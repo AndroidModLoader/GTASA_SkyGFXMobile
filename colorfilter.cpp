@@ -1,7 +1,10 @@
 #include <mod/config.h>
 #include <gtasa_things.h>
-#include <renderware_things.h>
+#include "GTASA_STRUCTS.h"
 
+#include "colorfilter.h"
+
+uintptr_t pGTASAAddr_Colorfilter = 0;
 int nColorFilter = 0;
 extern ConfigEntry* pColorfilter;
 const char* pColorFilterSettings[4] = 
@@ -102,14 +105,13 @@ extern "C" void ColorFilter(char* sp)
     }
 }
 
-extern uintptr_t pGTASAAddr_Colorfilter;
 // "optnone" will be ignored on GCC but this is required for CLang to stop doing VERY DUMB OPTIMIZATIONS
 __attribute__((optnone)) __attribute__((naked)) void ColorFilter_stub(void)
 {
     // !!! Do not type here anything !!!
     // !!! Adding ANY function WILL BREAK IT !!!
 
-    asm volatile(
+    asm(
         "push {r0-r11}\n" // 12*4=0x30
         "add r0, sp, 0x30\n"
         "bl ColorFilter\n"
@@ -118,8 +120,8 @@ __attribute__((optnone)) __attribute__((naked)) void ColorFilter_stub(void)
         "vldr s6, [sp, #(0x18+0x30)]\n" // blue.b
     );
 
-    // End the function
-    asm volatile(
+    // End of the function
+    asm(
         "mov r12, %0\n" // Should be there! BEFORE POP
                         // Anyway Clang uses R0 and then R12, which is not correct and completely dumb way
         "pop {r0-r11}\n"// We're popping r0-r11 BUT NOT r12 !!!

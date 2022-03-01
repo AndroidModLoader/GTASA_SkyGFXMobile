@@ -1,3 +1,20 @@
+extern int* deviceChip;
+extern int* RasterExtOffset;
+extern int* detailTexturesStorage;
+extern int* textureDetail;
+extern float *openglAmbientLight;
+extern float _rwOpenGLOpaqueBlack[4];
+extern RwInt32 *p_rwOpenGLColorMaterialEnabled;
+extern CColourSet *p_CTimeCycle__m_CurrentColours;
+extern CVector *p_CTimeCycle__m_vecDirnLightToSun;
+extern float *p_gfLaRiotsLightMult;
+extern float *p_CCoronas__LightsMult;
+extern uint8_t *p_CWeather__LightningFlash;
+extern float *skin_map;
+extern int *skin_dirty;
+extern int *skin_num;
+extern int (* GetMobileEffectSetting)();
+
 #define FLAG_ALPHA_TEST           0x01
 #define FLAG_LIGHTING             0x02
 #define FLAG_ALPHA_MODULATE       0x04
@@ -24,22 +41,39 @@
 #define FLAG_TEXMATRIX            0x2000000
 #define FLAG_GAMMA                0x4000000
 
-#define PXL_EMIT(__v) strcat(pxlbuf, __v "\n")
-#define VTX_EMIT(__v) strcat(vtxbuf, __v "\n")
+//#define PXL_EMIT(__v) strcat(pxlbuf, __v "\n")
+//#define VTX_EMIT(__v) strcat(vtxbuf, __v "\n")
+//#define PXL_EMIT_V(...)                      \
+//  do {                                       \
+//    snprintf(tmp, sizeof(tmp), __VA_ARGS__); \
+//    strcat(pxlbuf, tmp);                     \
+//    strcat(pxlbuf, "\n");                    \
+//  } while (0)
+//
+//
+//#define VTX_EMIT_V(...)                      \
+//  do {                                       \
+//    snprintf(tmp, sizeof(tmp), __VA_ARGS__); \
+//    strcat(vtxbuf, tmp);                     \
+//    strcat(vtxbuf, "\n");                    \
+//  } while (0)
+
+#define PXL_EMIT(__v) t = concatf(t, __v "\n", sizeof(__v)+1)
+#define VTX_EMIT(__v) t = concatf(t, __v "\n", sizeof(__v)+1)
 
 #define PXL_EMIT_V(...)                      \
   do {                                       \
     snprintf(tmp, sizeof(tmp), __VA_ARGS__); \
-    strcat(pxlbuf, tmp);                     \
-    strcat(pxlbuf, "\n");                    \
+    t=concatf(t, tmp, strlen(tmp)+1);        \
+    t=concatf(t, "\n", 2);                   \
   } while (0)
 
 
 #define VTX_EMIT_V(...)                      \
   do {                                       \
     snprintf(tmp, sizeof(tmp), __VA_ARGS__); \
-    strcat(vtxbuf, tmp);                     \
-    strcat(vtxbuf, "\n");                    \
+    t=concatf(t, tmp, strlen(tmp)+1);        \
+    t=concatf(t, "\n", 2);                   \
   } while (0)
 
   typedef struct {
@@ -84,3 +118,5 @@ void BuildPixelSource_Reversed(int flags);
 
 void BuildVertexSource_SkyGfx(int flags);
 void BuildPixelSource_SkyGfx(int flags);
+
+void PatchShaders();

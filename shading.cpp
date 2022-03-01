@@ -1,7 +1,8 @@
 #include <gtasa_things.h>
-#include <renderware_things.h>
-
+#include "GTASA_STRUCTS.h"
 #include <string> // memset
+
+#include <shading.h>
 
 RpLight **p_pDirect;
 RpLight **p_pAmbient;
@@ -9,6 +10,14 @@ RwRGBAReal *p_AmbientLightColourForFrame;
 RwRGBAReal *p_AmbientLightColourForFrame_PedsCarsAndObjects;
 RwRGBAReal *p_DirectionalLightColourForFrame;
 RwRGBAReal *p_DirectionalLightColourFromDay;
+
+RwFrame *(*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);
+RpLight *(*RpLightSetColor)(RpLight *light, const RwRGBAReal *color);
+void (*emu_glLightModelfv)(GLenum pname, const GLfloat *params);
+void (*emu_glMaterialfv)(GLenum face, GLenum pname, const GLfloat *params);
+void (*emu_glColorMaterial)(GLenum face, GLenum mode);
+void (*emu_glEnable)(GLenum cap);
+void (*emu_glDisable)(GLenum cap);
 
 inline void _rwOpenGLEnableColorMaterial(RwInt32 enable)
 {

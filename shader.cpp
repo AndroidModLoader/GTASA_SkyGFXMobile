@@ -2,18 +2,37 @@
 #include <mod/amlmod.h>
 #include <mod/logger.h>
 #include <mod/config.h>
-#include <shader.h>
 
 #include <gtasa_things.h>
-#include <renderware_things.h>
+#include "GTASA_STRUCTS.h"
 
-extern int (* GetMobileEffectSetting)();
-extern int* deviceChip;
+#include <fastcat.h>
+#include <shader.h>
+
+int* deviceChip;
+int* RasterExtOffset;
+int* detailTexturesStorage;
+int* textureDetail;
+float *openglAmbientLight;
+float _rwOpenGLOpaqueBlack[4];
+RwInt32 *p_rwOpenGLColorMaterialEnabled;
+CColourSet *p_CTimeCycle__m_CurrentColours;
+CVector *p_CTimeCycle__m_vecDirnLightToSun;
+float *p_gfLaRiotsLightMult;
+float *p_CCoronas__LightsMult;
+uint8_t *p_CWeather__LightningFlash;
+float *skin_map;
+int *skin_dirty;
+int *skin_num;
+int (* GetMobileEffectSetting)();
+
 //extern ConfigEntry* pBonesOptimization;
 //extern ConfigEntry* pMVPOptimization;
 extern ConfigEntry* pDisablePedSpec;
 extern ConfigEntry* pPS2Sun;
 extern ConfigEntry* pPS2Shading;
+extern ConfigEntry* pPS2Reflections;
+extern ConfigEntry* pExponentialFog;
 
 char pxlbuf[8192], vtxbuf[8192];
 
@@ -28,6 +47,7 @@ int OS_SystemChip()
 void BuildPixelSource_SkyGfx(int flags)
 {
     char tmp[512];
+    char* t = pxlbuf;
     int ped_spec = pDisablePedSpec->GetBool() ? 0 : (FLAG_BONE3 | FLAG_BONE4);
     
     PXL_EMIT("#version 100");
@@ -163,7 +183,7 @@ LABEL_45:
             }
             else if (flags & FLAG_SPHERE_ENVMAP)
             {
-                PXL_EMIT("vec2 ReflPos = normalize(Out_Refl.xy) * (Out_Refl.z * 0.5 + 0.5);");
+                PXL_EMIT("lowp vec2 ReflPos = normalize(Out_Refl.xy) * (Out_Refl.z * 0.5 + 0.5);"); // DID: lowp
                 PXL_EMIT("ReflPos = (ReflPos * 0.5) + 0.5;");
                 PXL_EMIT("lowp vec4 ReflTexture = texture2D(EnvMap, ReflPos);");
                 PXL_EMIT("fcolor.xyz = mix(fcolor.xyz, ReflTexture.xyz, EnvMapCoefficient);");
@@ -175,9 +195,9 @@ LABEL_45:
             {
                 // PS2-style specdot
                 // We don't actually have the texture. so simulate it
-                PXL_EMIT("vec2 unpack = (Out_Spec.xy-0.5)*2.0;");
-                PXL_EMIT("vec3 specColor = vec3(Out_Spec.z, Out_Spec.z, Out_Spec.z);");
-                PXL_EMIT("float dist = unpack.x*unpack.x + unpack.y*unpack.y;");
+                PXL_EMIT("lowp vec2 unpack = (Out_Spec.xy-0.5)*2.0;"); // DID: lowp
+                PXL_EMIT("lowp vec3 specColor = vec3(Out_Spec.z, Out_Spec.z, Out_Spec.z);"); // DID: lowp
+                PXL_EMIT("lowp float dist = unpack.x*unpack.x + unpack.y*unpack.y;"); // DID: lowp
                 // outside the dot
                 PXL_EMIT("if(dist > 0.69*0.69) specColor *= 0.0;");
                 // smooth the edge
@@ -256,6 +276,7 @@ LABEL_45:
 void BuildVertexSource_SkyGfx(int flags)
 {
     char tmp[512];
+    char* t = vtxbuf;
     int ped_spec = pDisablePedSpec->GetBool() ? 0 : (FLAG_BONE3 | FLAG_BONE4);
     
     VTX_EMIT("#version 100");
@@ -447,7 +468,8 @@ void BuildVertexSource_SkyGfx(int flags)
 
     if(!RQCaps->unk_08 && (flags & FLAG_FOG))
     {
-        VTX_EMIT("Out_FogAmt = clamp((length(WorldPos.xyz - CameraPosition.xyz) - FogDistances.x) * FogDistances.z, 0.0, 0.90);");
+        if(pExponentialFog->GetBool()) VTX_EMIT("float fogDist = length(WorldPos.xyz - CameraPosition.xyz);\nOut_FogAmt = clamp(1.0 - exp2(-1.7 * FogDistances.z*FogDistances.z * fogDist*fogDist * 1.442695), 0.0, 1.0);");
+        else VTX_EMIT("Out_FogAmt = clamp((length(WorldPos.xyz - CameraPosition.xyz) - FogDistances.x) * FogDistances.z, 0.0, 0.90);");
     }
 
     const char* _tmp;
@@ -562,36 +584,56 @@ void BuildVertexSource_SkyGfx(int flags)
     // SPECULAR LIGHT
     if (!RQCaps->unk_08 && (flags & FLAG_LIGHT1))
     {
-        if (flags & FLAG_ENVMAP)
+        if(pPS2Reflections->GetBool())
         {
-            // Low quality setting -- PS2 style
-            // PS2 specdot - reflect in view space
-            VTX_EMIT("vec3 ViewNormal = WorldNormal * mat3(ViewMatrix);");
-            VTX_EMIT("vec3 ViewLight = DirLightDirection * mat3(ViewMatrix);");
-            VTX_EMIT("vec3 V = ViewLight - 2.0*ViewNormal*dot(ViewNormal, ViewLight);");
-            // find some nice specular value -- not the real thing unfortunately
-            VTX_EMIT("float specAmt = 1.0 * EnvMapCoefficient * DirLightDiffuseColor.x;");
-            // NB: this is not a color here!!
-            VTX_EMIT("Out_Spec.xyz = (V + vec3(1.0, 1.0, 0.0))/2.0;");
-            VTX_EMIT("if(Out_Spec.z < 0.0) Out_Spec.z = specAmt; else Out_Spec.z = 0.0;");
-            // need the light multiplier from here
-            VTX_EMIT("Out_Spec.w = EnvMapCoefficient * DirLightDiffuseColor.x;");
+            if (flags & FLAG_ENVMAP)
+            {
+                // Low quality setting -- PS2 style
+                // PS2 specdot - reflect in view space
+                VTX_EMIT("vec3 ViewNormal = WorldNormal * mat3(ViewMatrix);");
+                VTX_EMIT("vec3 ViewLight = DirLightDirection * mat3(ViewMatrix);");
+                VTX_EMIT("vec3 V = ViewLight - 2.0*ViewNormal*dot(ViewNormal, ViewLight);");
+                // find some nice specular value -- not the real thing unfortunately
+                VTX_EMIT("float specAmt = 1.0 * EnvMapCoefficient * DirLightDiffuseColor.x;");
+                // NB: this is not a color here!!
+                VTX_EMIT("Out_Spec.xyz = (V + vec3(1.0, 1.0, 0.0))/2.0;");
+                VTX_EMIT("if(Out_Spec.z < 0.0) Out_Spec.z = specAmt; else Out_Spec.z = 0.0;");
+                // need the light multiplier from here
+                VTX_EMIT("Out_Spec.w = EnvMapCoefficient * DirLightDiffuseColor.x;");
+            }
+            else if (flags & FLAG_SPHERE_ENVMAP)
+            {
+                // Detailed & Max quality setting - original android (for now)
+                //VTX_EMIT_V("float specAmt = pow(max(dot(reflVector, DirLightDirection), 0.0), %.1f) * EnvMapCoefficient * 2.0;", RQCaps->isMaliChip ? 9.0f : 10.0f); // Broken! It's always 9 or 10!
+                VTX_EMIT_V("float specAmt = max(pow(dot(reflVector, DirLightDirection), %.1f), 0.0) * EnvMapCoefficient * 2.0;", RQCaps->isMaliChip ? 9.0f : 10.0f);
+                VTX_EMIT("Out_Spec.xyz = specAmt * DirLightDiffuseColor;");
+                VTX_EMIT("Out_Spec.w = EnvMapCoefficient * DirLightDiffuseColor.x;");
+            }
+            else if (flags & ped_spec)
+            {
+                VTX_EMIT("vec3 reflVector = normalize(WorldPos.xyz - CameraPosition.xyz);");
+                VTX_EMIT("reflVector = reflVector - 2.0 * dot(reflVector, WorldNormal) * WorldNormal;");
+                VTX_EMIT_V("float specAmt = max(pow(dot(reflVector, DirLightDirection), %.1f), 0.0) * 0.125;", RQCaps->isMaliChip ? 5.0f : 4.0f);
+                VTX_EMIT("Out_Spec.xyz = specAmt * DirLightDiffuseColor;");
+                VTX_EMIT("Out_Spec.w = 0.0;");
+            }
         }
-        else if (flags & FLAG_SPHERE_ENVMAP)
+        else
         {
-            // Detailed & Max quality setting - original android (for now)
-            //VTX_EMIT_V("float specAmt = pow(max(dot(reflVector, DirLightDirection), 0.0), %.1f) * EnvMapCoefficient * 2.0;", RQCaps->isMaliChip ? 9.0f : 10.0f); // Broken! It's always 9 or 10!
-            VTX_EMIT_V("float specAmt = max(pow(dot(reflVector, DirLightDirection), %.1f), 0.0) * EnvMapCoefficient * 2.0;", RQCaps->isMaliChip ? 9.0f : 10.0f);
+            // Default Reflections
+            if (flags & (FLAG_ENVMAP | FLAG_SPHERE_ENVMAP))
+            {
+                VTX_EMIT_V("float specAmt = max(pow(dot(reflVector, DirLightDirection), %.1f), 0.0) * EnvMapCoefficient * 2.0;", RQCaps->isMaliChip ? 9.0f : 10.0f);
+            }
+            else
+            {
+                if(!(flags & ped_spec)) goto LABEL_107;
+                VTX_EMIT("vec3 reflVector = normalize(WorldPos.xyz - CameraPosition.xyz);");
+                VTX_EMIT("reflVector = reflVector - 2.0 * dot(reflVector, WorldNormal) * WorldNormal;");
+                VTX_EMIT_V("float specAmt = max(pow(dot(reflVector, DirLightDirection), %.1f), 0.0) * 0.125;", RQCaps->isMaliChip ? 5.0f : 4.0f);
+            }
             VTX_EMIT("Out_Spec.xyz = specAmt * DirLightDiffuseColor;");
-            VTX_EMIT("Out_Spec.w = EnvMapCoefficient * DirLightDiffuseColor.x;");
-        }
-        else if (flags & ped_spec)
-        {
-            VTX_EMIT("vec3 reflVector = normalize(WorldPos.xyz - CameraPosition.xyz);");
-            VTX_EMIT("reflVector = reflVector - 2.0 * dot(reflVector, WorldNormal) * WorldNormal;");
-            VTX_EMIT_V("float specAmt = max(pow(dot(reflVector, DirLightDirection), %.1f), 0.0) * 0.125;", RQCaps->isMaliChip ? 5.0f : 4.0f);
-            VTX_EMIT("Out_Spec.xyz = specAmt * DirLightDiffuseColor;");
-            VTX_EMIT("Out_Spec.w = 0.0;");
+            //VTX_EMIT("Out_Spec.w = EnvMapCoefficient * DirLightDiffuseColor.x;");
         }
     }
 
@@ -628,6 +670,7 @@ LABEL_107:
 void BuildPixelSource_Reversed(int flags)
 {
     char tmp[512];
+    char* t = pxlbuf;
     int ped_spec = pDisablePedSpec->GetBool() ? 0 : (FLAG_BONE3 | FLAG_BONE4);
     
     PXL_EMIT("#version 100");
@@ -819,6 +862,7 @@ LABEL_45:
 void BuildVertexSource_Reversed(int flags)
 {
     char tmp[512];
+    char* t = vtxbuf;
     int ped_spec = pDisablePedSpec->GetBool() ? 0 : (FLAG_BONE3 | FLAG_BONE4);
     
     VTX_EMIT("#version 100");
@@ -986,7 +1030,9 @@ void BuildVertexSource_Reversed(int flags)
 
     if(!RQCaps->unk_08 && (flags & FLAG_FOG))
     {
-        VTX_EMIT("Out_FogAmt = clamp((length(WorldPos.xyz - CameraPosition.xyz) - FogDistances.x) * FogDistances.z, 0.0, 0.90);");
+        if(pExponentialFog->GetBool()) VTX_EMIT("float fogDist = length(WorldPos.xyz - CameraPosition.xyz);\nOut_FogAmt = clamp(1.0 - exp2(-1.7 * FogDistances.z*FogDistances.z * fogDist*fogDist * 1.442695), 0.0, 1.0);");
+        else VTX_EMIT("Out_FogAmt = clamp((length(WorldPos.xyz - CameraPosition.xyz) - FogDistances.x) * FogDistances.z, 0.0, 0.90);");
+        //VTX_EMIT("Out_FogAmt = clamp((length(WorldPos.xyz - CameraPosition.xyz) - FogDistances.x) * FogDistances.z, 0.0, 0.90);");
     }
 
     const char* _tmp;
@@ -1134,4 +1180,30 @@ LABEL_107:
     ///////////////////////////////////////
     ////////////////  END  ////////////////
     ///////////////////////////////////////
+}
+
+DECL_HOOK(int, RQShaderBuildSource, int flags, char **pxlsrc, char **vtxsrc)
+{
+    pxlbuf[0] = '\0'; vtxbuf[0] = '\0';
+    if(pPS2Shading->GetBool())
+    {
+        BuildPixelSource_SkyGfx(flags);
+        BuildVertexSource_SkyGfx(flags);
+    }
+    else
+    {
+        BuildPixelSource_Reversed(flags);
+        BuildVertexSource_Reversed(flags);
+    }
+    *pxlsrc = pxlbuf; *vtxsrc = vtxbuf;
+    return 1;
+}
+
+void PatchShaders()
+{
+    SET_TO(GetMobileEffectSetting,          aml->GetSym(pGTASA, "_Z22GetMobileEffectSettingv"));
+    SET_TO(RQCaps,                          aml->GetSym(pGTASA, "RQCaps"));
+    SET_TO(RQMaxBones,                      aml->GetSym(pGTASA, "RQMaxBones"));
+    SET_TO(deviceChip,                      aml->GetSym(pGTASA, "deviceChip"));
+    HOOK(RQShaderBuildSource,               aml->GetSym(pGTASA, "_ZN8RQShader11BuildSourceEjPPKcS2_"));
 }
