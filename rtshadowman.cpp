@@ -5,6 +5,9 @@
 #include "GTASA_STRUCTS.h"
 #include <shadows.h>
 
+#include "isautils.h"
+extern ISAUtils* sautils;
+
 RwCamera* (*CreateShadowCamera)(ShadowCameraStorage*, int size);
 void (*DestroyShadowCamera)(CShadowCamera*);
 void (*MakeGradientRaster)(ShadowCameraStorage*);
@@ -20,7 +23,6 @@ void (*UpdateRTShadow)(CRealTimeShadow* shadow);
 float *TimeCycShadowDispX, *TimeCycShadowDispY, *TimeCycShadowFrontX, *TimeCycShadowFrontY, *TimeCycShadowSideX, *TimeCycShadowSideY;
 int *TimeCycCurrentStoredValue;
 int *RTShadowsQuality;
-int *RTShadowsQuality2;
 
 static CRealTimeShadowManager_NEW realTimeShadowManLocal;
 CRealTimeShadowManager_NEW* g_realTimeShadowMan = &realTimeShadowManLocal;
@@ -128,12 +130,10 @@ void ReturnRTShadow(CRealTimeShadowManager_NEW* self, CRealTimeShadow* shadow)
 
 void UpdateRealTimeShadowManager(CRealTimeShadowManager_NEW* self)
 {
-    if(*RTShadowsQuality2 == 0) return;
+    if(!*RTShadowsQuality) return;
 
-    CShadowCamera* pShadowValues[MAX_RT_SHADOWS + 12];
-    int v3 = 4, v4 = 12, v5 = 0, v9, v10, v11;
+    CShadowCamera* pShadowValues[MAX_RT_SHADOWS + 12], *shadowCamera;
     CRealTimeShadow* shadow;
-    CShadowCamera* shadowCamera;
     int lowResShadow = 12, midResShadow = 0, highResShadow = 4;
 
     for(unsigned char i = 0; i < MAX_RT_SHADOWS; ++i)
@@ -191,7 +191,7 @@ void UpdateRealTimeShadowManager(CRealTimeShadowManager_NEW* self)
         if(shadow->m_pOwner != NULL)
         {
             // ANTI-CRASH
-            if(shadow->m_pOwner->GetMatrix() == NULL) continue;
+            if(shadow->m_pOwner->m_pRwObject == NULL) continue;
             // ANTI-CRASH
 
             char& quality = shadow->m_byteQuality;
@@ -233,8 +233,8 @@ void UpdateRealTimeShadowManager(CRealTimeShadowManager_NEW* self)
 
 void DoShadowThisFrame(CRealTimeShadowManager_NEW* self, CPhysical* physical)
 {
-    //if((physical->m_nType == ENTITY_TYPE_PED && ((CPed*)physical)->m_nPedType == PED_TYPE_PLAYER1) || *RTShadowsQuality == 2)
-    if(*RTShadowsQuality2 == 2)
+    if((physical->m_nType == ENTITY_TYPE_PED && ((CPed*)physical)->m_nPedType == PED_TYPE_PLAYER1) || *RTShadowsQuality == 2)
+    //if(*RTShadowsQuality == 2)
     {
         CRealTimeShadow* rtShadow = physical->m_pRTShadow;
         if(rtShadow)
@@ -296,7 +296,7 @@ void PatchRTShadowMan()
     SET_TO(TimeCycShadowSideY,            aml->GetSym(pGTASA, "_ZN10CTimeCycle14m_fShadowSideYE"));
     SET_TO(TimeCycCurrentStoredValue,     aml->GetSym(pGTASA, "_ZN10CTimeCycle20m_CurrentStoredValueE"));
     SET_TO(RTShadowsQuality,              pGTASAAddr + 0x6E049C);
-    SET_TO(RTShadowsQuality2,             pGTASAAddr + 0x6E0494);
+    if(sautils != NULL) SET_TO(RTShadowsQuality, sautils->GetSettingValuePointer(SETITEM_SA_SHADOWS_QUALITY));
 
     aml->Write(pGTASAAddr + 0x679A98, (uintptr_t)&g_realTimeShadowMan, sizeof(void*));
     Redirect(aml->GetSym(pGTASA, "_ZN22CRealTimeShadowManagerC2Ev"), (uintptr_t)RealTimeShadowManager);

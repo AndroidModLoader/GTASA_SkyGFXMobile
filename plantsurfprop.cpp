@@ -84,91 +84,91 @@ void PlantSurfPropMgrLoadPlantsDat(const char* filename)
 
                 case 3:
                 {
-                    *(short*)(ActiveSurface + 0) = atoi(token);
+                    *(short*)((int)ActiveSurface + 0) = atoi(token);
                     break;
                 }
 
                 case 4:
                 {
-                    *(short*)(ActiveSurface + 2) = atoi(token);
+                    *(short*)((int)ActiveSurface + 2) = atoi(token);
                     break;
                 }
 
                 case 5:
                 {
-                    *(bool*)(ActiveSurface + 4) = atoi(token);
+                    *(char*)((int)ActiveSurface + 4) = atoi(token);
                     break;
                 }
 
                 case 6:
                 {
-                    *(bool*)(ActiveSurface + 5) = atoi(token);
+                    *(char*)((int)ActiveSurface + 5) = atoi(token);
                     break;
                 }
 
                 case 7:
                 {
-                    *(bool*)(ActiveSurface + 6) = atoi(token);
+                    *(char*)((int)ActiveSurface + 6) = atoi(token);
                     break;
                 }
 
                 case 8:
                 {
-                    *(bool*)(ActiveSurface + 8) = atoi(token);
+                    *(char*)((int)ActiveSurface + 8) = atoi(token);
                     break;
                 }
 
                 case 9:
                 {
-                    *(bool*)(ActiveSurface + 9) = atoi(token);
+                    *(char*)((int)ActiveSurface + 9) = atoi(token);
                     break;
                 }
 
                 case 10:
                 {
-                    *(bool*)(ActiveSurface + 7) = atoi(token);
+                    *(char*)((int)ActiveSurface + 7) = atoi(token);
                     break;
                 }
 
                 case 11:
                 {
-                    *(float*)(ActiveSurface + 12) = atof(token);
+                    *(float*)((int)ActiveSurface + 12) = atof(token);
                     break;
                 }
 
                 case 12:
                 {
-                    *(float*)(ActiveSurface + 16) = atof(token);
+                    *(float*)((int)ActiveSurface + 16) = atof(token);
                     break;
                 }
 
                 case 13:
                 {
-                    *(float*)(ActiveSurface + 20) = atof(token);
+                    *(float*)((int)ActiveSurface + 20) = atof(token);
                     break;
                 }
 
                 case 14:
                 {
-                    *(float*)(ActiveSurface + 24) = atof(token);
+                    *(float*)((int)ActiveSurface + 24) = atof(token);
                     break;
                 }
 
                 case 15:
                 {
-                    *(float*)(ActiveSurface + 32) = atof(token);
+                    *(float*)((int)ActiveSurface + 32) = atof(token);
                     break;
                 }
 
                 case 16:
                 {
-                    *(float*)(ActiveSurface + 36) = atof(token);
+                    *(float*)((int)ActiveSurface + 36) = atof(token);
                     break;
                 }
 
                 case 17:
                 {
-                    *(float*)(ActiveSurface + 28) = atof(token);
+                    *(float*)((int)ActiveSurface + 28) = atof(token);
                     break;
                 }
             }
