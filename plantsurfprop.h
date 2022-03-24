@@ -1,38 +1,20 @@
 #include <stdio.h>
 
-struct Surface
-{
-    short pad0;
-};
-
-struct RwStream
-{
-
-};
-
-extern void (*FileMgrSetDir)(const char* dir);
-extern FILE* (*FileMgrOpenFile)(const char* dir, const char* ioflags);
-extern void (*FileMgrCloseFile)(FILE*);
-extern char* (*FileLoaderLoadLine)(FILE*);
+extern void           (*FileMgrSetDir)(const char* dir);
+extern FILE*          (*FileMgrOpenFile)(const char* dir, const char* ioflags);
+extern void           (*FileMgrCloseFile)(FILE*);
+extern char*          (*FileLoaderLoadLine)(FILE*);
 extern unsigned short (*GetSurfaceIdFromName)(void*, const char* surfname);
-extern Surface** m_SurfPropPtrTab;
-extern int* m_countSurfPropsAllocated;
-extern uintptr_t m_SurfPropTab;
+extern uintptr_t      (*LoadTextureDB)(const char* dbFile, bool fullLoad, int txdbFormat);
+extern void           (*RegisterTextureDB)(uintptr_t dbPtr);
+extern RwTexture*     (*GetTextureFromTextureDB)(const char* texture);
+extern int            (*AddImageToList)(const char* imgName, bool isPlayerImg);
 
+extern Surface**      m_SurfPropPtrTab;
+extern int*           m_countSurfPropsAllocated;
+extern Surface        m_SurfPropTab[MAX_SURFACE_PROPS];
+extern RwTexture*     PC_PlantTextureTab0[4];
+extern RwTexture*     PC_PlantTextureTab1[4];
 
 // CPlantMgr:
-extern CPool** pTxdPool; // _ZN9CTxdStore11ms_pTxdPoolE
-
 extern void (*StreamingMakeSpaceFor)(int);
-extern void (*ImGonnaUseStreamingMemory)();
-extern int (*RwTexDictionaryGetCurrent)();
-extern int (*FindTxdSlot)(const char*);
-extern int (*AddTxdSlot)(const char*);
-extern void (*TxdAddRef)(int);
-extern void (*SetCurrentTxd)(int);
-extern int* TexDictionaryLinkPluginOff; // A83F5C
-
-extern RwStream* (*RwStreamOpen)(int type, int accessType, int data);
-extern void (*RwStreamClose)(RwStream* stream, void* unk);
-extern bool (*RwStreamFindChunk)(RwStream* stream, unsigned int, unsigned int, unsigned int);
-extern int (*RwTexDictionaryGtaStreamRead)(RwStream* stream);

@@ -6,9 +6,13 @@
 #include <shadows.h>
 #include <stdlib.h>
 
+extern ConfigEntry* pMaxRTShadows;
+extern ConfigEntry* pDropRTShadowsQuality;
+extern ConfigEntry* pDynamicObjectsShadows;
+extern ConfigEntry* pAllowPlayerClassicShadow;
+
 CRegisteredShadow* asShadowsStored_NEW;
 void (*EntityPreRender)(CEntity* entity);
-void (*DoShadowThisFrame)(CRealTimeShadowManager* realtimeShadowManager, CPhysical* entity);
 
 uintptr_t ObjectPreRender_jumpto;
 
@@ -40,43 +44,11 @@ void PatchShadows()
     logger->Info("Static shadows storage has been bumped!");
 }
 
-inline bool CanRenderShadowForObjectId(short id)
-{
-    switch(id)
-    {
-        case 954:
-        case 1210:
-        case 1212:
-        case 1213:
-        case 1239:
-        case 1240:
-        case 1241:
-        case 1242:
-        case 1247:
-        case 1248:
-        case 1252:
-        case 1253:
-        case 1254:
-        case 1272:
-        case 1273:
-        case 1274:
-        case 1275:
-        case 1276:
-        case 1277:
-        case 1279:
-        case 1313:
-        case 1314:
-        case 1318:
-            return false;
-    }
-    return true;
-}
-
+extern int *RTShadowsQuality;
 extern "C" void ObjectPreRenderPatch(CObject* object)
 {
     EntityPreRender(object);
-    // Flags ARE NOT WORKING (wtf?) so im using my own fn // if((*(int*)(*(int*)entity + 324) & (1 << 8)) != 0) 
-    if(CanRenderShadowForObjectId(object->m_nModelIndex)) DoShadowThisFrame((CRealTimeShadowManager*)g_realTimeShadowMan, object);
+    if(!object->m_nObjectFlags.bIsPickup && *RTShadowsQuality == 2) DoShadowThisFrame(g_realTimeShadowMan, object);
 }
 __attribute__((optnone)) __attribute__((naked)) void ObjectPreRender_stub(void)
 {
@@ -91,11 +63,9 @@ __attribute__((optnone)) __attribute__((naked)) void ObjectPreRender_stub(void)
         "bx r12\n");
 }
 
-DECL_HOOKv(RTShadowUpdate, uintptr_t shadow)
+DECL_HOOKv(RTShadowUpdate, CRealTimeShadow* shadow)
 {
-    int v2 = *(int*)(shadow + 24);
-    if((v2 == 1 || v2 == 2) && *(int*)(*(int*)shadow + 24) == 0) return;
-    RTShadowUpdate(shadow);
+    if(shadow->m_pOwner->m_pRwObject != NULL) RTShadowUpdate(shadow);
 }
 
 void RTShadows()
@@ -103,15 +73,15 @@ void RTShadows()
     // RT Shadows? RealTime, not RayTraced!
     PatchRTShadowMan();
     
-    SET_TO(ObjectPreRender_jumpto,        pGTASAAddr + 0x454E60 + 0x1);
-    SET_TO(DoShadowThisFrame,             aml->GetSym(pGTASA, "_ZN22CRealTimeShadowManager17DoShadowThisFrameEP9CPhysical"));
-    SET_TO(EntityPreRender,               aml->GetSym(pGTASA, "_ZN7CEntity9PreRenderEv"));
-    Redirect(pGTASAAddr + 0x454E56 + 0x1, (uintptr_t)ObjectPreRender_stub); // Add shadows for OBJECTs
-    aml->PlaceRET(aml->GetSym(pGTASA,     "_ZN8CShadows18StoreShadowForPoleEP7CEntityfffffj") & ~1); // Disable static pole shadows
-    // Fixing weird crashes...
-    HOOKPLT(RTShadowUpdate,               pGTASAAddr + 0x6759E4);
-    aml->PlaceRET(aml->GetSym(pGTASA,     "_ZN22CRealTimeShadowManager20ReturnRealTimeShadowEP15CRealTimeShadow") & ~1);
-    Redirect(pGTASAAddr + 0x454D58 + 0x1, pGTASAAddr + 0x454DD4 + 0x1); // Removed StoreShadowToBeRendered from Object::PreRender
-
-    logger->Info("Shadows for dynamic objects are enabled...");
+    if(pDynamicObjectsShadows->GetBool())
+    {
+        SET_TO(ObjectPreRender_jumpto,        pGTASAAddr + 0x454E60 + 0x1);
+        SET_TO(EntityPreRender,               aml->GetSym(pGTASA, "_ZN7CEntity9PreRenderEv"));
+        Redirect(pGTASAAddr + 0x454E56 + 0x1, (uintptr_t)ObjectPreRender_stub); // Add shadows for OBJECTs
+        aml->PlaceRET(aml->GetSym(pGTASA,     "_ZN8CShadows18StoreShadowForPoleEP7CEntityfffffj") & ~1); // Disable static pole shadows
+        // Fixing weird crashes...
+        HOOKPLT(RTShadowUpdate,               pGTASAAddr + 0x6759E4);
+        aml->PlaceRET(aml->GetSym(pGTASA,     "_ZN22CRealTimeShadowManager20ReturnRealTimeShadowEP15CRealTimeShadow") & ~1);
+        Redirect(pGTASAAddr + 0x454D58 + 0x1, pGTASAAddr + 0x454DD4 + 0x1); // Removed StoreShadowToBeRendered from Object::PreRender
+    }
 }

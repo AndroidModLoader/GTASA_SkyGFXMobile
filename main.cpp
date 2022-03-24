@@ -47,6 +47,9 @@ ConfigEntry* pMovingFog;
 ConfigEntry* pVolumetricClouds;
 ConfigEntry* pPedShadowDistance;
 ConfigEntry* pVehicleShadowDistance;
+ConfigEntry* pMaxRTShadows;
+ConfigEntry* pDynamicObjectsShadows;
+ConfigEntry* pAllowPlayerClassicShadow;
 
 /* Patch Saves */
 //const uint32_t sunCoronaRet = 0xF0F7ECE0;
@@ -86,6 +89,12 @@ void Redirect(uintptr_t addr, uintptr_t to)
 ////////////////////////////////////////////////////////////////////////
 // Was taken from TheOfficialFloW's git repo (will be in AML 1.0.0.6) //
 ////////////////////////////////////////////////////////////////////////
+
+DECL_HOOKv(InitRW)
+{
+    logger->Info("Initializing RW...");
+    InitRW();
+}
 
 #define GREEN_TEXTURE_ID 14
 inline void* GetDetailTexturePtr(int texId)
@@ -170,21 +179,6 @@ const char* VehicleShadowDistanceDraw(int nNewValue)
     return ret;
 }
 
-bool fdf = false;
-DECL_HOOKv(ShadowPole, void* a1, float a2, float a3, float a4, float a5, float a6, int a7)
-{
-    logger->Info("ShadowPole %d", *(short*)(pGTASAAddr + 0x966598));
-    fdf = true;
-    ShadowPole(a1, a2, a3, a4, a5, a6, a7);
-    fdf = false;
-    logger->Info("ShadowPole %d END", *(short*)(pGTASAAddr + 0x966598));
-}
-DECL_HOOKv(StoreStaticShadow, int a1, char a2, int a3, float *a4, float a5, int a6, float a7, int a8, int a9, unsigned int a10, unsigned int a11, unsigned int a12, int a13, int a14, float a15, short a16, float a17)
-{
-    StoreStaticShadow(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17);
-    if(fdf) logger->Info("StoreStaticShadow");
-}
-
 extern const char* pColorFilterSettings[4];
 extern "C" void OnModLoad()
 {
@@ -217,7 +211,7 @@ extern "C" void OnModLoad()
 
     // Config: Effects
     pWaterFog = cfg->Bind("WaterFog", true, "Effects");
-    pWaterFogBlocksLimits = cfg->Bind("WaterFogBlocksLimit", 768, "Effects"); // 70 is default
+    pWaterFogBlocksLimits = cfg->Bind("WaterFogBlocksLimit", 512, "Effects"); // 70 is default
     pMovingFog = cfg->Bind("MovingFog", true, "Effects");
     pVolumetricClouds = cfg->Bind("VolumetricClouds", true, "Effects");
 
@@ -229,9 +223,15 @@ extern "C" void OnModLoad()
     pVehicleShadowDistance = cfg->Bind("VehicleShadowDistance", *(float*)(pGTASAAddr + 0x5B9AE0), "Shadows"); *(float*)(pGTASAAddr + 0x5B9AE0) = pVehicleShadowDistance->GetFloat();
     if(sautils != NULL) sautils->AddSliderItem(Display, "Vehicle Shadow Distance", 100 * pVehicleShadowDistance->GetFloat(), 100 * 4.0f, 100 * 256.0f, VehicleShadowDistanceChanged, VehicleShadowDistanceDraw);
 
+    pMaxRTShadows = cfg->Bind("MaxRTShadows", 64, "Shadows"); // Default value is 40
+    pDynamicObjectsShadows = cfg->Bind("DynamicObjectsShadows", false, "Shadows");
+    pAllowPlayerClassicShadow = cfg->Bind("AllowPlayerClassicShadow", true, "Shadows");
+
     // Config: Information
     cfg->Bind("About_PS2_Reflections", "Works only on low reflections setting with PS2 Shading enabled", "?Information");
     cfg->Bind("Colorfilter_Values", "default none ps2 pc", "?Information");
+
+    HOOKPLT(InitRW, pGTASAAddr + 0x66F2D0);
 
 // Patches
     // Patches: Shading
@@ -320,17 +320,17 @@ extern "C" void OnModLoad()
 
     // Mipmaps
     if(pFixMipMaps->GetBool())
-	{
+    {
         logger->Info("MipMaps fix is enabled!");
-		HOOKPLT(glCompressedTex2D, pGTASAAddr + 0x674838);
-	}
+        HOOKPLT(glCompressedTex2D, pGTASAAddr + 0x674838);
+    }
 
-	// Unexplored map shading
-	if(pDontShadeUnexploredMap->GetBool())
-	{
+    // Unexplored map shading
+    if(pDontShadeUnexploredMap->GetBool())
+    {
         logger->Info("Unexplored map sectors shading disabled!");
-		Redirect(pGTASAAddr + 0x2AADE0 + 0x1, pGTASAAddr + 0x2AAF9A + 0x1);
-	}
+        Redirect(pGTASAAddr + 0x2AADE0 + 0x1, pGTASAAddr + 0x2AAF9A + 0x1);
+    }
 
     if(pDisableClouds->GetBool())
     {
@@ -373,7 +373,7 @@ extern "C" void OnModLoad()
         SET_TO(pg_fx,                           aml->GetSym(pGTASA, "g_fx"));
         SET_TO(RenderFx,                        aml->GetSym(pGTASA, "_ZN4Fx_c6RenderEP8RwCamerah"));
         SET_TO(RenderWaterCannons,              aml->GetSym(pGTASA, "_ZN13CWaterCannons6RenderEv"));
-        Redirect(pGTASAAddr + 0x3F638C + 0x1, (uintptr_t)EffectsRender_stub);
+        Redirect(pGTASAAddr + 0x3F638C + 0x1,   (uintptr_t)EffectsRender_stub);
 
         if(pWaterFog->GetBool())
         {
@@ -415,25 +415,19 @@ extern "C" void OnModLoad()
 
         if(pPlantsDatLoading->GetBool())
         {
-            //pTxdPool = (CPool**)aml->GetSym(pGTASA, "_ZN9CTxdStore11ms_pTxdPoolE");
-            //SET_TO(TexDictionaryLinkPluginOff,  aml->GetSym(pGTASA, "_ZN9CTxdStore16ms_lastSlotFoundE") + 0x4); // pGTASAAddr + 0xA83F5C
-            //SET_TO(StreamingMakeSpaceFor,       aml->GetSym(pGTASA, "_ZN10CStreaming12MakeSpaceForEi"));
-            //SET_TO(ImGonnaUseStreamingMemory,   aml->GetSym(pGTASA, "_ZN10CStreaming25ImGonnaUseStreamingMemoryEv"));
-            //SET_TO(RwTexDictionaryGetCurrent,   aml->GetSym(pGTASA, "_Z25RwTexDictionaryGetCurrentv"));
-            //SET_TO(FindTxdSlot,                 aml->GetSym(pGTASA, "_ZN9CTxdStore11FindTxdSlotEPKc"));
-            //SET_TO(AddTxdSlot,                  aml->GetSym(pGTASA, "_ZN9CTxdStore10AddTxdSlotEPKcS1_b"));
-            //SET_TO(TxdAddRef,                   aml->GetSym(pGTASA, "_ZN9CTxdStore6AddRefEi"));
-            //SET_TO(SetCurrentTxd,               aml->GetSym(pGTASA, "_ZN9CTxdStore13SetCurrentTxdEiPKc"));
-            //SET_TO(RwStreamOpen,                aml->GetSym(pGTASA, "_Z12RwStreamOpen12RwStreamType18RwStreamAccessTypePKv"));
-            //SET_TO(RwStreamClose,               aml->GetSym(pGTASA, "_Z13RwStreamCloseP8RwStreamPv"));
-            //SET_TO(RwStreamFindChunk,           aml->GetSym(pGTASA, "_Z17RwStreamFindChunkP8RwStreamjPjS1_"));
-            //SET_TO(RwTexDictionaryGtaStreamRead,aml->GetSym(pGTASA, "_Z28RwTexDictionaryGtaStreamReadP8RwStream"));
+            SET_TO(StreamingMakeSpaceFor,       aml->GetSym(pGTASA, "_ZN10CStreaming12MakeSpaceForEi"));
+
+            SET_TO(LoadTextureDB,               aml->GetSym(pGTASA, "_ZN22TextureDatabaseRuntime4LoadEPKcb21TextureDatabaseFormat"));
+            SET_TO(RegisterTextureDB,           aml->GetSym(pGTASA, "_ZN22TextureDatabaseRuntime8RegisterEPS_"));
+            SET_TO(GetTextureFromTextureDB,     aml->GetSym(pGTASA, "_ZN22TextureDatabaseRuntime10GetTextureEPKc"));
+            SET_TO(AddImageToList,              aml->GetSym(pGTASA, "_ZN10CStreaming14AddImageToListEPKcb"));
+
+            SET_TO(PC_PlantTextureTab0,         aml->GetSym(pGTASA, "_ZN9CPlantMgr19PC_PlantTextureTab0E"));
+            SET_TO(PC_PlantTextureTab1,         aml->GetSym(pGTASA, "_ZN9CPlantMgr19PC_PlantTextureTab1E"));
             //HOOK(PlantMgrInit,                  aml->GetSym(pGTASA, "_ZN9CPlantMgr10InitialiseEv"));
         }
     }
 
-    //aml->Write(pGTASAAddr + 0x5BA62E, (uintptr_t)"\x00\x46\x44\xF2\xF0\x23", 6); // CShadows::StoreShadowForPole
-
     if(cfg->Bind("BumpShadowsLimit", true, "Shadows")->GetBool()) PatchShadows();
-    if(cfg->Bind("DynamicObjectRTShadow", true, "Shadows")->GetBool()) RTShadows();
+    RTShadows();
 }

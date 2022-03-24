@@ -3,27 +3,28 @@
 #include "GTASA_STRUCTS.h"
 #include <effects.h>
 
-RwUInt8* (*RwRasterLock)(RwRaster*, unsigned char, int);
-void (*RwRasterUnlock)(RwRaster*);
-void (*ImmediateModeRenderStatesStore)();
-void (*ImmediateModeRenderStatesSet)();
-void (*ImmediateModeRenderStatesReStore)();
-void (*RwRenderStateSet)(RwRenderState, void*);
+RwUInt8* (*RwRasterLock)(RwRaster*, unsigned char, int) = NULL;
+void (*RwRasterUnlock)(RwRaster*) = NULL;
+void (*ImmediateModeRenderStatesStore)() = NULL;
+void (*ImmediateModeRenderStatesSet)() = NULL;
+void (*ImmediateModeRenderStatesReStore)() = NULL;
+void (*RwRenderStateSet)(RwRenderState, void*) = NULL;
+
 
 RwRaster *grainRaster = NULL;
 // VU style random number generator -- taken from pcsx2
-uint R;
-void vrinit(uint x) { R = 0x3F800000 | x & 0x007FFFFF; }
+uint32_t R;
+void vrinit(uint32_t x) { R = 0x3F800000 | x & 0x007FFFFF; }
 void vradvance(void)
 {
-	int x = (R >> 4) & 1;
-	int y = (R >> 22) & 1;
-	R <<= 1;
-	R ^= x ^ y;
-	R = (R&0x7fffff)|0x3f800000;
+    int x = (R >> 4) & 1;
+    int y = (R >> 22) & 1;
+    R <<= 1;
+    R ^= x ^ y;
+    R = (R & 0x7FFFFF) | 0x3F800000;
 }
-inline uint vrget(void){ return R; }
-inline uint vrnext(void){ vradvance(); return R; }
+inline uint32_t vrget(void) { return R; }
+inline uint32_t vrnext(void) { vradvance(); return R; }
 
 //void GrainEffect(int strength, bool generate)
 //{
@@ -73,7 +74,6 @@ void (*RenderFx)(uintptr_t, uintptr_t, unsigned char) = NULL;
 void (*RenderWaterCannons)() = NULL;
 
 uintptr_t pg_fx;
-uintptr_t pFxCamera;
 bool* pbCCTV;
 bool* pbFog;
 void (*RenderWaterFog)() = NULL;
