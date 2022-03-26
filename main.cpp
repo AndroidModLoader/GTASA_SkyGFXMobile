@@ -36,11 +36,13 @@ ConfigEntry* pFixGreenDetailTexture;
 ConfigEntry* pFixMipMaps;
 ConfigEntry* pDontShadeUnexploredMap;
 ConfigEntry* pDisableClouds;
-//ConfigEntry* pPS2Pipeline;
+ConfigEntry* pPS2Pipeline;
 ConfigEntry* pPlantsDatLoading;
 ConfigEntry* pProcobjDatLoading;
 ConfigEntry* pExponentialFog;
 ConfigEntry* pScreenFog;
+ConfigEntry* pGrainEffect;
+ConfigEntry* pGrainIntensityPercent;
 ConfigEntry* pWaterFog;
 ConfigEntry* pWaterFogBlocksLimits;
 ConfigEntry* pMovingFog;
@@ -106,14 +108,14 @@ DECL_HOOKv(emu_TextureSetDetailTexture, void* texture, unsigned int tilingScale)
 {
     if(texture == NULL)
     {
-      noDetail:
         emu_TextureSetDetailTexture(NULL, 0);
         return;
     }
     if(texture == GetDetailTexturePtr(GREEN_TEXTURE_ID))
     {
         *textureDetail = 0;
-        goto noDetail;
+        emu_TextureSetDetailTexture(NULL, 0);
+        return;
     }
     emu_TextureSetDetailTexture(texture, tilingScale);
     *textureDetail = 1;
@@ -201,13 +203,18 @@ extern "C" void OnModLoad()
     pFixMipMaps = cfg->Bind("FixMipMaps", false, "Render");
     pDontShadeUnexploredMap = cfg->Bind("DontShadeUnexploredMap", false, "Render");
     pDisableClouds = cfg->Bind("DisableClouds", false, "Render");
-    //pPS2Pipeline = cfg->Bind("PS2_Pipeline", false, "Render");
+    pPS2Pipeline = cfg->Bind("PS2_Pipeline", false, "Render");
     pPlantsDatLoading = cfg->Bind("PlantsDatLoading", false, "Render");
     pProcobjDatLoading = cfg->Bind("ProcObjDatLoading", true, "Render");
     pExponentialFog = cfg->Bind("ExponentialFog", true, "Render");
 
     // Config: PostEffects
     pScreenFog = cfg->Bind("ScreenFog", true, "PostEffects");
+    pGrainEffect = cfg->Bind("Grain", true, "PostEffects");
+    pGrainIntensityPercent = cfg->Bind("GrainIntensityPercent", 60, "PostEffects");
+    if(pGrainIntensityPercent->GetInt() >= 100) grainIntensity = 255;
+    else if(pGrainIntensityPercent->GetInt() <= 0) grainIntensity = 0;
+    else grainIntensity = pGrainIntensityPercent->GetInt() * 2.55f;
 
     // Config: Effects
     pWaterFog = cfg->Bind("WaterFog", true, "Effects");
@@ -338,31 +345,87 @@ extern "C" void OnModLoad()
         Redirect(pGTASAAddr + 0x59F340 + 0x1, pGTASAAddr + 0x59F40A + 0x1);
     }
 
-    //if(pPS2Pipeline->GetBool())
-    //{
-    //    logger->Info("PS2 Pipeline is enabled!");
-    //    _rxPipelineDestroy = (void(*)(RxPipeline*))aml->GetSym(pGTASA, "_Z18_rxPipelineDestroyP10RxPipeline");
-    //    RxPipelineCreate = (RxPipeline*(*)())aml->GetSym(pGTASA, "_Z16RxPipelineCreatev");
-    //    RxPipelineLock = (RxLockedPipe*(*)(RxPipeline*))aml->GetSym(pGTASA, "_Z14RxPipelineLockP10RxPipeline");
-    //    RxNodeDefinitionGetOpenGLAtomicAllInOne = (RxNodeDefinition*(*)())aml->GetSym(pGTASA, "_Z39RxNodeDefinitionGetOpenGLAtomicAllInOnev");
-    //    RxLockedPipeAddFragment = (void*(*)(RxLockedPipe*, int, RxNodeDefinition*, int))aml->GetSym(pGTASA, "_Z23RxLockedPipeAddFragmentP10RxPipelinePjP16RxNodeDefinitionz");
-    //    RxLockedPipeUnlock = (RxLockedPipe*(*)(RxLockedPipe*))aml->GetSym(pGTASA, "_Z18RxLockedPipeUnlockP10RxPipeline");
-    //    RxPipelineFindNodeByName = (RxPipelineNode*(*)(RxPipeline*, const char*, int, int))aml->GetSym(pGTASA, "_Z24RxPipelineFindNodeByNameP10RxPipelinePKcP14RxPipelineNodePi");
-    //    RxOpenGLAllInOneSetInstanceCallBack = (void(*)(RxPipelineNode*, void*))aml->GetSym(pGTASA, "_Z35RxOpenGLAllInOneSetInstanceCallBackP14RxPipelineNodePFiPvP24RxOpenGLMeshInstanceDataiiE");
-    //    RxOpenGLAllInOneSetRenderCallBack = (void(*)(RxPipelineNode*, void*))aml->GetSym(pGTASA, "_Z33RxOpenGLAllInOneSetRenderCallBackP14RxPipelineNodePFvP10RwResEntryPvhjE");
+    if(pPS2Pipeline->GetBool())
+    {
+        logger->Info("PS2 Pipeline is enabled!");
 
-    //    Redirect(aml->GetSym(pGTASA, "_ZN25CCustomBuildingDNPipeline19CreateCustomObjPipeEv"), (uintptr_t)CCustomBuildingDNPipeline_CreateCustomObjPipe_SkyGfx);
-    //}
+        SET_TO(_rxPipelineDestroy, aml->GetSym(pGTASA, "_Z18_rxPipelineDestroyP10RxPipeline"));
+        SET_TO(RxPipelineCreate, aml->GetSym(pGTASA, "_Z16RxPipelineCreatev"));
+        SET_TO(RxPipelineLock, aml->GetSym(pGTASA, "_Z14RxPipelineLockP10RxPipeline"));
+        SET_TO(RxNodeDefinitionGetOpenGLAtomicAllInOne, aml->GetSym(pGTASA, "_Z39RxNodeDefinitionGetOpenGLAtomicAllInOnev"));
+        SET_TO(RxLockedPipeAddFragment, aml->GetSym(pGTASA, "_Z23RxLockedPipeAddFragmentP10RxPipelinePjP16RxNodeDefinitionz"));
+        SET_TO(RxLockedPipeUnlock, aml->GetSym(pGTASA, "_Z18RxLockedPipeUnlockP10RxPipeline"));
+        SET_TO(RxPipelineFindNodeByName, aml->GetSym(pGTASA, "_Z24RxPipelineFindNodeByNameP10RxPipelinePKcP14RxPipelineNodePi"));
+        SET_TO(RxOpenGLAllInOneSetInstanceCallBack, aml->GetSym(pGTASA, "_Z35RxOpenGLAllInOneSetInstanceCallBackP14RxPipelineNodePFiPvP24RxOpenGLMeshInstanceDataiiE"));
+        SET_TO(RxOpenGLAllInOneSetRenderCallBack, aml->GetSym(pGTASA, "_Z33RxOpenGLAllInOneSetRenderCallBackP14RxPipelineNodePFvP10RwResEntryPvhjE"));
+        SET_TO(_rwOpenGLSetRenderState, aml->GetSym(pGTASA, "_Z23_rwOpenGLSetRenderState13RwRenderStatePv"));
+        SET_TO(_rwOpenGLGetRenderState, aml->GetSym(pGTASA, "_Z23_rwOpenGLGetRenderState13RwRenderStatePv"));
+        SET_TO(_rwOpenGLSetRenderStateNoExtras, aml->GetSym(pGTASA, "_Z31_rwOpenGLSetRenderStateNoExtras13RwRenderStatePv"));
+        SET_TO(_rwOpenGLLightsSetMaterialPropertiesORG, aml->GetSym(pGTASA, "_Z36_rwOpenGLLightsSetMaterialPropertiesPK10RpMaterialj"));
+        SET_TO(SetNormalMatrix, aml->GetSym(pGTASA, "_Z15SetNormalMatrixff5RwV2d"));
+        SET_TO(DrawStoredMeshData, aml->GetSym(pGTASA, "_ZN24RxOpenGLMeshInstanceData10DrawStoredEv"));
 
-    if(pScreenFog->GetBool())
+        SET_TO(m_fDNBalanceParam, aml->GetSym(pGTASA, "_ZN25CCustomBuildingDNPipeline17m_fDNBalanceParamE"));
+        SET_TO(rwOpenGLOpaqueBlack, aml->GetSym(pGTASA, "_rwOpenGLOpaqueBlack"));
+        SET_TO(rwOpenGLLightingEnabled, aml->GetSym(pGTASA, "_rwOpenGLLightingEnabled"));
+        SET_TO(rwOpenGLColorMaterialEnabled, aml->GetSym(pGTASA, "_rwOpenGLColorMaterialEnabled"));
+        SET_TO(ms_envMapPluginOffset, aml->GetSym(pGTASA, "_ZN24CCustomCarEnvMapPipeline21ms_envMapPluginOffsetE"));
+        SET_TO(ppline_RasterExtOffset, aml->GetSym(pGTASA, "RasterExtOffset"));
+        SET_TO(byte_70BF3C, pGTASAAddr + 0x70BF3C);
+
+        SET_TO(ppline_SetSecondVertexColor, aml->GetSym(pGTASA, "_Z24emu_SetSecondVertexColorhf"));
+        SET_TO(ppline_EnableAlphaModulate, aml->GetSym(pGTASA, "_Z23emu_EnableAlphaModulatef"));
+        SET_TO(ppline_DisableAlphaModulate, aml->GetSym(pGTASA, "_Z24emu_DisableAlphaModulatev"));
+        SET_TO(ppline_glDisable, aml->GetSym(pGTASA, "_Z13emu_glDisablej"));
+        SET_TO(ppline_glColor4fv, aml->GetSym(pGTASA, "_Z14emu_glColor4fvPKf"));
+        SET_TO(ppline_SetEnvMap, aml->GetSym(pGTASA, "_Z13emu_SetEnvMapPvfi"));
+        SET_TO(ppline_ResetEnvMap, aml->GetSym(pGTASA, "_Z15emu_ResetEnvMapv"));
+        SET_TO(ppline_glPopMatrix, aml->GetSym(pGTASA, "_Z15emu_glPopMatrixv"));
+        SET_TO(ppline_glMatrixMode, aml->GetSym(pGTASA, "_Z16emu_glMatrixModej"));
+
+        Redirect(aml->GetSym(pGTASA, "_ZN25CCustomBuildingDNPipeline19CreateCustomObjPipeEv"), (uintptr_t)CCustomBuildingDNPipeline_CreateCustomObjPipe_SkyGfx);
+    }
+
+    if(pScreenFog->GetBool() || pGrainEffect->GetBool())
     {
         logger->Info("Post-Effects patch is enabled!");
         pGTASAAddr_MobileEffectsRender =        pGTASAAddr + 0x5B6790 + 0x1;
-        SET_TO(pbCCTV,                          aml->GetSym(pGTASA, "_ZN12CPostEffects7m_bCCTVE"));
-        SET_TO(pbFog,                           aml->GetSym(pGTASA, "_ZN12CPostEffects6m_bFogE"));
-        SET_TO(RenderScreenFogPostEffect,       aml->GetSym(pGTASA, "_ZN12CPostEffects3FogEv"));
-        SET_TO(RenderCCTVPostEffect,            aml->GetSym(pGTASA, "_ZN12CPostEffects4CCTVEv"));
         Redirect(pGTASAAddr + 0x5B677E + 0x1,   (uintptr_t)MobileEffectsRender_stub);
+        SET_TO(pbCCTV,                          aml->GetSym(pGTASA, "_ZN12CPostEffects7m_bCCTVE"));
+        SET_TO(RenderCCTVPostEffect,            aml->GetSym(pGTASA, "_ZN12CPostEffects4CCTVEv"));
+
+        if(pGrainEffect->GetBool())
+        {
+            HOOKPLT(InitialisePostEffects,      pGTASAAddr + 0x672200);
+            SET_TO(RwRasterCreate,              aml->GetSym(pGTASA, "_Z14RwRasterCreateiiii"));
+            SET_TO(RwRasterLock,                aml->GetSym(pGTASA, "_Z12RwRasterLockP8RwRasterhi"));
+            SET_TO(RwRasterUnlock,              aml->GetSym(pGTASA, "_Z14RwRasterUnlockP8RwRaster"));
+            SET_TO(ImmediateModeRenderStatesStore,   aml->GetSym(pGTASA, "_ZN12CPostEffects30ImmediateModeRenderStatesStoreEv"));
+            SET_TO(ImmediateModeRenderStatesSet,     aml->GetSym(pGTASA, "_ZN12CPostEffects28ImmediateModeRenderStatesSetEv"));
+            SET_TO(ImmediateModeRenderStatesReStore, aml->GetSym(pGTASA, "_ZN12CPostEffects32ImmediateModeRenderStatesReStoreEv"));
+            SET_TO(RwRenderStateSet,            aml->GetSym(pGTASA, "_Z16RwRenderStateSet13RwRenderStatePv"));
+            SET_TO(DrawQuadSetUVs,              aml->GetSym(pGTASA, "_ZN12CPostEffects14DrawQuadSetUVsEffffffff"));
+            SET_TO(PostEffectsDrawQuad,         aml->GetSym(pGTASA, "_ZN12CPostEffects8DrawQuadEffffhhhhP8RwRaster"));
+            SET_TO(DrawQuadSetDefaultUVs,       aml->GetSym(pGTASA, "_ZN12CPostEffects21DrawQuadSetDefaultUVsEv"));
+            SET_TO(CamNoRain,                   aml->GetSym(pGTASA, "_ZN10CCullZones9CamNoRainEv"));
+            SET_TO(PlayerNoRain,                aml->GetSym(pGTASA, "_ZN10CCullZones12PlayerNoRainEv"));
+            SET_TO(RsGlobal,                    aml->GetSym(pGTASA, "RsGlobal"));
+            SET_TO(pnGrainStrength,             aml->GetSym(pGTASA, "_ZN12CPostEffects15m_grainStrengthE"));
+            SET_TO(currArea,                    aml->GetSym(pGTASA, "_ZN5CGame8currAreaE"));
+            SET_TO(pbGrainEnable,               aml->GetSym(pGTASA, "_ZN12CPostEffects14m_bGrainEnableE"));
+            SET_TO(pbRainEnable,                aml->GetSym(pGTASA, "_ZN12CPostEffects13m_bRainEnableE"));
+            SET_TO(pbInCutscene,                aml->GetSym(pGTASA, "_ZN12CPostEffects13m_bInCutsceneE"));
+            SET_TO(pbNightVision,               aml->GetSym(pGTASA, "_ZN12CPostEffects14m_bNightVisionE"));
+            SET_TO(pbInfraredVision,            aml->GetSym(pGTASA, "_ZN12CPostEffects17m_bInfraredVisionE"));
+            SET_TO(pfWeatherRain,               aml->GetSym(pGTASA, "_ZN8CWeather4RainE"));
+            SET_TO(pfWeatherUnderwaterness,     aml->GetSym(pGTASA, "_ZN8CWeather14UnderWaternessE"));
+            SET_TO(effects_TheCamera,           aml->GetSym(pGTASA, "TheCamera"));
+        }
+        if(pScreenFog->GetBool())
+        {
+            SET_TO(pbFog,                       aml->GetSym(pGTASA, "_ZN12CPostEffects6m_bFogE"));
+            SET_TO(RenderScreenFogPostEffect,   aml->GetSym(pGTASA, "_ZN12CPostEffects3FogEv"));
+        }
     }
 
     if(pWaterFog->GetBool() || pMovingFog->GetBool() || pVolumetricClouds->GetBool())
