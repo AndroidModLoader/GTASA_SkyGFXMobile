@@ -21,7 +21,21 @@ void              (*_rwOpenGLSetRenderStateNoExtras)(RwRenderState, void*); //
 void              (*_rwOpenGLLightsSetMaterialPropertiesORG)(const RpMaterial *mat, RwUInt32 flags); //
 void              (*SetNormalMatrix)(float, float, RwV2d); //
 void              (*DrawStoredMeshData)(RxOpenGLMeshInstanceData*);
+void              (*ResetEnvMap)();
 
+extern ConfigEntry* pPS2PipelineRenderWay;
+const char* pPipelineSettings[3] = 
+{
+    "SinglePass",
+    "DualPass for Alpha",
+    "DualPass for Everything",
+};
+void PipelineChanged(int oldVal, int newVal)
+{
+    pPS2PipelineRenderWay->SetInt(newVal);
+    pipelineWay = (ePipelineDualpassWay)newVal;
+    cfg->Save();
+}
 
 float* m_fDNBalanceParam;
 float* rwOpenGLOpaqueBlack;
@@ -37,10 +51,10 @@ void (*ppline_DisableAlphaModulate)();
 void (*ppline_glDisable)(uint32_t);
 void (*ppline_glColor4fv)(float*);
 void (*ppline_SetEnvMap)(void*, float, int);
-void (*ppline_ResetEnvMap)();
-void (*ppline_glPopMatrix)();
-void (*ppline_glMatrixMode)(uint32_t);
 // End emu_*
+
+
+ePipelineDualpassWay pipelineWay = DPWay_Default;
 
 
 int CCustomBuildingDNPipeline__CustomPipeInstanceCB_SkyGfx(void* object, RxOpenGLMeshInstanceData* meshData, int, int reinstance)
@@ -52,8 +66,8 @@ int CCustomBuildingDNPipeline__CustomPipeInstanceCB_SkyGfx(void* object, RxOpenG
 inline void RenderMeshes(int meshData, unsigned int flags)
 {
     RpMaterial* material = *(RpMaterial**)(meshData + 48);
-    int alpha = material->color.alpha;
-    bool hasAlphaVertexEnabled = !(*(int*)(meshData + 52)==0 && alpha==255),
+    int alpha = material->color.alpha, vertexColor = *(int*)(meshData + 52), alphafunc;
+    bool hasAlphaVertexEnabled = !(vertexColor==0 && alpha==255),
          hasEnvMap = false;
     if(hasAlphaVertexEnabled && alpha == 0) return;
 
@@ -89,15 +103,7 @@ inline void RenderMeshes(int meshData, unsigned int flags)
         _rwOpenGLSetRenderState(rwRENDERSTATETEXTURERASTER, false);
         DrawStoredMeshData((RxOpenGLMeshInstanceData*)meshData);
         if (hasAlphaVertexEnabled) ppline_DisableAlphaModulate();
-        if (hasEnvMap)
-        {
-            ppline_ResetEnvMap();
-            if ( !*byte_70BF3C )
-            {
-                ppline_glPopMatrix();
-                ppline_glMatrixMode(0x1700u);
-            }
-        }
+        if (hasEnvMap) ResetEnvMap();
     }
     else if(material->texture->raster->originalStride << 31)
     {
@@ -107,27 +113,53 @@ inline void RenderMeshes(int meshData, unsigned int flags)
     {
         _rwOpenGLSetRenderStateNoExtras(rwRENDERSTATETEXTURERASTER, (void*)material->texture->raster);
         _rwOpenGLSetRenderState(rwRENDERSTATETEXTUREFILTER, RwTextureGetFilterModeMacro(material->texture));
-        DrawStoredMeshData((RxOpenGLMeshInstanceData*)meshData);
-        if (hasAlphaVertexEnabled) ppline_DisableAlphaModulate();
-        if (hasEnvMap)
+        switch(pipelineWay)
         {
-            ppline_ResetEnvMap();
-            if ( !*byte_70BF3C )
-            {
-                ppline_glPopMatrix();
-                ppline_glMatrixMode(0x1700u);
-            }
+            default:
+                DrawStoredMeshData((RxOpenGLMeshInstanceData*)meshData);
+                break;
+
+            case DPWay_Alpha:
+                if(!hasAlphaVertexEnabled)
+                {
+                    DrawStoredMeshData((RxOpenGLMeshInstanceData*)meshData);
+                }
+                else
+                {
+                    _rwOpenGLGetRenderState(rwRENDERSTATEALPHATESTFUNCTION, &alphafunc);
+                    _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, rwALPHATESTFUNCTIONGREATEREQUAL);
+                    DrawStoredMeshData((RxOpenGLMeshInstanceData*)meshData);
+                    _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, rwALPHATESTFUNCTIONLESS);
+                    _rwOpenGLSetRenderState(rwRENDERSTATEZWRITEENABLE, false);
+                    DrawStoredMeshData((RxOpenGLMeshInstanceData*)meshData);
+                    _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, alphafunc);
+                    _rwOpenGLSetRenderState(rwRENDERSTATEZWRITEENABLE, true);
+                }
+                break;
+
+            case DPWay_Everything:
+                _rwOpenGLGetRenderState(rwRENDERSTATEALPHATESTFUNCTION, &alphafunc);
+                _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, rwALPHATESTFUNCTIONGREATEREQUAL);
+                DrawStoredMeshData((RxOpenGLMeshInstanceData*)meshData);
+                _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, rwALPHATESTFUNCTIONLESS);
+                _rwOpenGLSetRenderState(rwRENDERSTATEZWRITEENABLE, false);
+                DrawStoredMeshData((RxOpenGLMeshInstanceData*)meshData);
+                _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, alphafunc);
+                _rwOpenGLSetRenderState(rwRENDERSTATEZWRITEENABLE, true);
+                break;
         }
+        if (hasAlphaVertexEnabled) ppline_DisableAlphaModulate();
+        if (hasEnvMap) ResetEnvMap();
     }
 }
 
 void CCustomBuildingDNPipeline__CustomPipeRenderCB_SkyGfx(RwResEntry* entry, void* obj, unsigned char type, unsigned int flags)
 {
-    uint16_t numMeshes = *(uint16_t*)((int)entry + 26);
+    int numMeshes = *(uint16_t*)((int)entry + 26);
     int meshData = (int)entry + 28;
 
     ppline_SetSecondVertexColor(1, *m_fDNBalanceParam);
-    while(--numMeshes > 0)
+    while(--numMeshes >= 0)
     {
         RenderMeshes(meshData, flags);
         meshData += 56;
@@ -150,10 +182,10 @@ RxPipeline* CCustomBuildingDNPipeline_CreateCustomObjPipe_SkyGfx()
     RxPipelineNode* NodeByName = RxPipelineFindNodeByName(pipeline, OpenGLAtomicAllInOne->name, 0, 0);
 
     RxOpenGLAllInOneSetInstanceCallBack(NodeByName, (void*)aml->GetSym(pGTASA, "_ZN25CCustomBuildingDNPipeline20CustomPipeInstanceCBEPvP24RxOpenGLMeshInstanceDataii")); // ORG
-    RxOpenGLAllInOneSetRenderCallBack(NodeByName, (void*)aml->GetSym(pGTASA, "_ZN25CCustomBuildingDNPipeline18CustomPipeRenderCBEP10RwResEntryPvhj")); // ORG
+    //RxOpenGLAllInOneSetRenderCallBack(NodeByName, (void*)aml->GetSym(pGTASA, "_ZN25CCustomBuildingDNPipeline18CustomPipeRenderCBEP10RwResEntryPvhj")); // ORG
 
     //RxOpenGLAllInOneSetInstanceCallBack(NodeByName, (void*)CCustomBuildingDNPipeline__CustomPipeInstanceCB_SkyGfx); // SkyGfx // Vertex
-    //RxOpenGLAllInOneSetRenderCallBack(NodeByName, (void*)CCustomBuildingDNPipeline__CustomPipeRenderCB_SkyGfx); // SkyGfx // Fragment
+    RxOpenGLAllInOneSetRenderCallBack(NodeByName, (void*)CCustomBuildingDNPipeline__CustomPipeRenderCB_SkyGfx); // SkyGfx // Fragment
 
     pipeline->pluginId = 0x53F20098;
     pipeline->pluginData = 0x53F20098;

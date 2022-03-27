@@ -14,7 +14,20 @@ class RxPipelineNode
 
 };
 
+enum ePipelineDualpassWay : uint8_t
+{
+    DPWay_Default = 0,
+    DPWay_Alpha,
+    DPWay_Everything,
+
+    DPWay_MaxWays,
+};
+extern ePipelineDualpassWay pipelineWay;
+
 RxPipeline* CCustomBuildingDNPipeline_CreateCustomObjPipe_SkyGfx();
+
+extern const char* pPipelineSettings[3];
+void PipelineChanged(int oldVal, int newVal);
 
 extern void              (*_rxPipelineDestroy)(RxPipeline*);
 extern RxPipeline*       (*RxPipelineCreate)();
@@ -31,6 +44,7 @@ extern void              (*_rwOpenGLSetRenderStateNoExtras)(RwRenderState, void*
 extern void              (*_rwOpenGLLightsSetMaterialPropertiesORG)(const RpMaterial *mat, RwUInt32 flags); //
 extern void              (*SetNormalMatrix)(float, float, RwV2d); //
 extern void              (*DrawStoredMeshData)(RxOpenGLMeshInstanceData*);
+extern void              (*ResetEnvMap)();
 
 extern float* m_fDNBalanceParam;
 extern float* rwOpenGLOpaqueBlack;
@@ -46,7 +60,4 @@ extern void (*ppline_DisableAlphaModulate)();
 extern void (*ppline_glDisable)(uint32_t);
 extern void (*ppline_glColor4fv)(float*);
 extern void (*ppline_SetEnvMap)(void*, float, int);
-extern void (*ppline_ResetEnvMap)();
-extern void (*ppline_glPopMatrix)();
-extern void (*ppline_glMatrixMode)(uint32_t);
 // End emu_*

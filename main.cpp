@@ -37,9 +37,11 @@ ConfigEntry* pFixMipMaps;
 ConfigEntry* pDontShadeUnexploredMap;
 ConfigEntry* pDisableClouds;
 ConfigEntry* pPS2Pipeline;
+ConfigEntry* pPS2PipelineRenderWay;
 ConfigEntry* pPlantsDatLoading;
 ConfigEntry* pProcobjDatLoading;
 ConfigEntry* pExponentialFog;
+ConfigEntry* pDisableCamnorm;
 ConfigEntry* pScreenFog;
 ConfigEntry* pGrainEffect;
 ConfigEntry* pGrainIntensityPercent;
@@ -168,6 +170,13 @@ const char* PedShadowDistanceDraw(int nNewValue)
     return ret;
 }
 
+void GrainIntensityChanged(int oldVal, int newVal)
+{
+    pGrainIntensityPercent->SetInt(newVal);
+    grainIntensity = newVal * 2.55f;
+    cfg->Save();
+}
+
 void VehicleShadowDistanceChanged(int oldVal, int newVal)
 {
     pVehicleShadowDistance->SetFloat(0.01f * newVal);
@@ -181,7 +190,6 @@ const char* VehicleShadowDistanceDraw(int nNewValue)
     return ret;
 }
 
-extern const char* pColorFilterSettings[4];
 extern "C" void OnModLoad()
 {
     logger->SetTag("SkyGfx Mobile");
@@ -203,15 +211,24 @@ extern "C" void OnModLoad()
     pFixMipMaps = cfg->Bind("FixMipMaps", false, "Render");
     pDontShadeUnexploredMap = cfg->Bind("DontShadeUnexploredMap", false, "Render");
     pDisableClouds = cfg->Bind("DisableClouds", false, "Render");
-    pPS2Pipeline = cfg->Bind("PS2_Pipeline", false, "Render");
+    pPS2Pipeline = cfg->Bind("PS2_Pipeline", true, "Render");
+    pPS2PipelineRenderWay = cfg->Bind("PS2_Pipeline_RenderWay", DPWay_Everything, "Render");
     pPlantsDatLoading = cfg->Bind("PlantsDatLoading", false, "Render");
     pProcobjDatLoading = cfg->Bind("ProcObjDatLoading", true, "Render");
     pExponentialFog = cfg->Bind("ExponentialFog", true, "Render");
+    pDisableCamnorm = cfg->Bind("DisableCamnorm", false, "Render");
+
+    if(pPS2PipelineRenderWay->GetInt() <= 0) pipelineWay = DPWay_Default;
+    if(pPS2PipelineRenderWay->GetInt() >= DPWay_MaxWays) pipelineWay = DPWay_Everything;
+    else pipelineWay = (ePipelineDualpassWay)pPS2PipelineRenderWay->GetInt();
+
+    if(pDisableCamnorm->GetBool()) aml->PlaceNOP(pGTASAAddr + 0x1E7C6C, 9);
 
     // Config: PostEffects
     pScreenFog = cfg->Bind("ScreenFog", true, "PostEffects");
     pGrainEffect = cfg->Bind("Grain", true, "PostEffects");
     pGrainIntensityPercent = cfg->Bind("GrainIntensityPercent", 60, "PostEffects");
+
     if(pGrainIntensityPercent->GetInt() >= 100) grainIntensity = 255;
     else if(pGrainIntensityPercent->GetInt() <= 0) grainIntensity = 0;
     else grainIntensity = pGrainIntensityPercent->GetInt() * 2.55f;
@@ -222,17 +239,17 @@ extern "C" void OnModLoad()
     pMovingFog = cfg->Bind("MovingFog", true, "Effects");
     pVolumetricClouds = cfg->Bind("VolumetricClouds", true, "Effects");
 
-    // Config: Shadows
-    aml->Unprot(pGTASAAddr + 0x5BD2FC, sizeof(float));
-    pPedShadowDistance = cfg->Bind("PedShadowDistance", *(float*)(pGTASAAddr + 0x5BD2FC), "Shadows"); *(float*)(pGTASAAddr + 0x5BD2FC) = pPedShadowDistance->GetFloat();
-    if(sautils != NULL) sautils->AddSliderItem(Display, "Ped Shadow Distance", 100 * pPedShadowDistance->GetFloat(), 100 * 4.0f, 100 * 256.0f, PedShadowDistanceChanged, PedShadowDistanceDraw);
-    aml->Unprot(pGTASAAddr + 0x5B9AE0, sizeof(float));
-    pVehicleShadowDistance = cfg->Bind("VehicleShadowDistance", *(float*)(pGTASAAddr + 0x5B9AE0), "Shadows"); *(float*)(pGTASAAddr + 0x5B9AE0) = pVehicleShadowDistance->GetFloat();
-    if(sautils != NULL) sautils->AddSliderItem(Display, "Vehicle Shadow Distance", 100 * pVehicleShadowDistance->GetFloat(), 100 * 4.0f, 100 * 256.0f, VehicleShadowDistanceChanged, VehicleShadowDistanceDraw);
+    // Config: Shadows (not working)
+    //aml->Unprot(pGTASAAddr + 0x5BD2FC, sizeof(float));
+    //pPedShadowDistance = cfg->Bind("PedShadowDistance", *(float*)(pGTASAAddr + 0x5BD2FC), "Shadows"); *(float*)(pGTASAAddr + 0x5BD2FC) = pPedShadowDistance->GetFloat();
+    //if(sautils != NULL) sautils->AddSliderItem(Display, "Ped Shadow Distance", 100 * pPedShadowDistance->GetFloat(), 100 * 4.0f, 100 * 256.0f, PedShadowDistanceChanged, PedShadowDistanceDraw);
+    //aml->Unprot(pGTASAAddr + 0x5B9AE0, sizeof(float));
+    //pVehicleShadowDistance = cfg->Bind("VehicleShadowDistance", *(float*)(pGTASAAddr + 0x5B9AE0), "Shadows"); *(float*)(pGTASAAddr + 0x5B9AE0) = pVehicleShadowDistance->GetFloat();
+    //if(sautils != NULL) sautils->AddSliderItem(Display, "Vehicle Shadow Distance", 100 * pVehicleShadowDistance->GetFloat(), 100 * 4.0f, 100 * 256.0f, VehicleShadowDistanceChanged, VehicleShadowDistanceDraw);
 
     pMaxRTShadows = cfg->Bind("MaxRTShadows", 64, "Shadows"); // Default value is 40
     pDynamicObjectsShadows = cfg->Bind("DynamicObjectsShadows", false, "Shadows");
-    pAllowPlayerClassicShadow = cfg->Bind("AllowPlayerClassicShadow", true, "Shadows");
+    pAllowPlayerClassicShadow = cfg->Bind("AllowPlayerClassicShadow", false, "Shadows");
 
     // Config: Information
     cfg->Bind("About_PS2_Reflections", "Works only on low reflections setting with PS2 Shading enabled", "?Information");
@@ -364,6 +381,7 @@ extern "C" void OnModLoad()
         SET_TO(_rwOpenGLLightsSetMaterialPropertiesORG, aml->GetSym(pGTASA, "_Z36_rwOpenGLLightsSetMaterialPropertiesPK10RpMaterialj"));
         SET_TO(SetNormalMatrix, aml->GetSym(pGTASA, "_Z15SetNormalMatrixff5RwV2d"));
         SET_TO(DrawStoredMeshData, aml->GetSym(pGTASA, "_ZN24RxOpenGLMeshInstanceData10DrawStoredEv"));
+        SET_TO(ResetEnvMap, aml->GetSym(pGTASA, "_Z11ResetEnvMapv"));
 
         SET_TO(m_fDNBalanceParam, aml->GetSym(pGTASA, "_ZN25CCustomBuildingDNPipeline17m_fDNBalanceParamE"));
         SET_TO(rwOpenGLOpaqueBlack, aml->GetSym(pGTASA, "_rwOpenGLOpaqueBlack"));
@@ -379,11 +397,13 @@ extern "C" void OnModLoad()
         SET_TO(ppline_glDisable, aml->GetSym(pGTASA, "_Z13emu_glDisablej"));
         SET_TO(ppline_glColor4fv, aml->GetSym(pGTASA, "_Z14emu_glColor4fvPKf"));
         SET_TO(ppline_SetEnvMap, aml->GetSym(pGTASA, "_Z13emu_SetEnvMapPvfi"));
-        SET_TO(ppline_ResetEnvMap, aml->GetSym(pGTASA, "_Z15emu_ResetEnvMapv"));
-        SET_TO(ppline_glPopMatrix, aml->GetSym(pGTASA, "_Z15emu_glPopMatrixv"));
-        SET_TO(ppline_glMatrixMode, aml->GetSym(pGTASA, "_Z16emu_glMatrixModej"));
 
         Redirect(aml->GetSym(pGTASA, "_ZN25CCustomBuildingDNPipeline19CreateCustomObjPipeEv"), (uintptr_t)CCustomBuildingDNPipeline_CreateCustomObjPipe_SkyGfx);
+
+        if(sautils != NULL)
+        {
+            sautils->AddClickableItem(Display, "Pipeline Pass-type", pipelineWay, 0, sizeofA(pPipelineSettings)-1, pPipelineSettings, PipelineChanged);
+        }
     }
 
     if(pScreenFog->GetBool() || pGrainEffect->GetBool())
@@ -420,6 +440,7 @@ extern "C" void OnModLoad()
             SET_TO(pfWeatherRain,               aml->GetSym(pGTASA, "_ZN8CWeather4RainE"));
             SET_TO(pfWeatherUnderwaterness,     aml->GetSym(pGTASA, "_ZN8CWeather14UnderWaternessE"));
             SET_TO(effects_TheCamera,           aml->GetSym(pGTASA, "TheCamera"));
+            if(sautils != NULL) sautils->AddSliderItem(Display, "Grain Intensity", pGrainIntensityPercent->GetInt(), 0, 100, GrainIntensityChanged);
         }
         if(pScreenFog->GetBool())
         {
@@ -491,6 +512,9 @@ extern "C" void OnModLoad()
         }
     }
 
-    if(cfg->Bind("BumpShadowsLimit", true, "Shadows")->GetBool()) PatchShadows();
-    RTShadows();
+    if(cfg->Bind("BumpShadowsLimit", false, "Shadows")->GetBool())
+    {
+        PatchShadows();
+        RTShadows();
+    }
 }
