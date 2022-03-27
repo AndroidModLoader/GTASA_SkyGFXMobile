@@ -63,106 +63,102 @@ int CCustomBuildingDNPipeline__CustomPipeInstanceCB_SkyGfx(void* object, RxOpenG
     return 1;
 }
 
-inline void RenderMeshes(int meshData, unsigned int flags)
-{
-    RpMaterial* material = *(RpMaterial**)(meshData + 48);
-    int alpha = material->color.alpha, vertexColor = *(int*)(meshData + 52), alphafunc;
-    bool hasAlphaVertexEnabled = !(vertexColor==0 && alpha==255),
-         hasEnvMap = false;
-    if(hasAlphaVertexEnabled && alpha == 0) return;
-
-    if(hasAlphaVertexEnabled) ppline_EnableAlphaModulate((float)alpha/255.0f);
-    _rwOpenGLSetRenderState(rwRENDERSTATEVERTEXALPHAENABLE, hasAlphaVertexEnabled?1:0);
-    if(*rwOpenGLLightingEnabled)
-    {
-        _rwOpenGLLightsSetMaterialPropertiesORG(material, flags);
-    }
-    else
-    {
-        if(*rwOpenGLColorMaterialEnabled)
-        {
-            ppline_glDisable(0xB57u);
-            *rwOpenGLColorMaterialEnabled = 0;
-        }
-        if(!(flags & rxGEOMETRY_PRELIT)) ppline_glColor4fv(rwOpenGLOpaqueBlack);
-    }
-
-    hasEnvMap = (*(int*)((int)material + 16) & 1)!=0;
-    if(hasEnvMap)
-    {
-        int v15 = *(int*)((int)material + *ms_envMapPluginOffset);
-        int v17 = *(int*)(v15 + 8);
-        *(char*)(v17 + 81) = 17;
-        ppline_SetEnvMap(*(void **)(*(int*)v17 + *ppline_RasterExtOffset), *(uint8_t*)(v15 + 4) * 0.0039216f * 1.5f, 0);
-        SetNormalMatrix(*(char*)(v15 + 0) * 0.125f, *(char*)(v15 + 1) * 0.125f, RwV2d(0, 0));
-        *byte_70BF3C = 0;
-    }
-
-    if(!(flags & (rxGEOMETRY_TEXTURED2 | rxGEOMETRY_TEXTURED)) || material->texture == NULL)
-    {
-        _rwOpenGLSetRenderState(rwRENDERSTATETEXTURERASTER, false);
-        DrawStoredMeshData((RxOpenGLMeshInstanceData*)meshData);
-        if (hasAlphaVertexEnabled) ppline_DisableAlphaModulate();
-        if (hasEnvMap) ResetEnvMap();
-    }
-    else if(material->texture->raster->originalStride << 31)
-    {
-        if (hasAlphaVertexEnabled) ppline_DisableAlphaModulate();
-    }
-    else
-    {
-        _rwOpenGLSetRenderStateNoExtras(rwRENDERSTATETEXTURERASTER, (void*)material->texture->raster);
-        _rwOpenGLSetRenderState(rwRENDERSTATETEXTUREFILTER, RwTextureGetFilterModeMacro(material->texture));
-        switch(pipelineWay)
-        {
-            default:
-                DrawStoredMeshData((RxOpenGLMeshInstanceData*)meshData);
-                break;
-
-            case DPWay_Alpha:
-                if(!hasAlphaVertexEnabled)
-                {
-                    DrawStoredMeshData((RxOpenGLMeshInstanceData*)meshData);
-                }
-                else
-                {
-                    _rwOpenGLGetRenderState(rwRENDERSTATEALPHATESTFUNCTION, &alphafunc);
-                    _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, rwALPHATESTFUNCTIONGREATEREQUAL);
-                    DrawStoredMeshData((RxOpenGLMeshInstanceData*)meshData);
-                    _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, rwALPHATESTFUNCTIONLESS);
-                    _rwOpenGLSetRenderState(rwRENDERSTATEZWRITEENABLE, false);
-                    DrawStoredMeshData((RxOpenGLMeshInstanceData*)meshData);
-                    _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, alphafunc);
-                    _rwOpenGLSetRenderState(rwRENDERSTATEZWRITEENABLE, true);
-                }
-                break;
-
-            case DPWay_Everything:
-                _rwOpenGLGetRenderState(rwRENDERSTATEALPHATESTFUNCTION, &alphafunc);
-                _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, rwALPHATESTFUNCTIONGREATEREQUAL);
-                DrawStoredMeshData((RxOpenGLMeshInstanceData*)meshData);
-                _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, rwALPHATESTFUNCTIONLESS);
-                _rwOpenGLSetRenderState(rwRENDERSTATEZWRITEENABLE, false);
-                DrawStoredMeshData((RxOpenGLMeshInstanceData*)meshData);
-                _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, alphafunc);
-                _rwOpenGLSetRenderState(rwRENDERSTATEZWRITEENABLE, true);
-                break;
-        }
-        if (hasAlphaVertexEnabled) ppline_DisableAlphaModulate();
-        if (hasEnvMap) ResetEnvMap();
-    }
-}
-
 void CCustomBuildingDNPipeline__CustomPipeRenderCB_SkyGfx(RwResEntry* entry, void* obj, unsigned char type, unsigned int flags)
 {
-    int numMeshes = *(uint16_t*)((int)entry + 26);
-    int meshData = (int)entry + 28;
+    int numMeshes = entry->meshesNum;
+    RxOpenGLMeshInstanceData* meshData = entry->meshes;
 
     ppline_SetSecondVertexColor(1, *m_fDNBalanceParam);
     while(--numMeshes >= 0)
     {
-        RenderMeshes(meshData, flags);
-        meshData += 56;
+        RpMaterial* material = meshData->m_pMaterial;
+        int alpha = material->color.alpha, vertexColor = meshData->m_nVertexColor, alphafunc;
+        bool hasAlphaVertexEnabled = !(vertexColor==0 && alpha==255),
+            hasEnvMap = false;
+        if(hasAlphaVertexEnabled && alpha == 0) return;
+
+        if(hasAlphaVertexEnabled) ppline_EnableAlphaModulate(0.00392156862f * alpha);
+        _rwOpenGLSetRenderState(rwRENDERSTATEVERTEXALPHAENABLE, hasAlphaVertexEnabled);
+        if(*rwOpenGLLightingEnabled)
+        {
+            _rwOpenGLLightsSetMaterialPropertiesORG(material, flags);
+        }
+        else
+        {
+            if(*rwOpenGLColorMaterialEnabled)
+            {
+                ppline_glDisable(0xB57u);
+                *rwOpenGLColorMaterialEnabled = 0;
+            }
+            if(!(flags & rxGEOMETRY_PRELIT)) ppline_glColor4fv(rwOpenGLOpaqueBlack);
+        }
+
+        hasEnvMap = material->surfaceProps.specular != 0;
+        if(hasEnvMap)
+        {
+            int v15 = *(int*)((int)material + *ms_envMapPluginOffset);
+            int v17 = *(int*)(v15 + 8);
+            *(char*)(v17 + 81) = 17;
+            ppline_SetEnvMap(*(void **)(*(int*)v17 + *ppline_RasterExtOffset), *(uint8_t*)(v15 + 4) * 0.0058824f, 0);
+            SetNormalMatrix(*(char*)(v15 + 0) * 0.125f, *(char*)(v15 + 1) * 0.125f, RwV2d(0, 0));
+            *byte_70BF3C = 0;
+        }
+
+        if(!(flags & (rxGEOMETRY_TEXTURED2 | rxGEOMETRY_TEXTURED)) || material->texture == NULL)
+        {
+            _rwOpenGLSetRenderState(rwRENDERSTATETEXTURERASTER, false);
+            DrawStoredMeshData(meshData);
+            if (hasAlphaVertexEnabled) ppline_DisableAlphaModulate();
+            if (hasEnvMap) ResetEnvMap();
+        }
+        else if(material->texture->raster->originalStride << 31)
+        {
+            if (hasAlphaVertexEnabled) ppline_DisableAlphaModulate();
+        }
+        else
+        {
+            _rwOpenGLSetRenderStateNoExtras(rwRENDERSTATETEXTURERASTER, (void*)material->texture->raster);
+            _rwOpenGLSetRenderState(rwRENDERSTATETEXTUREFILTER, RwTextureGetFilterModeMacro(material->texture));
+            switch(pipelineWay)
+            {
+                default:
+                    DrawStoredMeshData(meshData);
+                    break;
+
+                case DPWay_Alpha:
+                    if(!hasAlphaVertexEnabled)
+                    {
+                        DrawStoredMeshData(meshData);
+                    }
+                    else
+                    {
+                        _rwOpenGLGetRenderState(rwRENDERSTATEALPHATESTFUNCTION, &alphafunc);
+                        _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, rwALPHATESTFUNCTIONGREATEREQUAL);
+                        DrawStoredMeshData(meshData);
+                        _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, rwALPHATESTFUNCTIONLESS);
+                        _rwOpenGLSetRenderState(rwRENDERSTATEZWRITEENABLE, false);
+                        DrawStoredMeshData(meshData);
+                        _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, alphafunc);
+                        _rwOpenGLSetRenderState(rwRENDERSTATEZWRITEENABLE, true);
+                    }
+                    break;
+
+                case DPWay_Everything:
+                    _rwOpenGLGetRenderState(rwRENDERSTATEALPHATESTFUNCTION, &alphafunc);
+                    _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, rwALPHATESTFUNCTIONGREATEREQUAL);
+                    DrawStoredMeshData(meshData);
+                    _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, rwALPHATESTFUNCTIONLESS);
+                    _rwOpenGLSetRenderState(rwRENDERSTATEZWRITEENABLE, false);
+                    DrawStoredMeshData(meshData);
+                    _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, alphafunc);
+                    _rwOpenGLSetRenderState(rwRENDERSTATEZWRITEENABLE, true);
+                    break;
+            }
+            if (hasAlphaVertexEnabled) ppline_DisableAlphaModulate();
+            if (hasEnvMap) ResetEnvMap();
+        }
+
+        ++meshData;
     }
     ppline_SetSecondVertexColor(0, 0.0f);
 }

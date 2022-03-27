@@ -336,10 +336,7 @@ extern "C" void OnModLoad()
         aml->Unprot(pGTASAAddr + 0x5B6446, sizeof(uint16_t));
         memcpy((void *)(pGTASAAddr + 0x5B6446), (void *)(pGTASAAddr + 0x5B63EA), sizeof(uint16_t));
 
-        if(sautils != NULL)
-        {
-            sautils->AddClickableItem(Display, "Colorfilter", nColorFilter, 0, sizeofA(pColorFilterSettings)-1, pColorFilterSettings, ColorfilterChanged);
-        }
+        if(sautils != NULL) sautils->AddClickableItem(Display, "Colorfilter", nColorFilter, 0, sizeofA(pColorFilterSettings)-1, pColorFilterSettings, ColorfilterChanged);
     }
 
     // Mipmaps
@@ -366,44 +363,41 @@ extern "C" void OnModLoad()
     {
         logger->Info("PS2 Pipeline is enabled!");
 
-        SET_TO(_rxPipelineDestroy, aml->GetSym(pGTASA, "_Z18_rxPipelineDestroyP10RxPipeline"));
-        SET_TO(RxPipelineCreate, aml->GetSym(pGTASA, "_Z16RxPipelineCreatev"));
-        SET_TO(RxPipelineLock, aml->GetSym(pGTASA, "_Z14RxPipelineLockP10RxPipeline"));
+        SET_TO(_rxPipelineDestroy,              aml->GetSym(pGTASA, "_Z18_rxPipelineDestroyP10RxPipeline"));
+        SET_TO(RxPipelineCreate,                aml->GetSym(pGTASA, "_Z16RxPipelineCreatev"));
+        SET_TO(RxPipelineLock,                  aml->GetSym(pGTASA, "_Z14RxPipelineLockP10RxPipeline"));
         SET_TO(RxNodeDefinitionGetOpenGLAtomicAllInOne, aml->GetSym(pGTASA, "_Z39RxNodeDefinitionGetOpenGLAtomicAllInOnev"));
-        SET_TO(RxLockedPipeAddFragment, aml->GetSym(pGTASA, "_Z23RxLockedPipeAddFragmentP10RxPipelinePjP16RxNodeDefinitionz"));
-        SET_TO(RxLockedPipeUnlock, aml->GetSym(pGTASA, "_Z18RxLockedPipeUnlockP10RxPipeline"));
-        SET_TO(RxPipelineFindNodeByName, aml->GetSym(pGTASA, "_Z24RxPipelineFindNodeByNameP10RxPipelinePKcP14RxPipelineNodePi"));
+        SET_TO(RxLockedPipeAddFragment,         aml->GetSym(pGTASA, "_Z23RxLockedPipeAddFragmentP10RxPipelinePjP16RxNodeDefinitionz"));
+        SET_TO(RxLockedPipeUnlock,              aml->GetSym(pGTASA, "_Z18RxLockedPipeUnlockP10RxPipeline"));
+        SET_TO(RxPipelineFindNodeByName,        aml->GetSym(pGTASA, "_Z24RxPipelineFindNodeByNameP10RxPipelinePKcP14RxPipelineNodePi"));
         SET_TO(RxOpenGLAllInOneSetInstanceCallBack, aml->GetSym(pGTASA, "_Z35RxOpenGLAllInOneSetInstanceCallBackP14RxPipelineNodePFiPvP24RxOpenGLMeshInstanceDataiiE"));
         SET_TO(RxOpenGLAllInOneSetRenderCallBack, aml->GetSym(pGTASA, "_Z33RxOpenGLAllInOneSetRenderCallBackP14RxPipelineNodePFvP10RwResEntryPvhjE"));
-        SET_TO(_rwOpenGLSetRenderState, aml->GetSym(pGTASA, "_Z23_rwOpenGLSetRenderState13RwRenderStatePv"));
-        SET_TO(_rwOpenGLGetRenderState, aml->GetSym(pGTASA, "_Z23_rwOpenGLGetRenderState13RwRenderStatePv"));
+        SET_TO(_rwOpenGLSetRenderState,         aml->GetSym(pGTASA, "_Z23_rwOpenGLSetRenderState13RwRenderStatePv"));
+        SET_TO(_rwOpenGLGetRenderState,         aml->GetSym(pGTASA, "_Z23_rwOpenGLGetRenderState13RwRenderStatePv"));
         SET_TO(_rwOpenGLSetRenderStateNoExtras, aml->GetSym(pGTASA, "_Z31_rwOpenGLSetRenderStateNoExtras13RwRenderStatePv"));
         SET_TO(_rwOpenGLLightsSetMaterialPropertiesORG, aml->GetSym(pGTASA, "_Z36_rwOpenGLLightsSetMaterialPropertiesPK10RpMaterialj"));
-        SET_TO(SetNormalMatrix, aml->GetSym(pGTASA, "_Z15SetNormalMatrixff5RwV2d"));
-        SET_TO(DrawStoredMeshData, aml->GetSym(pGTASA, "_ZN24RxOpenGLMeshInstanceData10DrawStoredEv"));
-        SET_TO(ResetEnvMap, aml->GetSym(pGTASA, "_Z11ResetEnvMapv"));
+        SET_TO(SetNormalMatrix,                 aml->GetSym(pGTASA, "_Z15SetNormalMatrixff5RwV2d"));
+        SET_TO(DrawStoredMeshData,              aml->GetSym(pGTASA, "_ZN24RxOpenGLMeshInstanceData10DrawStoredEv"));
+        SET_TO(ResetEnvMap,                     aml->GetSym(pGTASA, "_Z11ResetEnvMapv"));
 
-        SET_TO(m_fDNBalanceParam, aml->GetSym(pGTASA, "_ZN25CCustomBuildingDNPipeline17m_fDNBalanceParamE"));
-        SET_TO(rwOpenGLOpaqueBlack, aml->GetSym(pGTASA, "_rwOpenGLOpaqueBlack"));
-        SET_TO(rwOpenGLLightingEnabled, aml->GetSym(pGTASA, "_rwOpenGLLightingEnabled"));
-        SET_TO(rwOpenGLColorMaterialEnabled, aml->GetSym(pGTASA, "_rwOpenGLColorMaterialEnabled"));
-        SET_TO(ms_envMapPluginOffset, aml->GetSym(pGTASA, "_ZN24CCustomCarEnvMapPipeline21ms_envMapPluginOffsetE"));
-        SET_TO(ppline_RasterExtOffset, aml->GetSym(pGTASA, "RasterExtOffset"));
-        SET_TO(byte_70BF3C, pGTASAAddr + 0x70BF3C);
+        SET_TO(m_fDNBalanceParam,               aml->GetSym(pGTASA, "_ZN25CCustomBuildingDNPipeline17m_fDNBalanceParamE"));
+        SET_TO(rwOpenGLOpaqueBlack,             aml->GetSym(pGTASA, "_rwOpenGLOpaqueBlack"));
+        SET_TO(rwOpenGLLightingEnabled,         aml->GetSym(pGTASA, "_rwOpenGLLightingEnabled"));
+        SET_TO(rwOpenGLColorMaterialEnabled,    aml->GetSym(pGTASA, "_rwOpenGLColorMaterialEnabled"));
+        SET_TO(ms_envMapPluginOffset,           aml->GetSym(pGTASA, "_ZN24CCustomCarEnvMapPipeline21ms_envMapPluginOffsetE"));
+        SET_TO(ppline_RasterExtOffset,          aml->GetSym(pGTASA, "RasterExtOffset"));
+        SET_TO(byte_70BF3C,                     pGTASAAddr + 0x70BF3C);
 
-        SET_TO(ppline_SetSecondVertexColor, aml->GetSym(pGTASA, "_Z24emu_SetSecondVertexColorhf"));
-        SET_TO(ppline_EnableAlphaModulate, aml->GetSym(pGTASA, "_Z23emu_EnableAlphaModulatef"));
-        SET_TO(ppline_DisableAlphaModulate, aml->GetSym(pGTASA, "_Z24emu_DisableAlphaModulatev"));
-        SET_TO(ppline_glDisable, aml->GetSym(pGTASA, "_Z13emu_glDisablej"));
-        SET_TO(ppline_glColor4fv, aml->GetSym(pGTASA, "_Z14emu_glColor4fvPKf"));
-        SET_TO(ppline_SetEnvMap, aml->GetSym(pGTASA, "_Z13emu_SetEnvMapPvfi"));
+        SET_TO(ppline_SetSecondVertexColor,     aml->GetSym(pGTASA, "_Z24emu_SetSecondVertexColorhf"));
+        SET_TO(ppline_EnableAlphaModulate,      aml->GetSym(pGTASA, "_Z23emu_EnableAlphaModulatef"));
+        SET_TO(ppline_DisableAlphaModulate,     aml->GetSym(pGTASA, "_Z24emu_DisableAlphaModulatev"));
+        SET_TO(ppline_glDisable,                aml->GetSym(pGTASA, "_Z13emu_glDisablej"));
+        SET_TO(ppline_glColor4fv,               aml->GetSym(pGTASA, "_Z14emu_glColor4fvPKf"));
+        SET_TO(ppline_SetEnvMap,                aml->GetSym(pGTASA, "_Z13emu_SetEnvMapPvfi"));
+        if(sautils != NULL) sautils->AddClickableItem(Display, "Pipeline Pass-type", pipelineWay, 0, sizeofA(pPipelineSettings)-1, pPipelineSettings, PipelineChanged);
 
         Redirect(aml->GetSym(pGTASA, "_ZN25CCustomBuildingDNPipeline19CreateCustomObjPipeEv"), (uintptr_t)CCustomBuildingDNPipeline_CreateCustomObjPipe_SkyGfx);
 
-        if(sautils != NULL)
-        {
-            sautils->AddClickableItem(Display, "Pipeline Pass-type", pipelineWay, 0, sizeofA(pPipelineSettings)-1, pPipelineSettings, PipelineChanged);
-        }
     }
 
     if(pScreenFog->GetBool() || pGrainEffect->GetBool())
@@ -420,8 +414,8 @@ extern "C" void OnModLoad()
             SET_TO(RwRasterCreate,              aml->GetSym(pGTASA, "_Z14RwRasterCreateiiii"));
             SET_TO(RwRasterLock,                aml->GetSym(pGTASA, "_Z12RwRasterLockP8RwRasterhi"));
             SET_TO(RwRasterUnlock,              aml->GetSym(pGTASA, "_Z14RwRasterUnlockP8RwRaster"));
-            SET_TO(ImmediateModeRenderStatesStore,   aml->GetSym(pGTASA, "_ZN12CPostEffects30ImmediateModeRenderStatesStoreEv"));
-            SET_TO(ImmediateModeRenderStatesSet,     aml->GetSym(pGTASA, "_ZN12CPostEffects28ImmediateModeRenderStatesSetEv"));
+            SET_TO(ImmediateModeRenderStatesStore, aml->GetSym(pGTASA, "_ZN12CPostEffects30ImmediateModeRenderStatesStoreEv"));
+            SET_TO(ImmediateModeRenderStatesSet, aml->GetSym(pGTASA, "_ZN12CPostEffects28ImmediateModeRenderStatesSetEv"));
             SET_TO(ImmediateModeRenderStatesReStore, aml->GetSym(pGTASA, "_ZN12CPostEffects32ImmediateModeRenderStatesReStoreEv"));
             SET_TO(RwRenderStateSet,            aml->GetSym(pGTASA, "_Z16RwRenderStateSet13RwRenderStatePv"));
             SET_TO(DrawQuadSetUVs,              aml->GetSym(pGTASA, "_ZN12CPostEffects14DrawQuadSetUVsEffffffff"));
