@@ -1,5 +1,4 @@
 #include <gtasa_things.h>
-#include "GTASA_STRUCTS.h"
 #include <string> // memset
 
 #include <shading.h>
@@ -46,25 +45,25 @@ void _rwOpenGLLightsSetMaterialProperties(const RpMaterial *mat, RwUInt32 flags)
     surfProps[0] = mat->surfaceProps.ambient;
     surfProps[1] = mat->surfaceProps.diffuse;
     // could use for env and spec data perhaps
-    surfProps[2] = 0.0;
-    surfProps[3] = 0.0;
-    colorScale[0] = mat->color.red/255.0f;
-    colorScale[1] = mat->color.green/255.0f;
-    colorScale[2] = mat->color.blue/255.0f;
-    colorScale[3] = mat->color.alpha/255.0f;
+    surfProps[2] = 0.0f;
+    surfProps[3] = 0.0f;
+    colorScale[0] = 0.00392156862f * mat->color.red;
+    colorScale[1] = 0.00392156862f * mat->color.green;
+    colorScale[2] = 0.00392156862f * mat->color.blue;
+    colorScale[3] = 0.00392156862f * mat->color.alpha;
     // repurposing material colors here
     emu_glMaterialfv(GL_FRONT, GL_AMBIENT, surfProps);
     emu_glMaterialfv(GL_FRONT, GL_DIFFUSE, colorScale);
 
     // multiplied by 1.5 internally, let's undo that
     float ambHack[4];
-    ambHack[0] = openglAmbientLight[0]/1.5f;
-    ambHack[1] = openglAmbientLight[1]/1.5f;
-    ambHack[2] = openglAmbientLight[2]/1.5f;
-    ambHack[3] = openglAmbientLight[3]/1.5f;
+    ambHack[0] = 0.66666666667f * openglAmbientLight[0];
+    ambHack[1] = 0.66666666667f * openglAmbientLight[1];
+    ambHack[2] = 0.66666666667f * openglAmbientLight[2];
+    ambHack[3] = 0.66666666667f * openglAmbientLight[3];
     emu_glLightModelfv(GL_LIGHT_MODEL_AMBIENT, ambHack);
 
-    if(flags & 8) // prelight
+    if(flags & rxGEOMETRY_PRELIT) // prelight
     {    
         _rwOpenGLEnableColorMaterial(1);
         emu_glColorMaterial(GL_FRONT, GL_EMISSION);
@@ -109,7 +108,7 @@ void SetLightsWithTimeOfDayColour(void *world)
 
     if(*p_pDirect)
     {
-        float dirMult = 256.0f/255.0f * *p_CCoronas__LightsMult;
+        float dirMult = 1.00392156863f * *p_CCoronas__LightsMult;
         p_DirectionalLightColourForFrame->red = p_CTimeCycle__m_CurrentColours->directionalmult * dirMult;
         p_DirectionalLightColourForFrame->green = p_CTimeCycle__m_CurrentColours->directionalmult * dirMult;
         p_DirectionalLightColourForFrame->blue = p_CTimeCycle__m_CurrentColours->directionalmult * dirMult;

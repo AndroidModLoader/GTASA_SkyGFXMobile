@@ -1,8 +1,8 @@
 #include <mod/config.h>
 #include <gtasa_things.h>
-#include "GTASA_STRUCTS.h"
 
 #include "colorfilter.h"
+#include "arm_neon.h"
 
 uintptr_t pGTASAAddr_Colorfilter = 0;
 int nColorFilter = 0;
@@ -54,52 +54,50 @@ extern "C" void ColorFilter(char* sp)
     {
         case 1: // No filter
         {
-            red->red = 1.0f;
-            green->green = 1.0f;
-            blue->blue = 1.0f;
-            red->green = red->blue = red->alpha = 0.0f;
+            red->red = green->green = blue->blue = 1.0f;
+            red->green = red->blue   = red->alpha   = 0.0f;
             green->red = green->blue = green->alpha = 0.0f;
-            blue->red = blue->green = blue->alpha = 0.0f;
+            blue->red  = blue->green = blue->alpha  = 0.0f;
             break;
         }
 
         case 2: // PS2
         {
-            float a = postfx2->alpha/128.0f;
-            red->red = postfx1->red/128.0f + a*postfx2->red/128.0f;
-            green->green = postfx1->green/128.0f + a*postfx2->green/128.0f;
-            blue->blue = postfx1->blue/128.0f + a*postfx2->blue/128.0f;
-            red->green = red->blue = red->alpha = 0.0f;
+            float a = 0.0078125f * postfx2->alpha;
+            red->red     = 0.0078125f * (postfx1->red   + a * postfx2->red);
+            green->green = 0.0078125f * (postfx1->green + a * postfx2->green);
+            blue->blue   = 0.0078125f * (postfx1->blue  + a * postfx2->blue);
+            red->green = red->blue   = red->alpha   = 0.0f;
             green->red = green->blue = green->alpha = 0.0f;
-            blue->red = blue->green = blue->alpha = 0.0f;
+            blue->red  = blue->green = blue->alpha  = 0.0f;
             break;
         }
 
         case 3: // PC
         {
-            float a1 = postfx1->alpha/128.0f;
-            float a2 = postfx2->alpha/128.0f;
-            red->red = 1.0f + a1*postfx1->red/255.0f + a2*postfx2->red/255.0f;
-            green->green = 1.0f + a1*postfx1->green/255.0f + a2*postfx2->green/255.0f;
-            blue->blue = 1.0f + a1*postfx1->blue/255.0f + a2*postfx2->blue/255.0f;
-            red->green = red->blue = red->alpha = 0.0f;
+            float a1 = 0.00003063725f * postfx1->alpha;
+            float a2 = 0.00003063725f * postfx2->alpha;
+            red->red =     1.0f + a1 * postfx1->red   + a2 * postfx2->red;
+            green->green = 1.0f + a1 * postfx1->green + a2 * postfx2->green;
+            blue->blue =   1.0f + a1 * postfx1->blue  + a2 * postfx2->blue;
+            red->green = red->blue   = red->alpha   = 0.0f;
             green->red = green->blue = green->alpha = 0.0f;
-            blue->red = blue->green = blue->alpha = 0.0f;
+            blue->red =  blue->green = blue->alpha  = 0.0f;
             break;
         }
 
         default: // Mobile (default)
         {
-            float r = postfx1->alpha*postfx1->red   + postfx2->alpha*postfx2->red;
-            float g = postfx1->alpha*postfx1->green + postfx2->alpha*postfx2->green;
-            float b = postfx1->alpha*postfx1->blue  + postfx2->alpha*postfx2->blue;
-            float invsqrt = 1.0f/sqrtf(r*r + g*g + b*b);
+            float r = postfx1->alpha * postfx1->red   + postfx2->alpha * postfx2->red;
+            float g = postfx1->alpha * postfx1->green + postfx2->alpha * postfx2->green;
+            float b = postfx1->alpha * postfx1->blue  + postfx2->alpha * postfx2->blue;
+            float invsqrt = 1.0f / sqrtf(r*r + g*g + b*b);
             r *= invsqrt;
             g *= invsqrt;
             b *= invsqrt;
-            red->red *= (1.5f + r*1.732f)*0.4f;
-            green->green *= (1.5f + g*1.732f)*0.4f;
-            blue->blue *= (1.5f + b*1.732f)*0.4f;
+            red->red     *= 0.6f + r * 0.6928f;
+            green->green *= 0.6f + g * 0.6928f;
+            blue->blue   *= 0.6f + b * 0.6928f;
             break;
         }
     }
@@ -109,7 +107,7 @@ extern "C" void ColorFilter(char* sp)
 __attribute__((optnone)) __attribute__((naked)) void ColorFilter_stub(void)
 {
     // !!! Do not type here anything !!!
-    // !!! Adding ANY function WILL BREAK IT !!!
+    // !!! Adding ANYTHING WILL BREAK IT !!!
 
     asm(
         "push {r0-r11}\n" // 12*4=0x30
@@ -124,7 +122,8 @@ __attribute__((optnone)) __attribute__((naked)) void ColorFilter_stub(void)
     asm(
         "mov r12, %0\n" // Should be there! BEFORE POP
                         // Anyway Clang uses R0 and then R12, which is not correct and completely dumb way
-        "pop {r0-r11}\n"// We're popping r0-r11 BUT NOT r12 !!!
+                        // (i think it`s dumb way)
+        "pop {r0-r11}\n"
         "bx r12\n"
       :: "r" (pGTASAAddr_Colorfilter)
     );

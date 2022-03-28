@@ -5,7 +5,6 @@
 #include <dlfcn.h> // dlopen
 
 #include <gtasa_things.h>
-#include "GTASA_STRUCTS.h"
 
 #include <shader.h>
 #include <pipeline.h>
@@ -94,6 +93,10 @@ void Redirect(uintptr_t addr, uintptr_t to)
 // Was taken from TheOfficialFloW's git repo (will be in AML 1.0.0.6) //
 ////////////////////////////////////////////////////////////////////////
 
+extern DECL_HOOKv(PlantMgrInit);
+extern DECL_HOOKv(PlantMgrRender);
+extern DECL_HOOKv(PlantSurfPropMgrInit);
+
 DECL_HOOKv(InitRW)
 {
     logger->Info("Initializing RW...");
@@ -127,21 +130,6 @@ DECL_HOOKv(glCompressedTex2D, GLenum target, GLint level, GLenum format, GLsizei
 {
     if (level == 0 || (width >= 4 && height >= 4) || (format != 0x8C01 && format != 0x8C02))
         glCompressedTex2D(target, level, format, width, height, border, imageSize, data);
-}
-
-void PlantSurfPropMgrLoadPlantsDat(const char* filename);
-DECL_HOOKv(PlantSurfPropMgrInit)
-{
-    PlantSurfPropMgrInit();
-    PlantSurfPropMgrLoadPlantsDat("plants.dat");
-}
-void InitPlantManager(); // Not implemented
-DECL_HOOKv(PlantMgrInit)
-{
-    logger->Info("CPlantMgr::Initialise");
-    PlantMgrInit(); // Acts like a CPlantMgr::ReloadConfig()
-    logger->Info("CPlantMgr::Initialise 2nd step");
-    InitPlantManager();
 }
 
 int emu_InternalSkinGetVectorCount(void)
@@ -497,12 +485,36 @@ extern "C" void OnModLoad()
 
             SET_TO(LoadTextureDB,               aml->GetSym(pGTASA, "_ZN22TextureDatabaseRuntime4LoadEPKcb21TextureDatabaseFormat"));
             SET_TO(RegisterTextureDB,           aml->GetSym(pGTASA, "_ZN22TextureDatabaseRuntime8RegisterEPS_"));
+            SET_TO(UnregisterTextureDB,         aml->GetSym(pGTASA, "_ZN22TextureDatabaseRuntime10UnregisterEPS_"));
             SET_TO(GetTextureFromTextureDB,     aml->GetSym(pGTASA, "_ZN22TextureDatabaseRuntime10GetTextureEPKc"));
             SET_TO(AddImageToList,              aml->GetSym(pGTASA, "_ZN10CStreaming14AddImageToListEPKcb"));
+            SET_TO(SetPlantModelsTab,           aml->GetSym(pGTASA, "_ZN14CGrassRenderer17SetPlantModelsTabEjPP8RpAtomic"));
+            SET_TO(SetCloseFarAlphaDist,        aml->GetSym(pGTASA, "_ZN14CGrassRenderer20SetCloseFarAlphaDistEff"));
 
+            SET_TO(PC_PlantSlotTextureTab,      aml->GetSym(pGTASA, "_ZN9CPlantMgr22PC_PlantSlotTextureTabE"));
             SET_TO(PC_PlantTextureTab0,         aml->GetSym(pGTASA, "_ZN9CPlantMgr19PC_PlantTextureTab0E"));
             SET_TO(PC_PlantTextureTab1,         aml->GetSym(pGTASA, "_ZN9CPlantMgr19PC_PlantTextureTab1E"));
-            //HOOK(PlantMgrInit,                  aml->GetSym(pGTASA, "_ZN9CPlantMgr10InitialiseEv"));
+            SET_TO(PC_PlantModelSlotTab,        aml->GetSym(pGTASA, "_ZN9CPlantMgr20PC_PlantModelSlotTabE"));
+            SET_TO(PC_PlantModelsTab0,          aml->GetSym(pGTASA, "_ZN9CPlantMgr18PC_PlantModelsTab0E"));
+            SET_TO(PC_PlantModelsTab1,          aml->GetSym(pGTASA, "_ZN9CPlantMgr18PC_PlantModelsTab1E"));
+
+            SET_TO(RwStreamOpen,                aml->GetSym(pGTASA, "_Z12RwStreamOpen12RwStreamType18RwStreamAccessTypePKv"));
+            SET_TO(RwStreamFindChunk,           aml->GetSym(pGTASA, "_Z17RwStreamFindChunkP8RwStreamjPjS1_"));
+            SET_TO(RpClumpStreamRead,           aml->GetSym(pGTASA, "_Z17RpClumpStreamReadP8RwStream"));
+            SET_TO(RwStreamClose,               aml->GetSym(pGTASA, "_Z13RwStreamCloseP8RwStreamPv"));
+            SET_TO(GetFirstAtomic,              aml->GetSym(pGTASA, "_Z14GetFirstAtomicP7RpClump"));
+            SET_TO(SetFilterModeOnAtomicsTextures, aml->GetSym(pGTASA, "_Z30SetFilterModeOnAtomicsTexturesP8RpAtomic19RwTextureFilterMode"));
+            SET_TO(RpGeometryLock,              aml->GetSym(pGTASA, "_Z14RpGeometryLockP10RpGeometryi"));
+            SET_TO(RpGeometryUnlock,            aml->GetSym(pGTASA, "_Z16RpGeometryUnlockP10RpGeometry"));
+            SET_TO(RpGeometryForAllMaterials,   aml->GetSym(pGTASA, "_Z25RpGeometryForAllMaterialsP10RpGeometryPFP10RpMaterialS2_PvES3_"));
+            SET_TO(RpMaterialSetTexture,        aml->GetSym(pGTASA, "_Z20RpMaterialSetTextureP10RpMaterialP9RwTexture"));
+            SET_TO(RpAtomicClone,               aml->GetSym(pGTASA, "_Z13RpAtomicCloneP8RpAtomic"));
+            SET_TO(RpClumpDestroy,              aml->GetSym(pGTASA, "_Z14RpClumpDestroyP7RpClump"));
+            SET_TO(RwFrameCreate,               aml->GetSym(pGTASA, "_Z13RwFrameCreatev"));
+            SET_TO(RpAtomicSetFrame,            aml->GetSym(pGTASA, "_Z16RpAtomicSetFrameP8RpAtomicP7RwFrame"));
+
+            HOOKPLT(PlantMgrInit,               pGTASAAddr + 0x673C90);
+            HOOKPLT(PlantMgrRender,             pGTASAAddr + 0x6726D0);
         }
     }
 

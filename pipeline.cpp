@@ -2,7 +2,6 @@
 #include <mod/logger.h>
 #include <mod/config.h>
 #include <gtasa_things.h>
-#include "GTASA_STRUCTS.h"
 
 #include "pipeline.h"
 
@@ -56,7 +55,6 @@ void (*ppline_SetEnvMap)(void*, float, int);
 
 ePipelineDualpassWay pipelineWay = DPWay_Default;
 
-
 int CCustomBuildingDNPipeline__CustomPipeInstanceCB_SkyGfx(void* object, RxOpenGLMeshInstanceData* meshData, int, int reinstance)
 {
     // Still nothing because PC's Pipe and Mobile's are COMPLETELY different :(
@@ -72,10 +70,11 @@ void CCustomBuildingDNPipeline__CustomPipeRenderCB_SkyGfx(RwResEntry* entry, voi
     while(--numMeshes >= 0)
     {
         RpMaterial* material = meshData->m_pMaterial;
-        int alpha = material->color.alpha, vertexColor = meshData->m_nVertexColor, alphafunc;
-        bool hasAlphaVertexEnabled = !(vertexColor==0 && alpha==255),
-            hasEnvMap = false;
-        if(hasAlphaVertexEnabled && alpha == 0) return;
+        uint8_t alpha = material->color.alpha;
+        int vertexColor = meshData->m_nVertexColor, alphafunc;
+        bool hasAlphaVertexEnabled = !(vertexColor==0 && alpha==255);
+
+        if(hasAlphaVertexEnabled && alpha == 0) return; // Fully invisible
 
         if(hasAlphaVertexEnabled) ppline_EnableAlphaModulate(0.00392156862f * alpha);
         _rwOpenGLSetRenderState(rwRENDERSTATEVERTEXALPHAENABLE, hasAlphaVertexEnabled);
@@ -93,7 +92,7 @@ void CCustomBuildingDNPipeline__CustomPipeRenderCB_SkyGfx(RwResEntry* entry, voi
             if(!(flags & rxGEOMETRY_PRELIT)) ppline_glColor4fv(rwOpenGLOpaqueBlack);
         }
 
-        hasEnvMap = material->surfaceProps.specular != 0;
+        bool hasEnvMap = material->surfaceProps.specular != 0;
         if(hasEnvMap)
         {
             int v15 = *(int*)((int)material + *ms_envMapPluginOffset);

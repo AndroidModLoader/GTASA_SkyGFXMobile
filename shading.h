@@ -1,5 +1,3 @@
-#include "GTASA_STRUCTS.h"
-
 #include <GLES2/gl2.h>
 #define GL_AMBIENT 0x1200
 #define GL_DIFFUSE 0x1201

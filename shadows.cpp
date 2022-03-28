@@ -2,7 +2,6 @@
 #include <mod/logger.h>
 #include <mod/config.h>
 #include <gtasa_things.h>
-#include "GTASA_STRUCTS.h"
 #include <shadows.h>
 #include <stdlib.h>
 

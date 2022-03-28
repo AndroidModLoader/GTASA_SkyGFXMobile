@@ -4,7 +4,6 @@
 #include <mod/config.h>
 
 #include <gtasa_things.h>
-#include "GTASA_STRUCTS.h"
 
 #include <fastcat.h>
 #include <shader.h>

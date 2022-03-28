@@ -1,5 +1,4 @@
 #include <mod/amlmod.h>
-#include "GTASA_STRUCTS.h"
 
 #define GRAIN_EFFECT_SCALE            0.75f
 #define GRAIN_NIGHTVISION_STRENGTH    48
