@@ -23,11 +23,12 @@ void              (*DrawStoredMeshData)(RxOpenGLMeshInstanceData*);
 void              (*ResetEnvMap)();
 
 extern ConfigEntry* pPS2PipelineRenderWay;
-const char* pPipelineSettings[3] = 
+const char* pPipelineSettings[4] = 
 {
-    "SinglePass",
-    "DualPass for Alpha",
-    "DualPass for Everything",
+    "Disabled",
+    "For Alpha",
+    "For Everything",
+    "For Last Meshes",
 };
 void PipelineChanged(int oldVal, int newVal)
 {
@@ -72,9 +73,9 @@ void CCustomBuildingDNPipeline__CustomPipeRenderCB_SkyGfx(RwResEntry* entry, voi
         RpMaterial* material = meshData->m_pMaterial;
         uint8_t alpha = material->color.alpha;
         int vertexColor = meshData->m_nVertexColor, alphafunc;
-        bool hasAlphaVertexEnabled = !(vertexColor==0 && alpha==255);
+        bool hasAlphaVertexEnabled = vertexColor || alpha != 255;
 
-        if(hasAlphaVertexEnabled && alpha == 0) return; // Fully invisible
+        if(hasAlphaVertexEnabled && alpha == 0) continue; // Fully invisible
 
         if(hasAlphaVertexEnabled) ppline_EnableAlphaModulate(0.00392156862f * alpha);
         _rwOpenGLSetRenderState(rwRENDERSTATEVERTEXALPHAENABLE, hasAlphaVertexEnabled);
@@ -92,12 +93,13 @@ void CCustomBuildingDNPipeline__CustomPipeRenderCB_SkyGfx(RwResEntry* entry, voi
             if(!(flags & rxGEOMETRY_PRELIT)) ppline_glColor4fv(rwOpenGLOpaqueBlack);
         }
 
-        bool hasEnvMap = material->surfaceProps.specular != 0;
+        bool hasEnvMap = *(int*)&material->surfaceProps.specular & 1;
+        //bool hasEnvMap = material->surfaceProps.specular != 0;
         if(hasEnvMap)
         {
             int v15 = *(int*)((int)material + *ms_envMapPluginOffset);
-            int v17 = *(int*)(v15 + 8);
-            *(char*)(v17 + 81) = 17;
+            RwTexture* v17 = *(RwTexture**)(v15 + 8);
+            v17->filterMode2 = 17;
             ppline_SetEnvMap(*(void **)(*(int*)v17 + *ppline_RasterExtOffset), *(uint8_t*)(v15 + 4) * 0.0058824f, 0);
             SetNormalMatrix(*(char*)(v15 + 0) * 0.125f, *(char*)(v15 + 1) * 0.125f, RwV2d(0, 0));
             *byte_70BF3C = 0;
@@ -117,7 +119,7 @@ void CCustomBuildingDNPipeline__CustomPipeRenderCB_SkyGfx(RwResEntry* entry, voi
         else
         {
             _rwOpenGLSetRenderStateNoExtras(rwRENDERSTATETEXTURERASTER, (void*)material->texture->raster);
-            _rwOpenGLSetRenderState(rwRENDERSTATETEXTUREFILTER, RwTextureGetFilterModeMacro(material->texture));
+            _rwOpenGLSetRenderState(rwRENDERSTATETEXTUREFILTER, material->texture->filterMode);
             switch(pipelineWay)
             {
                 default:
@@ -143,6 +145,22 @@ void CCustomBuildingDNPipeline__CustomPipeRenderCB_SkyGfx(RwResEntry* entry, voi
                     break;
 
                 case DPWay_Everything:
+                    _rwOpenGLGetRenderState(rwRENDERSTATEALPHATESTFUNCTION, &alphafunc);
+                    _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, rwALPHATESTFUNCTIONGREATEREQUAL);
+                    DrawStoredMeshData(meshData);
+                    _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, rwALPHATESTFUNCTIONLESS);
+                    _rwOpenGLSetRenderState(rwRENDERSTATEZWRITEENABLE, false);
+                    DrawStoredMeshData(meshData);
+                    _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, alphafunc);
+                    _rwOpenGLSetRenderState(rwRENDERSTATEZWRITEENABLE, true);
+                    break;
+
+                case DPWay_LastMesh:
+                    if(numMeshes > 1)
+                    {
+                        DrawStoredMeshData(meshData);
+                        break;
+                    }
                     _rwOpenGLGetRenderState(rwRENDERSTATEALPHATESTFUNCTION, &alphafunc);
                     _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, rwALPHATESTFUNCTIONGREATEREQUAL);
                     DrawStoredMeshData(meshData);

@@ -43,3 +43,8 @@ extern RpAtomic* (*RpAtomicClone)(RpAtomic*);
 extern void (*RpClumpDestroy)(RpClump*);
 extern RwFrame* (*RwFrameCreate)();
 extern void (*RpAtomicSetFrame)(RpAtomic*, RwFrame*);
+
+extern void (*PlantMgr_rwOpenGLSetRenderState)(RwRenderState, int);
+extern bool (*IsSphereVisibleForCamera)(CCamera*, const CVector*, float);
+extern void (*AddTriPlant)(PPTriPlant*, unsigned int);
+extern CCamera* PlantMgr_TheCamera;

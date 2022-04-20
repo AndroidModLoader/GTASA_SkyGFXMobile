@@ -68,26 +68,18 @@ uintptr_t pGTASAAddr = 0;
 void Redirect(uintptr_t addr, uintptr_t to)
 {
     if(!addr) return;
+    uint32_t hook[2] = {0xE51FF004, to};
     if(addr & 1)
     {
         addr &= ~1;
         if (addr & 2)
         {
-            aml->PlaceNOP(addr, 1);
+            aml->PlaceNOP(addr, 1); 
             addr += 2;
         }
-        uint32_t hook[2];
         hook[0] = 0xF000F8DF;
-        hook[1] = to;
-        aml->Write(addr, (uintptr_t)hook, sizeof(hook));
     }
-    else
-    {
-        uint32_t hook[2];
-        hook[0] = 0xE51FF004;
-        hook[1] = to;
-        aml->Write(addr, (uintptr_t)hook, sizeof(hook));
-    }
+    aml->Write(addr, (uintptr_t)hook, sizeof(hook));
 }
 ////////////////////////////////////////////////////////////////////////
 // Was taken from TheOfficialFloW's git repo (will be in AML 1.0.0.6) //
@@ -176,6 +168,11 @@ const char* VehicleShadowDistanceDraw(int nNewValue)
     static char ret[12];
     sprintf(ret, "%.2fm", 0.01f * nNewValue);
     return ret;
+}
+
+DECL_HOOKv(PlantLocTriAdd)
+{
+    logger->Info("PlantLocTriAdd");
 }
 
 extern "C" void OnModLoad()
@@ -382,7 +379,7 @@ extern "C" void OnModLoad()
         SET_TO(ppline_glDisable,                aml->GetSym(pGTASA, "_Z13emu_glDisablej"));
         SET_TO(ppline_glColor4fv,               aml->GetSym(pGTASA, "_Z14emu_glColor4fvPKf"));
         SET_TO(ppline_SetEnvMap,                aml->GetSym(pGTASA, "_Z13emu_SetEnvMapPvfi"));
-        if(sautils != NULL) sautils->AddClickableItem(Display, "Pipeline Pass-type", pipelineWay, 0, sizeofA(pPipelineSettings)-1, pPipelineSettings, PipelineChanged);
+        if(sautils != NULL) sautils->AddClickableItem(Display, "Building DualPass", pipelineWay, 0, sizeofA(pPipelineSettings)-1, pPipelineSettings, PipelineChanged);
 
         Redirect(aml->GetSym(pGTASA, "_ZN25CCustomBuildingDNPipeline19CreateCustomObjPipeEv"), (uintptr_t)CCustomBuildingDNPipeline_CreateCustomObjPipe_SkyGfx);
 
@@ -513,8 +510,14 @@ extern "C" void OnModLoad()
             SET_TO(RwFrameCreate,               aml->GetSym(pGTASA, "_Z13RwFrameCreatev"));
             SET_TO(RpAtomicSetFrame,            aml->GetSym(pGTASA, "_Z16RpAtomicSetFrameP8RpAtomicP7RwFrame"));
 
+            SET_TO(PlantMgr_rwOpenGLSetRenderState, aml->GetSym(pGTASA, "_Z23_rwOpenGLSetRenderState13RwRenderStatePv"));
+            SET_TO(IsSphereVisibleForCamera,    aml->GetSym(pGTASA, "_ZN7CCamera15IsSphereVisibleERK7CVectorf"));
+            SET_TO(AddTriPlant,                 aml->GetSym(pGTASA, "_ZN14CGrassRenderer11AddTriPlantEP10PPTriPlantj"));
+            SET_TO(PlantMgr_TheCamera,          aml->GetSym(pGTASA, "TheCamera"));
+
             HOOKPLT(PlantMgrInit,               pGTASAAddr + 0x673C90);
             HOOKPLT(PlantMgrRender,             pGTASAAddr + 0x6726D0);
+            //HOOKPLT(PlantLocTriAdd,             pGTASAAddr + 0x675504);
         }
     }
 

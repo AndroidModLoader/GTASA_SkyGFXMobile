@@ -306,7 +306,55 @@ DECL_HOOKv(PlantMgrInit)
     logger->Info("CPlantMgr::Initialise()");
     InitPlantManager();
 }
+
+#define DDDAFSF 4
+void (*PlantMgr_rwOpenGLSetRenderState)(RwRenderState, int);
+bool (*IsSphereVisibleForCamera)(CCamera*, const CVector*, float);
+void (*AddTriPlant)(PPTriPlant*, unsigned int);
+CPlantLocTri* m_CloseLocTriListHead[DDDAFSF];
+CCamera* PlantMgr_TheCamera;
+
 DECL_HOOKv(PlantMgrRender)
 {
-    logger->Info("CPlantMgr::Render");
+    PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEZWRITEENABLE, 0);
+    PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEZTESTENABLE, 1u);
+    PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEVERTEXALPHAENABLE, 1u);
+    PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATESRCBLEND, 5u);
+    PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEDESTBLEND, 6u);
+    PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEFOGENABLE, 1u);
+    PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTIONREF, 0);
+    PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, 8u);
+
+    for(int type = 0; type < DDDAFSF; ++type)
+    {
+        static PPTriPlant plant = {0}; 
+        CPlantLocTri* plantTris = m_CloseLocTriListHead[type];
+        RwTexture** grassTex = PC_PlantSlotTextureTab[type];
+        logger->Info("Type: %d, PlantTris: 0x%X, grassTex: 0x%X", (int)type, plantTris, grassTex);
+
+        plant.pos.x = 20.0f;
+        plant.pos.y = 20.0f;
+        plant.pos.z = 20.0f;
+        plant.texture = grassTex[0];
+        AddTriPlant(&plant, type);
+
+        while(plantTris != NULL)
+        {
+            Surface* surface = GetSurfacePtr(plantTris->surfaceId);
+            if(IsSphereVisibleForCamera(PlantMgr_TheCamera, &plantTris->pos, plantTris->radius))
+            {
+                SurfaceProperty& surfProp = surface->m_aSurfaceProperties[0];
+                if(surfProp.m_nModelId != -1)
+                {
+                    
+                }
+            }
+            plantTris = plantTris->nextPlant;
+        }
+    }
+
+    PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEZWRITEENABLE, 1u);
+    PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEZTESTENABLE, 1u);
+    PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, 7u);
+    PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTIONREF, 0);
 }
