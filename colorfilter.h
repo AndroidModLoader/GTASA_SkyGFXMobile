@@ -1,4 +1,4 @@
-extern uintptr_t pGTASAAddr_Colorfilter;
+extern uintptr_t pGTASA_Colorfilter;
 
 extern const char* pColorFilterSettings[4];
 void ColorFilter_stub(void);

@@ -1200,9 +1200,9 @@ DECL_HOOK(int, RQShaderBuildSource, int flags, char **pxlsrc, char **vtxsrc)
 
 void PatchShaders()
 {
-    SET_TO(GetMobileEffectSetting,          aml->GetSym(pGTASA, "_Z22GetMobileEffectSettingv"));
-    SET_TO(RQCaps,                          aml->GetSym(pGTASA, "RQCaps"));
-    SET_TO(RQMaxBones,                      aml->GetSym(pGTASA, "RQMaxBones"));
-    SET_TO(deviceChip,                      aml->GetSym(pGTASA, "deviceChip"));
-    HOOK(RQShaderBuildSource,               aml->GetSym(pGTASA, "_ZN8RQShader11BuildSourceEjPPKcS2_"));
+    SET_TO(GetMobileEffectSetting,          aml->GetSym(hGTASA, "_Z22GetMobileEffectSettingv"));
+    SET_TO(RQCaps,                          aml->GetSym(hGTASA, "RQCaps"));
+    SET_TO(RQMaxBones,                      aml->GetSym(hGTASA, "RQMaxBones"));
+    SET_TO(deviceChip,                      aml->GetSym(hGTASA, "deviceChip"));
+    HOOK(RQShaderBuildSource,               aml->GetSym(hGTASA, "_ZN8RQShader11BuildSourceEjPPKcS2_"));
 }

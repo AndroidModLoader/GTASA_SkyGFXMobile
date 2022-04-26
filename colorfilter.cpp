@@ -4,7 +4,7 @@
 #include "colorfilter.h"
 #include "arm_neon.h"
 
-uintptr_t pGTASAAddr_Colorfilter = 0;
+uintptr_t pGTASA_Colorfilter = 0;
 int nColorFilter = 0;
 extern ConfigEntry* pColorfilter;
 const char* pColorFilterSettings[4] = 
@@ -125,6 +125,6 @@ __attribute__((optnone)) __attribute__((naked)) void ColorFilter_stub(void)
                         // (i think it`s dumb way)
         "pop {r0-r11}\n"
         "bx r12\n"
-      :: "r" (pGTASAAddr_Colorfilter)
+      :: "r" (pGTASA_Colorfilter)
     );
 }

@@ -194,8 +194,8 @@ RxPipeline* CCustomBuildingDNPipeline_CreateCustomObjPipe_SkyGfx()
     }
     RxPipelineNode* NodeByName = RxPipelineFindNodeByName(pipeline, OpenGLAtomicAllInOne->name, 0, 0);
 
-    RxOpenGLAllInOneSetInstanceCallBack(NodeByName, (void*)aml->GetSym(pGTASA, "_ZN25CCustomBuildingDNPipeline20CustomPipeInstanceCBEPvP24RxOpenGLMeshInstanceDataii")); // ORG
-    //RxOpenGLAllInOneSetRenderCallBack(NodeByName, (void*)aml->GetSym(pGTASA, "_ZN25CCustomBuildingDNPipeline18CustomPipeRenderCBEP10RwResEntryPvhj")); // ORG
+    RxOpenGLAllInOneSetInstanceCallBack(NodeByName, (void*)aml->GetSym(hGTASA, "_ZN25CCustomBuildingDNPipeline20CustomPipeInstanceCBEPvP24RxOpenGLMeshInstanceDataii")); // ORG
+    //RxOpenGLAllInOneSetRenderCallBack(NodeByName, (void*)aml->GetSym(hGTASA, "_ZN25CCustomBuildingDNPipeline18CustomPipeRenderCBEP10RwResEntryPvhj")); // ORG
 
     //RxOpenGLAllInOneSetInstanceCallBack(NodeByName, (void*)CCustomBuildingDNPipeline__CustomPipeInstanceCB_SkyGfx); // SkyGfx // Vertex
     RxOpenGLAllInOneSetRenderCallBack(NodeByName, (void*)CCustomBuildingDNPipeline__CustomPipeRenderCB_SkyGfx); // SkyGfx // Fragment

@@ -103,7 +103,7 @@ DECL_HOOKv(InitialisePostEffects)
 
 
 // PostEffects
-uintptr_t pGTASAAddr_MobileEffectsRender = 0;
+uintptr_t pGTASA_MobileEffectsRender = 0;
 int nRainGrain = 0;
 extern "C" void MobileEffectsRender()
 {
@@ -144,7 +144,7 @@ extern "C" void MobileEffectsRender()
     // Original
     if(*pbCCTV) RenderCCTVPostEffect(); // CCTV
 }
-uintptr_t pGTASAAddr_EffectsRender = 0;
+uintptr_t pGTASA_EffectsRender = 0;
 uintptr_t* pdword_952880;
 extern "C" void EffectsRender()
 {
@@ -167,7 +167,7 @@ __attribute__((optnone)) __attribute__((naked)) void MobileEffectsRender_stub(vo
         "mov r12, %0\n"
         "pop {r0-r11}\n"
         "bx r12\n"
-    :: "r" (pGTASAAddr_MobileEffectsRender));
+    :: "r" (pGTASA_MobileEffectsRender));
 }
 __attribute__((optnone)) __attribute__((naked)) void EffectsRender_stub(void)
 {
@@ -180,15 +180,15 @@ __attribute__((optnone)) __attribute__((naked)) void EffectsRender_stub(void)
         "mov r12, %0\n"
         "pop {r0-r11}\n"
         "bx r12\n"
-    :: "r" (pGTASAAddr_EffectsRender));
+    :: "r" (pGTASA_EffectsRender));
 }
 
 uintptr_t retTo;
 extern ConfigEntry* pWaterFogBlocksLimits;
 extern "C" void SetUpWaterFog()
 {
-    if(*(int*)(pGTASAAddr + 0xA1DC9C) >= pWaterFogBlocksLimits->GetInt()) retTo = pGTASAAddr + 0x59A0DC + 0x1;
-    else retTo = pGTASAAddr + 0x599FC0 + 0x1;
+    if(*(int*)(pGTASA + 0xA1DC9C) >= pWaterFogBlocksLimits->GetInt()) retTo = pGTASA + 0x59A0DC + 0x1;
+    else retTo = pGTASA + 0x599FC0 + 0x1;
 }
 
 __attribute__((optnone)) __attribute__((naked)) void SetUpWaterFog_stub(void)

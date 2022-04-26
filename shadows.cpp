@@ -19,26 +19,26 @@ void PatchShadows()
 {
     // Static shadows?
     asShadowsStored_NEW = new CRegisteredShadow[0xFF];
-    aml->Write(pGTASAAddr + 0x677BEC, (uintptr_t)&asShadowsStored_NEW, sizeof(void*));
+    aml->Write(pGTASA + 0x677BEC, (uintptr_t)&asShadowsStored_NEW, sizeof(void*));
     // CShadows::StoreShadowToBeRendered
-    aml->Write(pGTASAAddr + 0x5B929A, (uintptr_t)"\xFE", 1);
-    aml->Write(pGTASAAddr + 0x5B92C0, (uintptr_t)"\xFE", 1);
-    aml->Write(pGTASAAddr + 0x5B92E6, (uintptr_t)"\xFE", 1);
-    aml->Write(pGTASAAddr + 0x5B930A, (uintptr_t)"\xFE", 1);
-    aml->Write(pGTASAAddr + 0x5B932E, (uintptr_t)"\xFE", 1);
-    aml->Write(pGTASAAddr + 0x5B9358, (uintptr_t)"\xFE", 1);
+    aml->Write(pGTASA + 0x5B929A, (uintptr_t)"\xFE", 1);
+    aml->Write(pGTASA + 0x5B92C0, (uintptr_t)"\xFE", 1);
+    aml->Write(pGTASA + 0x5B92E6, (uintptr_t)"\xFE", 1);
+    aml->Write(pGTASA + 0x5B930A, (uintptr_t)"\xFE", 1);
+    aml->Write(pGTASA + 0x5B932E, (uintptr_t)"\xFE", 1);
+    aml->Write(pGTASA + 0x5B9358, (uintptr_t)"\xFE", 1);
     // CShadows::StoreShadowToBeRendered (2nd arg is RwTexture*)
-    aml->Write(pGTASAAddr + 0x5B9444, (uintptr_t)"\xFE", 1);
+    aml->Write(pGTASA + 0x5B9444, (uintptr_t)"\xFE", 1);
     // CShadows::StoreShadowForVehicle
-    aml->Write(pGTASAAddr + 0x5B9BD4, (uintptr_t)"\xFE", 1);
-    aml->Write(pGTASAAddr + 0x5B9B2A, (uintptr_t)"\xFE", 1);
+    aml->Write(pGTASA + 0x5B9BD4, (uintptr_t)"\xFE", 1);
+    aml->Write(pGTASA + 0x5B9B2A, (uintptr_t)"\xFE", 1);
     // CShadows::StoreShadowForPedObject
-    aml->Write(pGTASAAddr + 0x5B9F62, (uintptr_t)"\xFE", 1);
+    aml->Write(pGTASA + 0x5B9F62, (uintptr_t)"\xFE", 1);
     // CShadows::StoreRealTimeShadow
-    aml->Write(pGTASAAddr + 0x5BA29E, (uintptr_t)"\xFE", 1);
+    aml->Write(pGTASA + 0x5BA29E, (uintptr_t)"\xFE", 1);
     // CShadows::RenderExtraPlayerShadows
-    aml->Write(pGTASAAddr + 0x5BDDBA, (uintptr_t)"\xFE", 1);
-    aml->Write(pGTASAAddr + 0x5BDD5A, (uintptr_t)"\xFE", 1);
+    aml->Write(pGTASA + 0x5BDDBA, (uintptr_t)"\xFE", 1);
+    aml->Write(pGTASA + 0x5BDD5A, (uintptr_t)"\xFE", 1);
 
     logger->Info("Static shadows storage has been bumped!");
 }
@@ -74,13 +74,13 @@ void RTShadows()
     
     if(pDynamicObjectsShadows->GetBool())
     {
-        SET_TO(ObjectPreRender_jumpto,        pGTASAAddr + 0x454E60 + 0x1);
-        SET_TO(EntityPreRender,               aml->GetSym(pGTASA, "_ZN7CEntity9PreRenderEv"));
-        Redirect(pGTASAAddr + 0x454E56 + 0x1, (uintptr_t)ObjectPreRender_stub); // Add shadows for OBJECTs
-        aml->PlaceRET(aml->GetSym(pGTASA,     "_ZN8CShadows18StoreShadowForPoleEP7CEntityfffffj") & ~1); // Disable static pole shadows
+        SET_TO(ObjectPreRender_jumpto,        pGTASA + 0x454E60 + 0x1);
+        SET_TO(EntityPreRender,               aml->GetSym(hGTASA, "_ZN7CEntity9PreRenderEv"));
+        Redirect(pGTASA + 0x454E56 + 0x1, (uintptr_t)ObjectPreRender_stub); // Add shadows for OBJECTs
+        aml->PlaceRET(aml->GetSym(hGTASA,     "_ZN8CShadows18StoreShadowForPoleEP7CEntityfffffj") & ~1); // Disable static pole shadows
         // Fixing weird crashes...
-        HOOKPLT(RTShadowUpdate,               pGTASAAddr + 0x6759E4);
-        aml->PlaceRET(aml->GetSym(pGTASA,     "_ZN22CRealTimeShadowManager20ReturnRealTimeShadowEP15CRealTimeShadow") & ~1);
-        Redirect(pGTASAAddr + 0x454D58 + 0x1, pGTASAAddr + 0x454DD4 + 0x1); // Removed StoreShadowToBeRendered from Object::PreRender
+        HOOKPLT(RTShadowUpdate,               pGTASA + 0x6759E4);
+        aml->PlaceRET(aml->GetSym(hGTASA,     "_ZN22CRealTimeShadowManager20ReturnRealTimeShadowEP15CRealTimeShadow") & ~1);
+        Redirect(pGTASA + 0x454D58 + 0x1, pGTASA + 0x454DD4 + 0x1); // Removed StoreShadowToBeRendered from Object::PreRender
     }
 }

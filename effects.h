@@ -21,8 +21,8 @@ extern void (*RenderCCTVPostEffect)();
 
 extern uintptr_t pg_fx;
 extern uintptr_t pFxCamera;
-extern uintptr_t pGTASAAddr_MobileEffectsRender;
-extern uintptr_t pGTASAAddr_EffectsRender;
+extern uintptr_t pGTASA_MobileEffectsRender;
+extern uintptr_t pGTASA_EffectsRender;
 extern uintptr_t* pdword_952880;
 extern bool* pbCCTV;
 extern bool* pbFog;
