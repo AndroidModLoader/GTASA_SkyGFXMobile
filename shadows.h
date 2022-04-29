@@ -40,7 +40,6 @@ extern CRealTimeShadowManager_NEW* g_realTimeShadowMan;
 
 #pragma pack(pop)
 
-void PatchShadows();
 void RTShadows();
 void PatchRTShadowMan();
 void DoShadowThisFrame(CRealTimeShadowManager_NEW* self, CPhysical* physical);

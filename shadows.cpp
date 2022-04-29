@@ -12,36 +12,7 @@ extern ConfigEntry* pAllowPlayerClassicShadow;
 
 CRegisteredShadow* asShadowsStored_NEW;
 void (*EntityPreRender)(CEntity* entity);
-
 uintptr_t ObjectPreRender_jumpto;
-
-void PatchShadows()
-{
-    // Static shadows?
-    asShadowsStored_NEW = new CRegisteredShadow[0xFF];
-    aml->Write(pGTASA + 0x677BEC, (uintptr_t)&asShadowsStored_NEW, sizeof(void*));
-    // CShadows::StoreShadowToBeRendered
-    aml->Write(pGTASA + 0x5B929A, (uintptr_t)"\xFE", 1);
-    aml->Write(pGTASA + 0x5B92C0, (uintptr_t)"\xFE", 1);
-    aml->Write(pGTASA + 0x5B92E6, (uintptr_t)"\xFE", 1);
-    aml->Write(pGTASA + 0x5B930A, (uintptr_t)"\xFE", 1);
-    aml->Write(pGTASA + 0x5B932E, (uintptr_t)"\xFE", 1);
-    aml->Write(pGTASA + 0x5B9358, (uintptr_t)"\xFE", 1);
-    // CShadows::StoreShadowToBeRendered (2nd arg is RwTexture*)
-    aml->Write(pGTASA + 0x5B9444, (uintptr_t)"\xFE", 1);
-    // CShadows::StoreShadowForVehicle
-    aml->Write(pGTASA + 0x5B9BD4, (uintptr_t)"\xFE", 1);
-    aml->Write(pGTASA + 0x5B9B2A, (uintptr_t)"\xFE", 1);
-    // CShadows::StoreShadowForPedObject
-    aml->Write(pGTASA + 0x5B9F62, (uintptr_t)"\xFE", 1);
-    // CShadows::StoreRealTimeShadow
-    aml->Write(pGTASA + 0x5BA29E, (uintptr_t)"\xFE", 1);
-    // CShadows::RenderExtraPlayerShadows
-    aml->Write(pGTASA + 0x5BDDBA, (uintptr_t)"\xFE", 1);
-    aml->Write(pGTASA + 0x5BDD5A, (uintptr_t)"\xFE", 1);
-
-    logger->Info("Static shadows storage has been bumped!");
-}
 
 extern int *RTShadowsQuality;
 extern "C" void ObjectPreRenderPatch(CObject* object)

@@ -1,7 +1,4 @@
 extern int* deviceChip;
-extern int* RasterExtOffset;
-extern int* detailTexturesStorage;
-extern int* textureDetail;
 extern float *openglAmbientLight;
 extern float _rwOpenGLOpaqueBlack[4];
 extern RwInt32 *p_rwOpenGLColorMaterialEnabled;
@@ -13,7 +10,7 @@ extern uint8_t *p_CWeather__LightningFlash;
 extern float *skin_map;
 extern int *skin_dirty;
 extern int *skin_num;
-extern int (* GetMobileEffectSetting)();
+extern int (*GetMobileEffectSetting)();
 
 #define FLAG_ALPHA_TEST           0x01
 #define FLAG_LIGHTING             0x02

@@ -31,8 +31,6 @@ ConfigEntry* pPS2Shading;
 ConfigEntry* pPS2Reflections;
 ConfigEntry* pColorfilter;
 ConfigEntry* pDisableDetailTexture;
-ConfigEntry* pFixGreenDetailTexture;
-ConfigEntry* pFixMipMaps;
 ConfigEntry* pDontShadeUnexploredMap;
 ConfigEntry* pDisableClouds;
 ConfigEntry* pPS2Pipeline;
@@ -95,29 +93,6 @@ DECL_HOOKv(InitRW)
     InitRW();
 }
 
-#define GREEN_TEXTURE_ID 14
-inline void* GetDetailTexturePtr(int texId)
-{
-    return *(void**)(**(int**)(*detailTexturesStorage + 4 * (texId-1)) + *RasterExtOffset);
-}
-
-DECL_HOOKv(emu_TextureSetDetailTexture, void* texture, unsigned int tilingScale)
-{
-    if(texture == NULL)
-    {
-        emu_TextureSetDetailTexture(NULL, 0);
-        return;
-    }
-    if(texture == GetDetailTexturePtr(GREEN_TEXTURE_ID))
-    {
-        *textureDetail = 0;
-        emu_TextureSetDetailTexture(NULL, 0);
-        return;
-    }
-    emu_TextureSetDetailTexture(texture, tilingScale);
-    *textureDetail = 1;
-}
-
 int emu_InternalSkinGetVectorCount(void)
 {
     return 4 * *skin_num;
@@ -177,6 +152,12 @@ extern "C" void OnModLoad()
     pGTASA = aml->GetLib("libGTASA.so");
     sautils = (ISAUtils*)GetInterface("SAUtils");
 // Config
+    cfg->Bind("Author", "", "About")->SetString("[-=KILL MAN=-]");
+    cfg->Bind("IdeasFrom", "", "About")->SetString("aap, TheOfficialFloW");
+    cfg->Bind("Discord", "", "About")->SetString("https://discord.gg/2MY7W39kBg");
+    cfg->Bind("GitHub", "", "About")->SetString("https://github.com/AndroidModLoader/GTASA_SkyGfxMobile");
+    cfg->Save();
+
     // Config: Render
     //pBonesOptimization = cfg->Bind("BonesOptim", false);
     //pMVPOptimization = cfg->Bind("MVPOptim", false);
@@ -186,7 +167,6 @@ extern "C" void OnModLoad()
     pPS2Reflections = cfg->Bind("PS2_Reflections", true, "Render");
     pColorfilter = cfg->Bind("Colorfilter", "ps2", "Render");
     pDisableDetailTexture = cfg->Bind("DisableDetailTexture", false, "Render");
-    pFixGreenDetailTexture = cfg->Bind("FixGreenDetailTexture", true, "Render");
     pDontShadeUnexploredMap = cfg->Bind("DontShadeUnexploredMap", false, "Render");
     pDisableClouds = cfg->Bind("DisableClouds", false, "Render");
     pPS2Pipeline = cfg->Bind("PS2_Pipeline", true, "Render");
@@ -262,7 +242,9 @@ extern "C" void OnModLoad()
         SET_TO(emu_glColorMaterial,             aml->GetSym(hGTASA, "_Z19emu_glColorMaterialjj"));
         SET_TO(emu_glEnable,                    aml->GetSym(hGTASA, "_Z12emu_glEnablej"));
         SET_TO(emu_glDisable,                   aml->GetSym(hGTASA, "_Z13emu_glDisablej"));
-        Redirect(aml->GetSym(hGTASA, "_Z36_rwOpenGLLightsSetMaterialPropertiesPK10RpMaterialj"), (uintptr_t)_rwOpenGLLightsSetMaterialProperties);
+        #ifdef NEW_LIGHTING
+            Redirect(aml->GetSym(hGTASA, "_Z36_rwOpenGLLightsSetMaterialPropertiesPK10RpMaterialj"), (uintptr_t)_rwOpenGLLightsSetMaterialProperties);
+        #endif // NEW_LIGHTING
         Redirect(aml->GetSym(hGTASA, "_Z28SetLightsWithTimeOfDayColourP7RpWorld"), (uintptr_t)SetLightsWithTimeOfDayColour);
         // Bones Optim (for SkyGfx shaders only, not yet, doesnt draw ped models)
         /*if(pBonesOptimization->GetBool())
@@ -289,15 +271,6 @@ extern "C" void OnModLoad()
     {
         logger->Info("Detail textures are disabled!");
         aml->PlaceRET(pGTASA + 0x1BCBC4);
-    }
-    else if(pFixGreenDetailTexture->GetBool())
-    {
-        logger->Info("Fixing a green detail texture is enabled!");
-        aml->PlaceNOP(pGTASA + 0x1B00B0, 5); // Dont set textureDetail variable! We'll handle it by ourselves!
-        SET_TO(detailTexturesStorage,           aml->GetSym(hGTASA, "_ZN22TextureDatabaseRuntime14detailTexturesE") + 8); // pGTASA + 0x6BD1D8
-        SET_TO(textureDetail,                   aml->GetSym(hGTASA, "textureDetail"));
-        SET_TO(RasterExtOffset,                 aml->GetSym(hGTASA, "RasterExtOffset"));
-        HOOK(emu_TextureSetDetailTexture,       aml->GetSym(hGTASA, "_Z27emu_TextureSetDetailTexturePvj"));
     }
 
     // Color Filter
@@ -509,7 +482,6 @@ extern "C" void OnModLoad()
 
     //if(cfg->Bind("BumpShadowsLimit", false, "Shadows")->GetBool())
     //{
-    //    PatchShadows();
     //    RTShadows();
     //}
 }
