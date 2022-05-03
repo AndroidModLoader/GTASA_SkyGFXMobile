@@ -47,11 +47,11 @@ void RTShadows()
     {
         SET_TO(ObjectPreRender_jumpto,        pGTASA + 0x454E60 + 0x1);
         SET_TO(EntityPreRender,               aml->GetSym(hGTASA, "_ZN7CEntity9PreRenderEv"));
-        Redirect(pGTASA + 0x454E56 + 0x1, (uintptr_t)ObjectPreRender_stub); // Add shadows for OBJECTs
+        aml->Redirect(pGTASA + 0x454E56 + 0x1, (uintptr_t)ObjectPreRender_stub); // Add shadows for OBJECTs
         aml->PlaceRET(aml->GetSym(hGTASA,     "_ZN8CShadows18StoreShadowForPoleEP7CEntityfffffj") & ~1); // Disable static pole shadows
         // Fixing weird crashes...
         HOOKPLT(RTShadowUpdate,               pGTASA + 0x6759E4);
         aml->PlaceRET(aml->GetSym(hGTASA,     "_ZN22CRealTimeShadowManager20ReturnRealTimeShadowEP15CRealTimeShadow") & ~1);
-        Redirect(pGTASA + 0x454D58 + 0x1, pGTASA + 0x454DD4 + 0x1); // Removed StoreShadowToBeRendered from Object::PreRender
+        aml->Redirect(pGTASA + 0x454D58 + 0x1, pGTASA + 0x454DD4 + 0x1); // Removed StoreShadowToBeRendered from Object::PreRender
     }
 }

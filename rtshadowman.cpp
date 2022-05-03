@@ -315,11 +315,11 @@ void PatchRTShadowMan()
     else                                  SET_TO(RTShadowsQuality, pGTASA + 0x6E049C);
 
     aml->Write(pGTASA + 0x679A98, (uintptr_t)&g_realTimeShadowMan, sizeof(void*));
-    Redirect(aml->GetSym(hGTASA, "_ZN22CRealTimeShadowManagerC2Ev"), (uintptr_t)RealTimeShadowManager);
-    Redirect(aml->GetSym(hGTASA, "_ZN22CRealTimeShadowManagerD2Ev"), (uintptr_t)DestructRealTimeShadowManager);
-    Redirect(aml->GetSym(hGTASA, "_ZN22CRealTimeShadowManager4InitEv"), (uintptr_t)InitRealTimeShadowManager);
-    Redirect(aml->GetSym(hGTASA, "_ZN22CRealTimeShadowManager4ExitEv"), (uintptr_t)ExitRealTimeShadowManager);
-    Redirect(aml->GetSym(hGTASA, "_ZN22CRealTimeShadowManager6UpdateEv"), (uintptr_t)UpdateRealTimeShadowManager);
-    Redirect(aml->GetSym(hGTASA, "_ZN22CRealTimeShadowManager20ReturnRealTimeShadowEP15CRealTimeShadow"), (uintptr_t)ReturnRTShadow);
-    Redirect(aml->GetSym(hGTASA, "_ZN22CRealTimeShadowManager17DoShadowThisFrameEP9CPhysical"), (uintptr_t)DoShadowThisFrame);
+    aml->Redirect(aml->GetSym(hGTASA, "_ZN22CRealTimeShadowManagerC2Ev"), (uintptr_t)RealTimeShadowManager);
+    aml->Redirect(aml->GetSym(hGTASA, "_ZN22CRealTimeShadowManagerD2Ev"), (uintptr_t)DestructRealTimeShadowManager);
+    aml->Redirect(aml->GetSym(hGTASA, "_ZN22CRealTimeShadowManager4InitEv"), (uintptr_t)InitRealTimeShadowManager);
+    aml->Redirect(aml->GetSym(hGTASA, "_ZN22CRealTimeShadowManager4ExitEv"), (uintptr_t)ExitRealTimeShadowManager);
+    aml->Redirect(aml->GetSym(hGTASA, "_ZN22CRealTimeShadowManager6UpdateEv"), (uintptr_t)UpdateRealTimeShadowManager);
+    aml->Redirect(aml->GetSym(hGTASA, "_ZN22CRealTimeShadowManager20ReturnRealTimeShadowEP15CRealTimeShadow"), (uintptr_t)ReturnRTShadow);
+    aml->Redirect(aml->GetSym(hGTASA, "_ZN22CRealTimeShadowManager17DoShadowThisFrameEP9CPhysical"), (uintptr_t)DoShadowThisFrame);
 }

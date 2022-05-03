@@ -514,7 +514,7 @@ void BuildVertexSource_SkyGfx(int flags)
     if(!RQCaps->unk_08 && (flags & FLAG_FOG))
     {
         if(pExponentialFog->GetBool()) VTX_EMIT("float fogDist = length(WorldPos.xyz - CameraPosition.xyz);\nOut_FogAmt = clamp(1.0 - exp2(-1.7 * FogDistances.z*FogDistances.z * fogDist*fogDist * 1.442695), 0.0, 1.0);");
-        else VTX_EMIT("Out_FogAmt = clamp((length(WorldPos.xyz - CameraPosition.xyz) - FogDistances.x) * FogDistances.z, 0.0, 0.90);");
+        else VTX_EMIT("Out_FogAmt = clamp((length(WorldPos.xyz - CameraPosition.xyz) - FogDistances.x) * FogDistances.z, 0.0, 0.80);"); // 0.90 ->
     }
 
     const char* _tmp;
@@ -577,9 +577,9 @@ void BuildVertexSource_SkyGfx(int flags)
                 VTX_EMIT("vec3 AmbEmissLight, DiffLight;");
                 if(flags & FLAG_COLOR_EMISSIVE)
                 {
-                    if(flags & FLAG_CAMERA_BASED_NORMALS)
+                    if(flags & FLAG_CAMERA_BASED_NORMALS) // Vegetation
                     {
-                        VTX_EMIT_V("AmbEmissLight += clamp(%s.xyz, 0.0, 0.5);", _tmp);
+                        VTX_EMIT_V("AmbEmissLight += clamp(%s.xyz, 0.0, 0.6);", _tmp); // From 0.5 to 0.6
                     }
                     else
                     {
@@ -594,7 +594,7 @@ void BuildVertexSource_SkyGfx(int flags)
                 VTX_EMIT("vec3 Out_LightingColor;");
                 if(flags & FLAG_COLOR_EMISSIVE)
                 {
-                    if(flags & FLAG_CAMERA_BASED_NORMALS) // 3D markers hack from psvita port
+                    if(flags & (FLAG_LIGHT1 | FLAG_LIGHT2 | FLAG_LIGHT3)) // 3D markers hack from psvita port
                     {
                         VTX_EMIT_V("Out_LightingColor = AmbientLightColor * MaterialAmbient.xyz + %s.xyz * MaterialDiffuse.xyz;", _tmp);
                     }
@@ -683,11 +683,14 @@ void BuildVertexSource_SkyGfx(int flags)
                         VTX_EMIT("Out_Color.w = Color2.w;");
                     else
                         VTX_EMIT("Out_Color.w = GlobalColor.w;");
+                    VTX_EMIT("Out_Color = clamp(Out_Color * ColorScale, 0.0, 1.0);");
                 }
                 else
             #endif // NEW_LIGHTING
-                VTX_EMIT_V("Out_Color = vec4(Out_LightingColor * MaterialDiffuse.xyz, MaterialAmbient.w * %s.w);", _tmp);
-            VTX_EMIT("Out_Color = clamp(Out_Color, 0.0, 1.0);");
+                {
+                    VTX_EMIT_V("Out_Color = vec4(Out_LightingColor * MaterialDiffuse.xyz, MaterialAmbient.w * %s.w);", _tmp);
+                    VTX_EMIT("Out_Color = clamp(Out_Color, 0.0, 1.0);");
+                }
         }
     }
     else if (flags & (FLAG_COLOR | FLAG_LIGHTING))

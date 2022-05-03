@@ -19,8 +19,11 @@
 ISAUtils* sautils = NULL;
 
 #define sizeofA(__aVar)  ((int)(sizeof(__aVar)/sizeof(__aVar[0])))
-MYMODCFG(net.rusjj.skygfxmobile, SkyGfx Mobile Beta, 0.1, aap & TheOfficialFloW & RusJJ)
+MYMODCFG(net.rusjj.skygfxmobile, SkyGfx Mobile Beta, 0.1.1, aap & TheOfficialFloW & RusJJ)
 NEEDGAME(com.rockstargames.gtasa)
+BEGIN_DEPLIST()
+    ADD_DEPENDENCY_VER(net.rusjj.aml, 1.0.0.6)
+END_DEPLIST()
 
 /* Config */
 //ConfigEntry* pBonesOptimization;
@@ -31,7 +34,6 @@ ConfigEntry* pPS2Shading;
 ConfigEntry* pPS2Reflections;
 ConfigEntry* pColorfilter;
 ConfigEntry* pDisableDetailTexture;
-ConfigEntry* pDontShadeUnexploredMap;
 ConfigEntry* pDisableClouds;
 ConfigEntry* pPS2Pipeline;
 ConfigEntry* pPS2PipelineRenderWay;
@@ -150,10 +152,9 @@ extern "C" void OnModLoad()
     pPS2Reflections = cfg->Bind("PS2_Reflections", true, "Render");
     pColorfilter = cfg->Bind("Colorfilter", "ps2", "Render");
     pDisableDetailTexture = cfg->Bind("DisableDetailTexture", false, "Render");
-    pDontShadeUnexploredMap = cfg->Bind("DontShadeUnexploredMap", false, "Render");
     pDisableClouds = cfg->Bind("DisableClouds", false, "Render");
     pPS2Pipeline = cfg->Bind("PS2_Pipeline", true, "Render");
-    pPS2PipelineRenderWay = cfg->Bind("PS2_Pipeline_RenderWay", DPWay_Everything, "Render");
+    pPS2PipelineRenderWay = cfg->Bind("PS2_Pipeline_RenderWay", DPWay_LastMesh, "Render");
     pPlantsDatLoading = cfg->Bind("PlantsDatLoading", false, "Features");
     pProcobjDatLoading = cfg->Bind("ProcObjDatLoading", true, "Features");
     pExponentialFog = cfg->Bind("ExponentialFog", false, "Render"); // Incomplete?
@@ -223,9 +224,12 @@ extern "C" void OnModLoad()
         SET_TO(emu_glDisable,                   aml->GetSym(hGTASA, "_Z13emu_glDisablej"));
         #ifdef NEW_LIGHTING
             pNewShaderLighting = cfg->Bind("PS2_Shading_NewLight", true, "Render");
-            Redirect(aml->GetSym(hGTASA, "_Z36_rwOpenGLLightsSetMaterialPropertiesPK10RpMaterialj"), (uintptr_t)_rwOpenGLLightsSetMaterialProperties);
+            if(pNewShaderLighting->GetBool())
+            {
+                aml->Redirect(aml->GetSym(hGTASA, "_Z36_rwOpenGLLightsSetMaterialPropertiesPK10RpMaterialj"), (uintptr_t)_rwOpenGLLightsSetMaterialProperties);
+                aml->Redirect(aml->GetSym(hGTASA, "_Z28SetLightsWithTimeOfDayColourP7RpWorld"), (uintptr_t)SetLightsWithTimeOfDayColour);
+            }
         #endif // NEW_LIGHTING
-        Redirect(aml->GetSym(hGTASA, "_Z28SetLightsWithTimeOfDayColourP7RpWorld"), (uintptr_t)SetLightsWithTimeOfDayColour);
         // Bones Optim (for SkyGfx shaders only, not yet, doesnt draw ped models)
         /*if(pBonesOptimization->GetBool())
         {
@@ -233,8 +237,8 @@ extern "C" void OnModLoad()
             SET_TO(skin_dirty,                  aml->GetSym(hGTASA, "skin_dirty"));
             SET_TO(skin_num,                    aml->GetSym(hGTASA, "skin_num"));
             aml->Unprot((uintptr_t)skin_map, 0x1800);
-            Redirect(aml->GetSym(hGTASA, "_Z30emu_InternalSkinGetVectorCountv"), (uintptr_t)emu_InternalSkinGetVectorCount);
-            Redirect(pGTASA + 0x1C8670 + 0x1, (uintptr_t)SkinSetMatrices);
+            aml->Redirect(aml->GetSym(hGTASA, "_Z30emu_InternalSkinGetVectorCountv"), (uintptr_t)emu_InternalSkinGetVectorCount);
+            aml->Redirect(pGTASA + 0x1C8670 + 0x1, (uintptr_t)SkinSetMatrices);
         }*/
     }
 
@@ -261,7 +265,7 @@ extern "C" void OnModLoad()
     {
         logger->Info("Colorfilter \"%s\" enabled!", pColorfilter->GetString());
         pGTASA_Colorfilter =                pGTASA + 0x5B6444 + 0x1;
-        Redirect(pGTASA + 0x5B643C + 0x1, (uintptr_t)ColorFilter_stub);
+        aml->Redirect(pGTASA + 0x5B643C + 0x1, (uintptr_t)ColorFilter_stub);
         aml->Unprot(pGTASA + 0x5B6444, sizeof(uint16_t));
         memcpy((void *)(pGTASA + 0x5B6444), (void *)(pGTASA + 0x5B63DC), sizeof(uint16_t));
         aml->Unprot(pGTASA + 0x5B6446, sizeof(uint16_t));
@@ -270,17 +274,10 @@ extern "C" void OnModLoad()
         if(sautils != NULL) sautils->AddClickableItem(Display, "Colorfilter", nColorFilter, 0, sizeofA(pColorFilterSettings)-1, pColorFilterSettings, ColorfilterChanged);
     }
 
-    // Unexplored map shading
-    if(pDontShadeUnexploredMap->GetBool())
-    {
-        logger->Info("Unexplored map sectors shading disabled!");
-        Redirect(pGTASA + 0x2AADE0 + 0x1, pGTASA + 0x2AAF9A + 0x1);
-    }
-
     if(pDisableClouds->GetBool())
     {
         logger->Info("Clouds are disabled!");
-        Redirect(pGTASA + 0x59F340 + 0x1, pGTASA + 0x59F40A + 0x1);
+        aml->Redirect(pGTASA + 0x59F340 + 0x1, pGTASA + 0x59F40A + 0x1);
     }
 
     if(pPS2Pipeline->GetBool())
@@ -320,7 +317,7 @@ extern "C" void OnModLoad()
         SET_TO(ppline_SetEnvMap,                aml->GetSym(hGTASA, "_Z13emu_SetEnvMapPvfi"));
         if(sautils != NULL) sautils->AddClickableItem(Display, "Building DualPass", pipelineWay, 0, sizeofA(pPipelineSettings)-1, pPipelineSettings, PipelineChanged);
 
-        Redirect(aml->GetSym(hGTASA, "_ZN25CCustomBuildingDNPipeline19CreateCustomObjPipeEv"), (uintptr_t)CCustomBuildingDNPipeline_CreateCustomObjPipe_SkyGfx);
+        aml->Redirect(aml->GetSym(hGTASA, "_ZN25CCustomBuildingDNPipeline19CreateCustomObjPipeEv"), (uintptr_t)CCustomBuildingDNPipeline_CreateCustomObjPipe_SkyGfx);
 
     }
 
@@ -328,7 +325,7 @@ extern "C" void OnModLoad()
     {
         logger->Info("Post-Effects patch is enabled!");
         pGTASA_MobileEffectsRender =        pGTASA + 0x5B6790 + 0x1;
-        Redirect(pGTASA + 0x5B677E + 0x1,   (uintptr_t)MobileEffectsRender_stub);
+        aml->Redirect(pGTASA + 0x5B677E + 0x1,   (uintptr_t)MobileEffectsRender_stub);
         SET_TO(pbCCTV,                          aml->GetSym(hGTASA, "_ZN12CPostEffects7m_bCCTVE"));
         SET_TO(RenderCCTVPostEffect,            aml->GetSym(hGTASA, "_ZN12CPostEffects4CCTVEv"));
 
@@ -375,11 +372,11 @@ extern "C" void OnModLoad()
         SET_TO(pg_fx,                           aml->GetSym(hGTASA, "g_fx"));
         SET_TO(RenderFx,                        aml->GetSym(hGTASA, "_ZN4Fx_c6RenderEP8RwCamerah"));
         SET_TO(RenderWaterCannons,              aml->GetSym(hGTASA, "_ZN13CWaterCannons6RenderEv"));
-        Redirect(pGTASA + 0x3F638C + 0x1,   (uintptr_t)EffectsRender_stub);
+        aml->Redirect(pGTASA + 0x3F638C + 0x1,   (uintptr_t)EffectsRender_stub);
 
         if(pWaterFog->GetBool())
         {
-            Redirect(pGTASA + 0x599FB4 + 0x1, (uintptr_t)SetUpWaterFog_stub);
+            aml->Redirect(pGTASA + 0x599FB4 + 0x1, (uintptr_t)SetUpWaterFog_stub);
             void** ms_WaterFog_New = new void*[pWaterFogBlocksLimits->GetInt()];
             aml->Write(pGTASA + 0x6779A0,   (uintptr_t)&ms_WaterFog_New, sizeof(void*));
             SET_TO(RenderWaterFog,              aml->GetSym(hGTASA, "_ZN11CWaterLevel14RenderWaterFogEv"));
