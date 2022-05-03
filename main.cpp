@@ -51,6 +51,7 @@ ConfigEntry* pVehicleShadowDistance;
 ConfigEntry* pMaxRTShadows;
 ConfigEntry* pDynamicObjectsShadows;
 ConfigEntry* pAllowPlayerClassicShadow;
+ConfigEntry* pNewShaderLighting;
 
 /* Patch Saves */
 //const uint32_t sunCoronaRet = 0xF0F7ECE0;
@@ -59,29 +60,6 @@ const uint32_t sunCoronaDel = 0xBF00BF00;
 /* Saves */
 void* hGTASA = NULL;
 uintptr_t pGTASA = 0;
-
-////////////////////////////////////////////////////////////////////////
-// Was taken from TheOfficialFloW's git repo (will be in AML 1.0.0.6) //
-////////////////////////////////////////////////////////////////////////
-void Redirect(uintptr_t addr, uintptr_t to)
-{
-    if(!addr) return;
-    uint32_t hook[2] = {0xE51FF004, to};
-    if(addr & 1)
-    {
-        addr &= ~1;
-        if (addr & 2)
-        {
-            aml->PlaceNOP(addr, 1); 
-            addr += 2;
-        }
-        hook[0] = 0xF000F8DF;
-    }
-    aml->Write(addr, (uintptr_t)hook, sizeof(hook));
-}
-////////////////////////////////////////////////////////////////////////
-// Was taken from TheOfficialFloW's git repo (will be in AML 1.0.0.6) //
-////////////////////////////////////////////////////////////////////////
 
 extern DECL_HOOKv(PlantMgrInit);
 extern DECL_HOOKv(PlantMgrRender);
@@ -156,6 +134,11 @@ extern "C" void OnModLoad()
     cfg->Bind("IdeasFrom", "", "About")->SetString("aap, TheOfficialFloW");
     cfg->Bind("Discord", "", "About")->SetString("https://discord.gg/2MY7W39kBg");
     cfg->Bind("GitHub", "", "About")->SetString("https://github.com/AndroidModLoader/GTASA_SkyGfxMobile");
+
+    // Config: Information
+    cfg->Bind("About_PS2_Reflections", "Works only on low reflections setting with PS2 Shading enabled", "About");
+    cfg->Bind("Colorfilter_Values", "default none ps2 pc", "About");
+    
     cfg->Save();
 
     // Config: Render
@@ -209,10 +192,6 @@ extern "C" void OnModLoad()
     //pDynamicObjectsShadows = cfg->Bind("DynamicObjectsShadows", false, "Shadows");
     //pAllowPlayerClassicShadow = cfg->Bind("AllowPlayerClassicShadow", false, "Shadows");
 
-    // Config: Information
-    cfg->Bind("About_PS2_Reflections", "Works only on low reflections setting with PS2 Shading enabled", "About");
-    cfg->Bind("Colorfilter_Values", "default none ps2 pc", "About");
-
     HOOKPLT(InitRW, pGTASA + 0x66F2D0);
 
 // Patches
@@ -243,6 +222,7 @@ extern "C" void OnModLoad()
         SET_TO(emu_glEnable,                    aml->GetSym(hGTASA, "_Z12emu_glEnablej"));
         SET_TO(emu_glDisable,                   aml->GetSym(hGTASA, "_Z13emu_glDisablej"));
         #ifdef NEW_LIGHTING
+            pNewShaderLighting = cfg->Bind("PS2_Shading_NewLight", true, "Render");
             Redirect(aml->GetSym(hGTASA, "_Z36_rwOpenGLLightsSetMaterialPropertiesPK10RpMaterialj"), (uintptr_t)_rwOpenGLLightsSetMaterialProperties);
         #endif // NEW_LIGHTING
         Redirect(aml->GetSym(hGTASA, "_Z28SetLightsWithTimeOfDayColourP7RpWorld"), (uintptr_t)SetLightsWithTimeOfDayColour);
@@ -468,6 +448,7 @@ extern "C" void OnModLoad()
             SET_TO(RpClumpDestroy,              aml->GetSym(hGTASA, "_Z14RpClumpDestroyP7RpClump"));
             SET_TO(RwFrameCreate,               aml->GetSym(hGTASA, "_Z13RwFrameCreatev"));
             SET_TO(RpAtomicSetFrame,            aml->GetSym(hGTASA, "_Z16RpAtomicSetFrameP8RpAtomicP7RwFrame"));
+            SET_TO(RenderAtomicWithAlpha,       aml->GetSym(hGTASA, "_ZN18CVisibilityPlugins21RenderAtomicWithAlphaEP8RpAtomici"));
 
             SET_TO(PlantMgr_rwOpenGLSetRenderState, aml->GetSym(hGTASA, "_Z23_rwOpenGLSetRenderState13RwRenderStatePv"));
             SET_TO(IsSphereVisibleForCamera,    aml->GetSym(hGTASA, "_ZN7CCamera15IsSphereVisibleERK7CVectorf"));

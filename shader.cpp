@@ -29,6 +29,9 @@ extern ConfigEntry* pPS2Sun;
 extern ConfigEntry* pPS2Shading;
 extern ConfigEntry* pPS2Reflections;
 extern ConfigEntry* pExponentialFog;
+#ifdef NEW_LIGHTING
+    extern ConfigEntry* pNewShaderLighting;
+#endif // NEW_LIGHTING
 
 char pxlbuf[4096], vtxbuf[4096];
 
@@ -47,7 +50,25 @@ void BuildPixelSource_SkyGfx(int flags)
     int ped_spec = pDisablePedSpec->GetBool() ? 0 : (FLAG_BONE3 | FLAG_BONE4);
     
     PXL_EMIT("#version 100");
+
+    #ifdef STOCHASTIC_TEX
+        PXL_EMIT("#extension GL_OES_standard_derivatives : enable");
+    #endif // STOCHASTIC_TEX
+
     PXL_EMIT("precision mediump float;");
+
+    #ifdef STOCHASTIC_TEX // Not working, huge performance impact
+        PXL_EMIT("vec2 hash2D2D(vec2 s) { return fract(sin(mod(vec2(dot(s, vec2(127.1, 311.7)), dot(s, vec2(269.5, 183.3))), 3.14159)) * 43758.5453); }");
+        PXL_EMIT("vec4 tex2DStochastic(sampler2D tex, vec2 UV) { mat4 BW_vx;");
+        PXL_EMIT("vec2 skewUV = (mat2(vec2(1.0, 0.0), vec2(-0.57735027, 1.15470054)) * UV * 3.464);");
+        PXL_EMIT("vec2 vxID = floor(skewUV); vec3 barry = vec3(fract(skewUV), 0); barry.z = 1.0 - barry.x - barry.y;");
+        PXL_EMIT("BW_vx = ((barry.z > 0.0) ? mat4(vec4(vxID, 0, 0), vec4(vxID + vec2(0, 1), 0, 0), vec4(vxID + vec2(1, 0), 0, 0), vec4(barry.zyx, 0)) : mat4(vec4(vxID + vec2(1, 1), 0, 0), vec4(vxID + vec2(1, 0), 0, 0), vec4(vxID + vec2(0, 1), 0, 0), vec4(-barry.z, 1.0 - barry.y, 1.0 - barry.x, 0)));");
+        PXL_EMIT("return (texture2D(tex, UV + hash2D2D(BW_vx[0].xy)) * BW_vx[3].x) + (texture2D(tex, UV + hash2D2D(BW_vx[1].xy)) * BW_vx[3].y) + (texture2D(tex, UV + hash2D2D(BW_vx[2].xy)) * BW_vx[3].z); }");
+        /*PXL_EMIT("vec2 dx = dFdx(UV); vec2 dy = dFdy(UV);");
+        PXL_EMIT("return (texture2DLod(tex, UV + hash2D2D(BW_vx[0].xy), dx, dy) * BW_vx[3].x) + (texture2DLod(tex, UV + hash2D2D(BW_vx[1].xy), dx, dy) * BW_vx[3].y) + (texture2DLod(tex, UV + hash2D2D(BW_vx[2].xy), dx, dy) * BW_vx[3].z); }");*/
+        PXL_EMIT("vec4 tex2DStochastic(sampler2D tex, vec2 UV, float bias) { return tex2DStochastic(tex, UV); }");
+    #endif // STOCHASTIC_TEX
+
     if(flags & FLAG_TEX0)
     {
         PXL_EMIT("uniform sampler2D Diffuse;\nvarying mediump vec2 Out_Tex0;");
@@ -100,18 +121,33 @@ void BuildPixelSource_SkyGfx(int flags)
     PXL_EMIT("\tlowp vec4 fcolor;");
     if(flags & FLAG_TEX0)
     {
-        if(flags & FLAG_TEXBIAS)
-        {
-            PXL_EMIT("\tlowp vec4 diffuseColor = texture2D(Diffuse, Out_Tex0, -1.5);");
-        }
-        else if(RQCaps->isSlowGPU != 0)
-        {
-            PXL_EMIT("\tlowp vec4 diffuseColor = texture2D(Diffuse, Out_Tex0);");
-        }
-        else
-        {
-            PXL_EMIT("\tlowp vec4 diffuseColor = texture2D(Diffuse, Out_Tex0, -0.5);");
-        }
+        #ifdef STOCHASTIC_TEX
+            if(flags & FLAG_TEXBIAS)
+            {
+                PXL_EMIT("\tlowp vec4 diffuseColor = tex2DStochastic(Diffuse, Out_Tex0, -1.5);");
+            }
+            else if(RQCaps->isSlowGPU != 0)
+            {
+                PXL_EMIT("\tlowp vec4 diffuseColor = tex2DStochastic(Diffuse, Out_Tex0);");
+            }
+            else
+            {
+                PXL_EMIT("\tlowp vec4 diffuseColor = tex2DStochastic(Diffuse, Out_Tex0, -0.5);");
+            }
+        #else
+            if(flags & FLAG_TEXBIAS)
+            {
+                PXL_EMIT("\tlowp vec4 diffuseColor = texture2D(Diffuse, Out_Tex0, -1.5);");
+            }
+            else if(RQCaps->isSlowGPU != 0)
+            {
+                PXL_EMIT("\tlowp vec4 diffuseColor = texture2D(Diffuse, Out_Tex0);");
+            }
+            else
+            {
+                PXL_EMIT("\tlowp vec4 diffuseColor = texture2D(Diffuse, Out_Tex0, -0.5);");
+            }
+        #endif // !STOCHASTIC_TEX
         PXL_EMIT("\tfcolor = diffuseColor;");
 
         if(flags & (FLAG_COLOR | FLAG_LIGHTING))
@@ -374,9 +410,12 @@ void BuildVertexSource_SkyGfx(int flags)
     }
 
     #ifdef NEW_LIGHTING
-        VTX_EMIT("#define SurfAmb (MaterialAmbient.x)");
-        VTX_EMIT("#define SurfDiff (MaterialAmbient.y)");
-        VTX_EMIT("#define ColorScale (MaterialDiffuse)");
+        if(pNewShaderLighting->GetBool())
+        {
+            VTX_EMIT("#define SurfAmb (MaterialAmbient.x)");
+            VTX_EMIT("#define SurfDiff (MaterialAmbient.y)");
+            VTX_EMIT("#define ColorScale (MaterialDiffuse)");
+        }
     #endif // NEW_LIGHTING
 
     ///////////////////////////////////////
@@ -533,93 +572,103 @@ void BuildVertexSource_SkyGfx(int flags)
     {
         // Ambient light
         #ifdef NEW_LIGHTING
-            VTX_EMIT("vec3 AmbEmissLight, DiffLight;");
-            if(flags & FLAG_COLOR_EMISSIVE)
+            if(pNewShaderLighting->GetBool())
             {
-                if(flags & FLAG_CAMERA_BASED_NORMALS)
+                VTX_EMIT("vec3 AmbEmissLight, DiffLight;");
+                if(flags & FLAG_COLOR_EMISSIVE)
                 {
-                    VTX_EMIT_V("AmbEmissLight += clamp(%s.xyz, 0.0, 0.5);", _tmp);
+                    if(flags & FLAG_CAMERA_BASED_NORMALS)
+                    {
+                        VTX_EMIT_V("AmbEmissLight += clamp(%s.xyz, 0.0, 0.5);", _tmp);
+                    }
+                    else
+                    {
+                        VTX_EMIT_V("AmbEmissLight += %s.xyz;", _tmp);
+                    }
                 }
-                else
-                {
-                    VTX_EMIT_V("AmbEmissLight += %s.xyz;", _tmp);
-                }
-            }
-            VTX_EMIT("AmbEmissLight += AmbientLightColor * SurfAmb;");
-        #else
-            VTX_EMIT("vec3 Out_LightingColor;");
-            if(flags & FLAG_COLOR_EMISSIVE)
-            {
-                if(flags & FLAG_CAMERA_BASED_NORMALS) // 3D markers hack from psvita port
-                {
-                    VTX_EMIT_V("Out_LightingColor = AmbientLightColor * MaterialAmbient.xyz + %s.xyz * MaterialDiffuse.xyz;", _tmp);
-                }
-                else if(flags & FLAG_CAMERA_BASED_NORMALS)
-                {
-                    VTX_EMIT("Out_LightingColor = AmbientLightColor * MaterialAmbient.xyz * 1.5;");
-                }
-                else
-                {
-                    VTX_EMIT_V("Out_LightingColor = AmbientLightColor * MaterialAmbient.xyz + %s.xyz;", _tmp);
-                }
+                VTX_EMIT("AmbEmissLight += AmbientLightColor * SurfAmb;");
             }
             else
-            {
-                VTX_EMIT("Out_LightingColor = AmbientLightColor * MaterialAmbient.xyz + MaterialEmissive.xyz;");
-            }
         #endif // NEW_LIGHTING
+            {
+                VTX_EMIT("vec3 Out_LightingColor;");
+                if(flags & FLAG_COLOR_EMISSIVE)
+                {
+                    if(flags & FLAG_CAMERA_BASED_NORMALS) // 3D markers hack from psvita port
+                    {
+                        VTX_EMIT_V("Out_LightingColor = AmbientLightColor * MaterialAmbient.xyz + %s.xyz * MaterialDiffuse.xyz;", _tmp);
+                    }
+                    else if(flags & FLAG_CAMERA_BASED_NORMALS)
+                    {
+                        VTX_EMIT("Out_LightingColor = AmbientLightColor * MaterialAmbient.xyz * 1.5;");
+                    }
+                    else
+                    {
+                        VTX_EMIT_V("Out_LightingColor = AmbientLightColor * MaterialAmbient.xyz + %s.xyz;", _tmp);
+                    }
+                }
+                else
+                {
+                    VTX_EMIT("Out_LightingColor = AmbientLightColor * MaterialAmbient.xyz + MaterialEmissive.xyz;");
+                }
+            }
 
         // DIFFUSE
         if(flags & (FLAG_LIGHT3 | FLAG_LIGHT2 | FLAG_LIGHT1))
         {
             #ifdef NEW_LIGHTING
-                if(flags & FLAG_LIGHT1)
+                if(pNewShaderLighting->GetBool())
                 {
-                    if(GetMobileEffectSetting() == 3 && (flags & (FLAG_BACKLIGHT | FLAG_BONE4 | FLAG_BONE3)))
+                    if(flags & FLAG_LIGHT1)
                     {
-                        VTX_EMIT("DiffLight += (max(dot(DirLightDirection, WorldNormal), 0.0) + max(dot(DirBackLightDirection, WorldNormal), 0.0)) * DirLightDiffuseColor;");
+                        if(GetMobileEffectSetting() == 3 && (flags & (FLAG_BACKLIGHT | FLAG_BONE4 | FLAG_BONE3)))
+                        {
+                            VTX_EMIT("DiffLight += (max(dot(DirLightDirection, WorldNormal), 0.0) + max(dot(DirBackLightDirection, WorldNormal), 0.0)) * DirLightDiffuseColor;");
+                        }
+                        else
+                        {
+                            VTX_EMIT("DiffLight += max(dot(DirLightDirection, WorldNormal), 0.0) * DirLightDiffuseColor;");
+                        }
                     }
-                    else
+                    if(flags & FLAG_LIGHT2)
                     {
-                        VTX_EMIT("DiffLight += max(dot(DirLightDirection, WorldNormal), 0.0) * DirLightDiffuseColor;");
+                        VTX_EMIT("DiffLight += max(dot(DirLight2Direction, WorldNormal), 0.0) * DirLight2DiffuseColor;");
                     }
+                    if(flags & FLAG_LIGHT3)
+                    {
+                        VTX_EMIT("DiffLight += max(dot(DirLight3Direction, WorldNormal), 0.0) * DirLight3DiffuseColor;");
+                    }
+                    VTX_EMIT("DiffLight *= SurfDiff;");
                 }
-                if(flags & FLAG_LIGHT2)
+                else
+            #endif // NEW_LIGHTING
                 {
-                    VTX_EMIT("DiffLight += max(dot(DirLight2Direction, WorldNormal), 0.0) * DirLight2DiffuseColor;");
-                }
-                if(flags & FLAG_LIGHT3)
-                {
-                    VTX_EMIT("DiffLight += max(dot(DirLight3Direction, WorldNormal), 0.0) * DirLight3DiffuseColor;");
-                }
-                VTX_EMIT("DiffLight *= SurfDiff;");
-            #else
-                if(flags & FLAG_LIGHT1)
-                {
-                    if(GetMobileEffectSetting() == 3 && (flags & (FLAG_BACKLIGHT | FLAG_BONE4 | FLAG_BONE3)))
+                    if(flags & FLAG_LIGHT1)
                     {
-                        VTX_EMIT("Out_LightingColor += (max(dot(DirLightDirection, WorldNormal), 0.0) + max(dot(DirBackLightDirection, WorldNormal), 0.0)) * DirLightDiffuseColor;");
-                    }
-                    else
-                    {
-                        VTX_EMIT("Out_LightingColor += max(dot(DirLightDirection, WorldNormal), 0.0) * DirLightDiffuseColor;");
-                    }
+                        if(GetMobileEffectSetting() == 3 && (flags & (FLAG_BACKLIGHT | FLAG_BONE4 | FLAG_BONE3)))
+                        {
+                            VTX_EMIT("Out_LightingColor += (max(dot(DirLightDirection, WorldNormal), 0.0) + max(dot(DirBackLightDirection, WorldNormal), 0.0)) * DirLightDiffuseColor;");
+                        }
+                        else
+                        {
+                            VTX_EMIT("Out_LightingColor += max(dot(DirLightDirection, WorldNormal), 0.0) * DirLightDiffuseColor;");
+                        }
 
-                    if(!(flags & FLAG_LIGHT2))
+                        if(!(flags & FLAG_LIGHT2))
+                        {
+                            if(flags & FLAG_LIGHT3)
+                                VTX_EMIT("Out_LightingColor += max(dot(DirLight3Direction, WorldNormal), 0.0) * DirLight3DiffuseColor;");
+                            goto LABEL_89;
+                        }
+                    }
+                    else if(!(flags & FLAG_LIGHT2))
                     {
                         if(flags & FLAG_LIGHT3)
                             VTX_EMIT("Out_LightingColor += max(dot(DirLight3Direction, WorldNormal), 0.0) * DirLight3DiffuseColor;");
                         goto LABEL_89;
                     }
+                    VTX_EMIT("Out_LightingColor += max(dot(DirLight2Direction, WorldNormal), 0.0) * DirLight2DiffuseColor;");
                 }
-                else if(!(flags & FLAG_LIGHT2))
-                {
-                    if(flags & FLAG_LIGHT3)
-                        VTX_EMIT("Out_LightingColor += max(dot(DirLight3Direction, WorldNormal), 0.0) * DirLight3DiffuseColor;");
-                    goto LABEL_89;
-                }
-                VTX_EMIT("Out_LightingColor += max(dot(DirLight2Direction, WorldNormal), 0.0) * DirLight2DiffuseColor;");
-            #endif // NEW_LIGHTING
         }
 
       LABEL_89:
@@ -627,14 +676,17 @@ void BuildVertexSource_SkyGfx(int flags)
         if(flags & (FLAG_COLOR | FLAG_LIGHTING))
         {
             #ifdef NEW_LIGHTING
-                VTX_EMIT("Out_Color.xyz = AmbEmissLight + DiffLight;");
-                if(flags & FLAG_COLOR2)
-                    VTX_EMIT("Out_Color.w = Color2.w;");
+                if(pNewShaderLighting->GetBool())
+                {
+                    VTX_EMIT("Out_Color.xyz = AmbEmissLight + DiffLight;");
+                    if(flags & FLAG_COLOR2)
+                        VTX_EMIT("Out_Color.w = Color2.w;");
+                    else
+                        VTX_EMIT("Out_Color.w = GlobalColor.w;");
+                }
                 else
-                    VTX_EMIT("Out_Color.w = GlobalColor.w;");
-            #else
-                VTX_EMIT_V("Out_Color = vec4(Out_LightingColor * MaterialDiffuse.xyz, MaterialAmbient.w * %s.w);", _tmp);
             #endif // NEW_LIGHTING
+                VTX_EMIT_V("Out_Color = vec4(Out_LightingColor * MaterialDiffuse.xyz, MaterialAmbient.w * %s.w);", _tmp);
             VTX_EMIT("Out_Color = clamp(Out_Color, 0.0, 1.0);");
         }
     }

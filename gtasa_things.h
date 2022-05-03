@@ -7,4 +7,4 @@ extern void* hGTASA;
 extern int nColorFilter;
 extern uintptr_t pGTASA;
 
-void Redirect(uintptr_t addr, uintptr_t to);
+#define Redirect aml->Redirect

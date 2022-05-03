@@ -199,6 +199,7 @@ RpAtomic* (*RpAtomicClone)(RpAtomic*);
 void (*RpClumpDestroy)(RpClump*);
 RwFrame* (*RwFrameCreate)();
 void (*RpAtomicSetFrame)(RpAtomic*, RwFrame*);
+void (*RenderAtomicWithAlpha)(RpAtomic*, int alphaVal);
 RpMaterial* SetGrassMaterial(RpMaterial* material, void* rgba)
 {
     material->color = *(RwRGBA*)rgba;
@@ -257,7 +258,7 @@ void InitPlantManager()
         logger->Error("Failed to load ENVGRASS.TEXDB!");
     }
 
-    StreamingMakeSpaceFor(0x8800);
+    StreamingMakeSpaceFor(0x8800); // Does nothing
 
     PC_PlantTextureTab0[0] = GetTextureFromTextureDB("txgrass0_0");
     PC_PlantTextureTab0[1] = GetTextureFromTextureDB("txgrass0_1");
@@ -324,6 +325,8 @@ DECL_HOOKv(PlantMgrRender)
     PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEFOGENABLE, 1u);
     PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTIONREF, 0);
     PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, 8u);
+
+    RenderAtomicWithAlpha(PC_PlantModelsTab0[0], 128);
 
     for(int type = 0; type < DDDAFSF; ++type)
     {
