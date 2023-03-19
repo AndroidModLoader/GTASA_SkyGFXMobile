@@ -330,21 +330,21 @@ DECL_HOOKv(PlantMgrRender)
 
     for(int type = 0; type < DDDAFSF; ++type)
     {
-        static PPTriPlant plant = {0}; 
+        static PPTriPlant plant;
         CPlantLocTri* plantTris = m_CloseLocTriListHead[type];
         RwTexture** grassTex = PC_PlantSlotTextureTab[type];
         logger->Info("Type: %d, PlantTris: 0x%X, grassTex: 0x%X", (int)type, plantTris, grassTex);
 
-        plant.pos.x = 20.0f;
-        plant.pos.y = 20.0f;
-        plant.pos.z = 20.0f;
-        plant.texture = grassTex[0];
+        plant.center.x = 20.0f;
+        plant.center.y = 20.0f;
+        plant.center.z = 20.0f;
+        plant.texture_ptr = grassTex[0];
         AddTriPlant(&plant, type);
 
         while(plantTris != NULL)
         {
-            Surface* surface = GetSurfacePtr(plantTris->surfaceId);
-            if(IsSphereVisibleForCamera(PlantMgr_TheCamera, &plantTris->pos, plantTris->radius))
+            Surface* surface = GetSurfacePtr(plantTris->m_nSurfaceType);
+            if(IsSphereVisibleForCamera(PlantMgr_TheCamera, &plantTris->m_Center, plantTris->m_SphereRadius))
             {
                 SurfaceProperty& surfProp = surface->m_aSurfaceProperties[0];
                 if(surfProp.m_nModelId != -1)
@@ -352,7 +352,7 @@ DECL_HOOKv(PlantMgrRender)
                     
                 }
             }
-            plantTris = plantTris->nextPlant;
+            plantTris = plantTris->m_pNextTri;
         }
     }
 

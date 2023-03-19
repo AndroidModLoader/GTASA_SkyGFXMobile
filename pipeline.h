@@ -28,7 +28,7 @@ extern ePipelineDualpassWay pipelineWay;
 RxPipeline* CCustomBuildingDNPipeline_CreateCustomObjPipe_SkyGfx();
 
 extern const char* pPipelineSettings[4];
-void PipelineChanged(int oldVal, int newVal);
+void PipelineChanged(int oldVal, int newVal, void* data);
 
 extern void              (*_rxPipelineDestroy)(RxPipeline*);
 extern RxPipeline*       (*RxPipelineCreate)();

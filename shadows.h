@@ -29,9 +29,10 @@ public:
     }
 public:
     bool m_bInitialized; // 0
-    int m_nMaxShadows; // 5
-    CRealTimeShadow** m_pShadows; // 9
-    char filler[155]; // 13
+    char filler1[3];
+    int m_nMaxShadows; // 4
+    CRealTimeShadow** m_pShadows; // 8
+    char filler2[152]; // 12
     bool m_bSomethingForVehicleRenderPipe; // 164
     ShadowCameraStorage m_pBlurCamera; // 168
     ShadowCameraStorage m_pGradientCamera; // 176

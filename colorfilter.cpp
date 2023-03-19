@@ -15,7 +15,7 @@ const char* pColorFilterSettings[4] =
     "PC Style",
 };
 
-void ColorfilterChanged(int oldVal, int newVal)
+void ColorfilterChanged(int oldVal, int newVal, void* data)
 {
     nColorFilter = newVal;
     switch(newVal)

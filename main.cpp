@@ -19,10 +19,10 @@
 ISAUtils* sautils = NULL;
 
 #define sizeofA(__aVar)  ((int)(sizeof(__aVar)/sizeof(__aVar[0])))
-MYMODCFG(net.rusjj.skygfxmobile, SkyGfx Mobile Beta, 0.1.1, aap & TheOfficialFloW & RusJJ)
+MYMODCFG(net.rusjj.skygfxmobile, SkyGfx Mobile Beta, 0.1.2, aap & TheOfficialFloW & RusJJ)
 NEEDGAME(com.rockstargames.gtasa)
 BEGIN_DEPLIST()
-    ADD_DEPENDENCY_VER(net.rusjj.aml, 1.0.0.6)
+    ADD_DEPENDENCY_VER(net.rusjj.aml, 1.0.2.1)
 END_DEPLIST()
 
 /* Config */
@@ -86,7 +86,7 @@ void SkinSetMatrices(uintptr_t skin, float* matrix)
     *skin_num = num;
 }
 
-void PedShadowDistanceChanged(int oldVal, int newVal)
+void PedShadowDistanceChanged(int oldVal, int newVal, void* data)
 {
     pPedShadowDistance->SetFloat(0.01f * newVal);
     *(float*)(pGTASA + 0x5BD2FC) = pPedShadowDistance->GetFloat();
@@ -99,14 +99,14 @@ const char* PedShadowDistanceDraw(int nNewValue)
     return ret;
 }
 
-void GrainIntensityChanged(int oldVal, int newVal)
+void GrainIntensityChanged(int oldVal, int newVal, void* data)
 {
     pGrainIntensityPercent->SetInt(newVal);
     grainIntensity = newVal * 2.55f;
     cfg->Save();
 }
 
-void VehicleShadowDistanceChanged(int oldVal, int newVal)
+void VehicleShadowDistanceChanged(int oldVal, int newVal, void* data)
 {
     pVehicleShadowDistance->SetFloat(0.01f * newVal);
     *(float*)(pGTASA + 0x5B9AE0) = pVehicleShadowDistance->GetFloat();
@@ -271,7 +271,7 @@ extern "C" void OnModLoad()
         aml->Unprot(pGTASA + 0x5B6446, sizeof(uint16_t));
         memcpy((void *)(pGTASA + 0x5B6446), (void *)(pGTASA + 0x5B63EA), sizeof(uint16_t));
 
-        if(sautils != NULL) sautils->AddClickableItem(Display, "Colorfilter", nColorFilter, 0, sizeofA(pColorFilterSettings)-1, pColorFilterSettings, ColorfilterChanged);
+        if(sautils != NULL) sautils->AddClickableItem(SetType_Display, "Colorfilter", nColorFilter, 0, sizeofA(pColorFilterSettings)-1, pColorFilterSettings, ColorfilterChanged, NULL);
     }
 
     if(pDisableClouds->GetBool())
@@ -293,8 +293,10 @@ extern "C" void OnModLoad()
         SET_TO(RxPipelineFindNodeByName,        aml->GetSym(hGTASA, "_Z24RxPipelineFindNodeByNameP10RxPipelinePKcP14RxPipelineNodePi"));
         SET_TO(RxOpenGLAllInOneSetInstanceCallBack, aml->GetSym(hGTASA, "_Z35RxOpenGLAllInOneSetInstanceCallBackP14RxPipelineNodePFiPvP24RxOpenGLMeshInstanceDataiiE"));
         SET_TO(RxOpenGLAllInOneSetRenderCallBack, aml->GetSym(hGTASA, "_Z33RxOpenGLAllInOneSetRenderCallBackP14RxPipelineNodePFvP10RwResEntryPvhjE"));
-        SET_TO(_rwOpenGLSetRenderState,         aml->GetSym(hGTASA, "_Z23_rwOpenGLSetRenderState13RwRenderStatePv"));
-        SET_TO(_rwOpenGLGetRenderState,         aml->GetSym(hGTASA, "_Z23_rwOpenGLGetRenderState13RwRenderStatePv"));
+        //SET_TO(_rwOpenGLSetRenderState,         aml->GetSym(hGTASA, "_Z23_rwOpenGLSetRenderState13RwRenderStatePv"));
+        //SET_TO(_rwOpenGLGetRenderState,         aml->GetSym(hGTASA, "_Z23_rwOpenGLGetRenderState13RwRenderStatePv"));
+        SET_TO(_rwOpenGLSetRenderState,         aml->GetSym(hGTASA, "_Z16RwRenderStateSet13RwRenderStatePv"));
+        SET_TO(_rwOpenGLGetRenderState,         aml->GetSym(hGTASA, "_Z16RwRenderStateGet13RwRenderStatePv"));
         SET_TO(_rwOpenGLSetRenderStateNoExtras, aml->GetSym(hGTASA, "_Z31_rwOpenGLSetRenderStateNoExtras13RwRenderStatePv"));
         SET_TO(_rwOpenGLLightsSetMaterialPropertiesORG, aml->GetSym(hGTASA, "_Z36_rwOpenGLLightsSetMaterialPropertiesPK10RpMaterialj"));
         SET_TO(SetNormalMatrix,                 aml->GetSym(hGTASA, "_Z15SetNormalMatrixff5RwV2d"));
@@ -315,7 +317,7 @@ extern "C" void OnModLoad()
         SET_TO(ppline_glDisable,                aml->GetSym(hGTASA, "_Z13emu_glDisablej"));
         SET_TO(ppline_glColor4fv,               aml->GetSym(hGTASA, "_Z14emu_glColor4fvPKf"));
         SET_TO(ppline_SetEnvMap,                aml->GetSym(hGTASA, "_Z13emu_SetEnvMapPvfi"));
-        if(sautils != NULL) sautils->AddClickableItem(Display, "Building DualPass", pipelineWay, 0, sizeofA(pPipelineSettings)-1, pPipelineSettings, PipelineChanged);
+        if(sautils != NULL) sautils->AddClickableItem(SetType_Display, "Building DualPass", pipelineWay, 0, sizeofA(pPipelineSettings)-1, pPipelineSettings, PipelineChanged, NULL);
 
         aml->Redirect(aml->GetSym(hGTASA, "_ZN25CCustomBuildingDNPipeline19CreateCustomObjPipeEv"), (uintptr_t)CCustomBuildingDNPipeline_CreateCustomObjPipe_SkyGfx);
 
@@ -355,7 +357,7 @@ extern "C" void OnModLoad()
             SET_TO(pfWeatherRain,               aml->GetSym(hGTASA, "_ZN8CWeather4RainE"));
             SET_TO(pfWeatherUnderwaterness,     aml->GetSym(hGTASA, "_ZN8CWeather14UnderWaternessE"));
             SET_TO(effects_TheCamera,           aml->GetSym(hGTASA, "TheCamera"));
-            if(sautils != NULL) sautils->AddSliderItem(Display, "Grain Intensity", pGrainIntensityPercent->GetInt(), 0, 100, GrainIntensityChanged);
+            if(sautils != NULL) sautils->AddSliderItem(SetType_Display, "Grain Intensity", pGrainIntensityPercent->GetInt(), 0, 100, GrainIntensityChanged, NULL, NULL);
         }
         if(pScreenFog->GetBool())
         {

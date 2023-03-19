@@ -124,15 +124,15 @@ void BuildPixelSource_SkyGfx(int flags)
         #ifdef STOCHASTIC_TEX
             if(flags & FLAG_TEXBIAS)
             {
-                PXL_EMIT("\tlowp vec4 diffuseColor = tex2DStochastic(Diffuse, Out_Tex0, -1.5);");
+                PXL_EMIT("\tlowp vec4 diffuseColor = tex2DStochastic(Diffuse, Out_Tex0 * 1.2, -1.5);");
             }
             else if(RQCaps->isSlowGPU != 0)
             {
-                PXL_EMIT("\tlowp vec4 diffuseColor = tex2DStochastic(Diffuse, Out_Tex0);");
+                PXL_EMIT("\tlowp vec4 diffuseColor = tex2DStochastic(Diffuse, Out_Tex0 * 1.2);");
             }
             else
             {
-                PXL_EMIT("\tlowp vec4 diffuseColor = tex2DStochastic(Diffuse, Out_Tex0, -0.5);");
+                PXL_EMIT("\tlowp vec4 diffuseColor = tex2DStochastic(Diffuse, Out_Tex0 * 1.2, -0.5);");
             }
         #else
             if(flags & FLAG_TEXBIAS)

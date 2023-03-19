@@ -30,7 +30,7 @@ const char* pPipelineSettings[4] =
     "For Everything",
     "For Last Meshes",
 };
-void PipelineChanged(int oldVal, int newVal)
+void PipelineChanged(int oldVal, int newVal, void* data)
 {
     pPS2PipelineRenderWay->SetInt(newVal);
     pipelineWay = (ePipelineDualpassWay)newVal;
@@ -120,6 +120,9 @@ void CCustomBuildingDNPipeline__CustomPipeRenderCB_SkyGfx(RwResEntry* entry, voi
         {
             _rwOpenGLSetRenderStateNoExtras(rwRENDERSTATETEXTURERASTER, (void*)material->texture->raster);
             _rwOpenGLSetRenderState(rwRENDERSTATETEXTUREFILTER, material->texture->filterMode);
+            int zwrite;
+            _rwOpenGLGetRenderState(rwRENDERSTATEZWRITEENABLE, &zwrite);
+            _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTIONREF, 1);
             switch(pipelineWay)
             {
                 default:
@@ -135,7 +138,7 @@ void CCustomBuildingDNPipeline__CustomPipeRenderCB_SkyGfx(RwResEntry* entry, voi
                     {
                         _rwOpenGLGetRenderState(rwRENDERSTATEALPHATESTFUNCTION, &alphafunc);
                         _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, rwALPHATESTFUNCTIONGREATEREQUAL);
-                        DrawStoredMeshData(meshData);
+                        //DrawStoredMeshData(meshData);
                         _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, rwALPHATESTFUNCTIONLESS);
                         _rwOpenGLSetRenderState(rwRENDERSTATEZWRITEENABLE, false);
                         DrawStoredMeshData(meshData);
@@ -147,7 +150,7 @@ void CCustomBuildingDNPipeline__CustomPipeRenderCB_SkyGfx(RwResEntry* entry, voi
                 case DPWay_Everything:
                     _rwOpenGLGetRenderState(rwRENDERSTATEALPHATESTFUNCTION, &alphafunc);
                     _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, rwALPHATESTFUNCTIONGREATEREQUAL);
-                    DrawStoredMeshData(meshData);
+                    //DrawStoredMeshData(meshData);
                     _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, rwALPHATESTFUNCTIONLESS);
                     _rwOpenGLSetRenderState(rwRENDERSTATEZWRITEENABLE, false);
                     DrawStoredMeshData(meshData);
@@ -163,7 +166,7 @@ void CCustomBuildingDNPipeline__CustomPipeRenderCB_SkyGfx(RwResEntry* entry, voi
                     }
                     _rwOpenGLGetRenderState(rwRENDERSTATEALPHATESTFUNCTION, &alphafunc);
                     _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, rwALPHATESTFUNCTIONGREATEREQUAL);
-                    DrawStoredMeshData(meshData);
+                    //DrawStoredMeshData(meshData);
                     _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, rwALPHATESTFUNCTIONLESS);
                     _rwOpenGLSetRenderState(rwRENDERSTATEZWRITEENABLE, false);
                     DrawStoredMeshData(meshData);
