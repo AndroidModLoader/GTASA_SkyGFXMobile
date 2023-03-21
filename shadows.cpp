@@ -18,7 +18,8 @@ extern int *RTShadowsQuality;
 extern "C" void ObjectPreRenderPatch(CObject* object)
 {
     EntityPreRender(object);
-    if(!object->m_nObjectFlags.bIsPickup && *RTShadowsQuality == 2) DoShadowThisFrame(g_realTimeShadowMan, object);
+    if(!object->objectFlags.bIsPickup && *RTShadowsQuality == 2)
+        DoShadowThisFrame(g_realTimeShadowMan, object);
 }
 __attribute__((optnone)) __attribute__((naked)) void ObjectPreRender_stub(void)
 {

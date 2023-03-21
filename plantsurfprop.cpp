@@ -317,7 +317,7 @@ CCamera* PlantMgr_TheCamera;
 
 DECL_HOOKv(PlantMgrRender)
 {
-    PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEZWRITEENABLE, 0);
+    /*PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEZWRITEENABLE, 0);
     PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEZTESTENABLE, 1u);
     PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEVERTEXALPHAENABLE, 1u);
     PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATESRCBLEND, 5u);
@@ -359,5 +359,5 @@ DECL_HOOKv(PlantMgrRender)
     PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEZWRITEENABLE, 1u);
     PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEZTESTENABLE, 1u);
     PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, 7u);
-    PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTIONREF, 0);
+    PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTIONREF, 0);*/
 }

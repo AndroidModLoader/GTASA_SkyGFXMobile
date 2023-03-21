@@ -78,7 +78,7 @@ void _rwOpenGLLightsSetMaterialProperties(const RpMaterial *mat, RwUInt32 flags)
 
 void SetLightsWithTimeOfDayColour(void *world)
 {
-    (*p_pDirect)->spec = 1;
+    (*p_pDirect)->isMainLight = 1;
     if(*p_pAmbient)
     {
         float ambMult = *p_gfLaRiotsLightMult * *p_CCoronas__LightsMult;
