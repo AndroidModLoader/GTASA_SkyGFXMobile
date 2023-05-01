@@ -66,6 +66,7 @@ uintptr_t pGTASA = 0;
 extern DECL_HOOKv(PlantMgrInit);
 extern DECL_HOOKv(PlantMgrRender);
 extern DECL_HOOKv(PlantSurfPropMgrInit);
+extern DECL_HOOK(CPlantLocTri*, PlantLocTriAdd, CPlantLocTri* self, CVector& p1, CVector& p2, CVector& p3, uint8_t surface, tColLighting lightning, bool createsPlants, bool createsObjects);
 
 DECL_HOOKv(InitRW)
 {
@@ -117,11 +118,6 @@ const char* VehicleShadowDistanceDraw(int nNewValue)
     static char ret[12];
     sprintf(ret, "%.2fm", 0.01f * nNewValue);
     return ret;
-}
-
-DECL_HOOKv(PlantLocTriAdd)
-{
-    logger->Info("PlantLocTriAdd");
 }
 
 extern "C" void OnModLoad()
@@ -425,6 +421,7 @@ extern "C" void OnModLoad()
             SET_TO(AddImageToList,              aml->GetSym(hGTASA, "_ZN10CStreaming14AddImageToListEPKcb"));
             SET_TO(SetPlantModelsTab,           aml->GetSym(hGTASA, "_ZN14CGrassRenderer17SetPlantModelsTabEjPP8RpAtomic"));
             SET_TO(SetCloseFarAlphaDist,        aml->GetSym(hGTASA, "_ZN14CGrassRenderer20SetCloseFarAlphaDistEff"));
+            SET_TO(FlushTriPlantBuffer,         aml->GetSym(hGTASA, "_ZN14CGrassRenderer19FlushTriPlantBufferEv"));
 
             SET_TO(PC_PlantSlotTextureTab,      aml->GetSym(hGTASA, "_ZN9CPlantMgr22PC_PlantSlotTextureTabE"));
             SET_TO(PC_PlantTextureTab0,         aml->GetSym(hGTASA, "_ZN9CPlantMgr19PC_PlantTextureTab0E"));
@@ -432,7 +429,9 @@ extern "C" void OnModLoad()
             SET_TO(PC_PlantModelSlotTab,        aml->GetSym(hGTASA, "_ZN9CPlantMgr20PC_PlantModelSlotTabE"));
             SET_TO(PC_PlantModelsTab0,          aml->GetSym(hGTASA, "_ZN9CPlantMgr18PC_PlantModelsTab0E"));
             SET_TO(PC_PlantModelsTab1,          aml->GetSym(hGTASA, "_ZN9CPlantMgr18PC_PlantModelsTab1E"));
+            SET_TO(ms_pColPool,                 aml->GetSym(hGTASA, "_ZN9CColStore11ms_pColPoolE"));
 
+            SET_TO(InitColStore,                aml->GetSym(hGTASA, "_ZN9CColStore10InitialiseEv"));
             SET_TO(RwStreamOpen,                aml->GetSym(hGTASA, "_Z12RwStreamOpen12RwStreamType18RwStreamAccessTypePKv"));
             SET_TO(RwStreamFindChunk,           aml->GetSym(hGTASA, "_Z17RwStreamFindChunkP8RwStreamjPjS1_"));
             SET_TO(RpClumpStreamRead,           aml->GetSym(hGTASA, "_Z17RpClumpStreamReadP8RwStream"));
@@ -448,15 +447,22 @@ extern "C" void OnModLoad()
             SET_TO(RwFrameCreate,               aml->GetSym(hGTASA, "_Z13RwFrameCreatev"));
             SET_TO(RpAtomicSetFrame,            aml->GetSym(hGTASA, "_Z16RpAtomicSetFrameP8RpAtomicP7RwFrame"));
             SET_TO(RenderAtomicWithAlpha,       aml->GetSym(hGTASA, "_ZN18CVisibilityPlugins21RenderAtomicWithAlphaEP8RpAtomici"));
+            SET_TO(RpGeometryCreate,            aml->GetSym(hGTASA, "_Z16RpGeometryCreateiij"));
+            SET_TO(RpGeometryTriangleGetMaterial, aml->GetSym(hGTASA, "_Z29RpGeometryTriangleGetMaterialPK10RpGeometryPK10RpTriangle"));
+            SET_TO(RpGeometryTriangleSetMaterial, aml->GetSym(hGTASA, "_Z29RpGeometryTriangleSetMaterialP10RpGeometryP10RpTriangleP10RpMaterial"));
+            SET_TO(RpAtomicSetGeometry,         aml->GetSym(hGTASA, "_Z19RpAtomicSetGeometryP8RpAtomicP10RpGeometryj"));
 
             SET_TO(PlantMgr_rwOpenGLSetRenderState, aml->GetSym(hGTASA, "_Z23_rwOpenGLSetRenderState13RwRenderStatePv"));
             SET_TO(IsSphereVisibleForCamera,    aml->GetSym(hGTASA, "_ZN7CCamera15IsSphereVisibleERK7CVectorf"));
             SET_TO(AddTriPlant,                 aml->GetSym(hGTASA, "_ZN14CGrassRenderer11AddTriPlantEP10PPTriPlantj"));
+            SET_TO(MoveLocTriToList,            aml->GetSym(hGTASA, "_ZN9CPlantMgr16MoveLocTriToListEPP12CPlantLocTriS2_S1_"));
             SET_TO(PlantMgr_TheCamera,          aml->GetSym(hGTASA, "TheCamera"));
+            SET_TO(m_CloseLocTriListHead,       aml->GetSym(hGTASA, "_ZN9CPlantMgr21m_CloseLocTriListHeadE"));
+            SET_TO(m_UnusedLocTriListHead,      aml->GetSym(hGTASA, "_ZN9CPlantMgr22m_UnusedLocTriListHeadE"));
 
-            //HOOKPLT(PlantMgrInit,               pGTASA + 0x673C90);
-            //HOOKPLT(PlantMgrRender,             pGTASA + 0x6726D0);
-            //HOOKPLT(PlantLocTriAdd,             pGTASA + 0x675504);
+            HOOKPLT(PlantMgrInit,               pGTASA + 0x673C90);
+            HOOKPLT(PlantMgrRender,             pGTASA + 0x6726D0);
+            HOOKPLT(PlantLocTriAdd,             pGTASA + 0x675504);
         }
     }
 

@@ -138,7 +138,7 @@ void CCustomBuildingDNPipeline__CustomPipeRenderCB_SkyGfx(RwResEntry* entry, voi
                     {
                         _rwOpenGLGetRenderState(rwRENDERSTATEALPHATESTFUNCTION, &alphafunc);
                         _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, rwALPHATESTFUNCTIONGREATEREQUAL);
-                        //DrawStoredMeshData(meshData);
+                        DrawStoredMeshData(meshData);
                         _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, rwALPHATESTFUNCTIONLESS);
                         _rwOpenGLSetRenderState(rwRENDERSTATEZWRITEENABLE, false);
                         DrawStoredMeshData(meshData);
@@ -150,7 +150,7 @@ void CCustomBuildingDNPipeline__CustomPipeRenderCB_SkyGfx(RwResEntry* entry, voi
                 case DPWay_Everything:
                     _rwOpenGLGetRenderState(rwRENDERSTATEALPHATESTFUNCTION, &alphafunc);
                     _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, rwALPHATESTFUNCTIONGREATEREQUAL);
-                    //DrawStoredMeshData(meshData);
+                    DrawStoredMeshData(meshData);
                     _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, rwALPHATESTFUNCTIONLESS);
                     _rwOpenGLSetRenderState(rwRENDERSTATEZWRITEENABLE, false);
                     DrawStoredMeshData(meshData);
@@ -166,7 +166,7 @@ void CCustomBuildingDNPipeline__CustomPipeRenderCB_SkyGfx(RwResEntry* entry, voi
                     }
                     _rwOpenGLGetRenderState(rwRENDERSTATEALPHATESTFUNCTION, &alphafunc);
                     _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, rwALPHATESTFUNCTIONGREATEREQUAL);
-                    //DrawStoredMeshData(meshData);
+                    DrawStoredMeshData(meshData);
                     _rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, rwALPHATESTFUNCTIONLESS);
                     _rwOpenGLSetRenderState(rwRENDERSTATEZWRITEENABLE, false);
                     DrawStoredMeshData(meshData);
