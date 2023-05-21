@@ -38,7 +38,7 @@ char pxlbuf[4096], vtxbuf[4096];
 RQCapabilities *RQCaps;
 int *RQMaxBones;
 
-int OS_SystemChip()
+inline int OS_SystemChip()
 {
     return *deviceChip;
 }

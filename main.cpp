@@ -68,6 +68,26 @@ extern DECL_HOOKv(PlantMgrRender);
 extern DECL_HOOKv(PlantSurfPropMgrInit);
 extern DECL_HOOK(CPlantLocTri*, PlantLocTriAdd, CPlantLocTri* self, CVector& p1, CVector& p2, CVector& p3, uint8_t surface, tColLighting lightning, bool createsPlants, bool createsObjects);
 
+uintptr_t OGLSomething_BackTo;
+extern "C" void OGLSomething(RwRaster* unkPtr)
+{
+    if(!unkPtr || (*(uint8_t*)((uintptr_t)unkPtr + 48) << 0x1F)) OGLSomething_BackTo = pGTASA + 0x222E04 + 0x1;
+    else OGLSomething_BackTo = pGTASA + 0x222DBE + 0x1;
+}
+__attribute__((optnone)) __attribute__((naked)) void OGLSomething_Patch(void)
+{
+    asm volatile(
+        "LDR R1, [R10]\n"
+        "PUSH {R0-R11}\n"
+        "LDR R0, [SP, #4]\n"
+        "BL OGLSomething\n");
+    asm volatile(
+        "MOV R12, %0\n"
+        "POP {R0-R11}\n"
+        "BX R12\n"
+    :: "r" (OGLSomething_BackTo));
+}
+
 DECL_HOOKv(InitRW)
 {
     logger->Info("Initializing RW...");
@@ -192,6 +212,7 @@ extern "C" void OnModLoad()
     HOOKPLT(InitRW, pGTASA + 0x66F2D0);
 
 // Patches
+    SET_TO(m_fDNBalanceParam,               aml->GetSym(hGTASA, "_ZN25CCustomBuildingDNPipeline17m_fDNBalanceParamE"));
     // Patches: Shading
     if(pPS2Shading->GetBool())
     {
@@ -299,7 +320,6 @@ extern "C" void OnModLoad()
         SET_TO(DrawStoredMeshData,              aml->GetSym(hGTASA, "_ZN24RxOpenGLMeshInstanceData10DrawStoredEv"));
         SET_TO(ResetEnvMap,                     aml->GetSym(hGTASA, "_Z11ResetEnvMapv"));
 
-        SET_TO(m_fDNBalanceParam,               aml->GetSym(hGTASA, "_ZN25CCustomBuildingDNPipeline17m_fDNBalanceParamE"));
         SET_TO(rwOpenGLOpaqueBlack,             aml->GetSym(hGTASA, "_rwOpenGLOpaqueBlack"));
         SET_TO(rwOpenGLLightingEnabled,         aml->GetSym(hGTASA, "_rwOpenGLLightingEnabled"));
         SET_TO(rwOpenGLColorMaterialEnabled,    aml->GetSym(hGTASA, "_rwOpenGLColorMaterialEnabled"));
@@ -415,6 +435,7 @@ extern "C" void OnModLoad()
             SET_TO(StreamingMakeSpaceFor,       aml->GetSym(hGTASA, "_ZN10CStreaming12MakeSpaceForEi"));
 
             SET_TO(LoadTextureDB,               aml->GetSym(hGTASA, "_ZN22TextureDatabaseRuntime4LoadEPKcb21TextureDatabaseFormat"));
+            SET_TO(GetTextureDB,                aml->GetSym(hGTASA, "_ZN22TextureDatabaseRuntime11GetDatabaseEPKc"));
             SET_TO(RegisterTextureDB,           aml->GetSym(hGTASA, "_ZN22TextureDatabaseRuntime8RegisterEPS_"));
             SET_TO(UnregisterTextureDB,         aml->GetSym(hGTASA, "_ZN22TextureDatabaseRuntime10UnregisterEPS_"));
             SET_TO(GetTextureFromTextureDB,     aml->GetSym(hGTASA, "_ZN22TextureDatabaseRuntime10GetTextureEPKc"));
@@ -422,6 +443,8 @@ extern "C" void OnModLoad()
             SET_TO(SetPlantModelsTab,           aml->GetSym(hGTASA, "_ZN14CGrassRenderer17SetPlantModelsTabEjPP8RpAtomic"));
             SET_TO(SetCloseFarAlphaDist,        aml->GetSym(hGTASA, "_ZN14CGrassRenderer20SetCloseFarAlphaDistEff"));
             SET_TO(FlushTriPlantBuffer,         aml->GetSym(hGTASA, "_ZN14CGrassRenderer19FlushTriPlantBufferEv"));
+            SET_TO(SetAmbientColours,           aml->GetSym(hGTASA, "_Z17SetAmbientColoursP10RwRGBAReal"));
+            SET_TO(DeActivateDirectional,       aml->GetSym(hGTASA, "_Z21DeActivateDirectionalv"));
 
             SET_TO(PC_PlantSlotTextureTab,      aml->GetSym(hGTASA, "_ZN9CPlantMgr22PC_PlantSlotTextureTabE"));
             SET_TO(PC_PlantTextureTab0,         aml->GetSym(hGTASA, "_ZN9CPlantMgr19PC_PlantTextureTab0E"));
@@ -463,6 +486,9 @@ extern "C" void OnModLoad()
             HOOKPLT(PlantMgrInit,               pGTASA + 0x673C90);
             HOOKPLT(PlantMgrRender,             pGTASA + 0x6726D0);
             HOOKPLT(PlantLocTriAdd,             pGTASA + 0x675504);
+            
+            aml->Redirect(pGTASA + 0x222DB2 + 0x1, (uintptr_t)OGLSomething_Patch);
+            //aml->Redirect(pGTASA + 0x222DB2 + 0x1, pGTASA + 0x222E04 + 0x1);
         }
     }
 
