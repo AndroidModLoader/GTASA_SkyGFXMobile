@@ -33,7 +33,7 @@ unsigned char grainIntensity;
 RwRaster *grainRaster = NULL;
 // VU style random number generator -- taken from pcsx2
 uint32_t R;
-void vrinit(uint32_t x) { R = 0x3F800000 | x & 0x007FFFFF; }
+void vrinit(uint32_t x) { R = 0x3F800000 | (x & 0x007FFFFF); }
 void vradvance(void)
 {
     int x = (R >> 4) & 1;

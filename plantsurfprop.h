@@ -28,22 +28,20 @@ extern RwTexture*     PC_PlantTextureTab1[4];
 extern RpAtomic**     PC_PlantModelSlotTab[4];
 extern RpAtomic*      PC_PlantModelsTab0[4];
 extern RpAtomic*      PC_PlantModelsTab1[4];
-extern CPool<ColDef>** ms_pColPool;
 
 // CPlantMgr:
 extern void (*StreamingMakeSpaceFor)(int);
 
 
-extern void (*InitColStore)();
 extern RwStream* (*RwStreamOpen)(int, int, const char*);
 extern bool (*RwStreamFindChunk)(RwStream*, int, int, int);
 extern RpClump* (*RpClumpStreamRead)(RwStream*);
-extern void (*RwStreamClose)(RwStreamMemory*, int);
+extern void (*RwStreamClose)(RwStream*, int);
 extern RpAtomic* (*GetFirstAtomic)(RpClump*);
 extern void (*SetFilterModeOnAtomicsTextures)(RpAtomic*, int);
 extern void (*RpGeometryLock)(RpGeometry*, int);
 extern void (*RpGeometryUnlock)(RpGeometry*);
-extern void (*RpGeometryForAllMaterials)(RpGeometry*, RpMaterial* (*)(RpMaterial*, RwRGBA&), RwRGBA&);
+extern void (*RpGeometryForAllMaterials)(RpGeometry*, RpMaterial* (*)(RpMaterial*, void*), void*);
 extern void (*RpMaterialSetTexture)(RpMaterial*, RwTexture*);
 extern RpAtomic* (*RpAtomicClone)(RpAtomic*);
 extern void (*RpClumpDestroy)(RpClump*);
@@ -56,6 +54,7 @@ extern void (*RpGeometryTriangleSetMaterial)(RpGeometry*, RpTriangle*, RpMateria
 extern void (*RpAtomicSetGeometry)(RpAtomic*, RpGeometry*, unsigned int);
 
 extern void (*PlantMgr_rwOpenGLSetRenderState)(RwRenderState, int);
+extern void (*PlantMgr_RwRenderStateSet)(RwRenderState, int);
 extern bool (*IsSphereVisibleForCamera)(CCamera*, const CVector*, float);
 extern void (*AddTriPlant)(PPTriPlant*, unsigned int);
 extern void (*MoveLocTriToList)(CPlantLocTri*& oldList, CPlantLocTri*& newList, CPlantLocTri* triangle);

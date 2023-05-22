@@ -68,24 +68,31 @@ extern DECL_HOOKv(PlantMgrRender);
 extern DECL_HOOKv(PlantSurfPropMgrInit);
 extern DECL_HOOK(CPlantLocTri*, PlantLocTriAdd, CPlantLocTri* self, CVector& p1, CVector& p2, CVector& p3, uint8_t surface, tColLighting lightning, bool createsPlants, bool createsObjects);
 
-uintptr_t OGLSomething_BackTo;
-extern "C" void OGLSomething(RwRaster* unkPtr)
+uintptr_t GrassMaterialApplying_BackTo;
+RpMaterial* SetGrassModelProperties(RpMaterial* material, void* data)
 {
-    if(!unkPtr || (*(uint8_t*)((uintptr_t)unkPtr + 48) << 0x1F)) OGLSomething_BackTo = pGTASA + 0x222E04 + 0x1;
-    else OGLSomething_BackTo = pGTASA + 0x222DBE + 0x1;
+    PPTriPlant* plant = (PPTriPlant*)data;
+    material->texture = plant->texture_ptr;
+    material->color = plant->color;
+    //RpMaterialSetTexture(material, plant->texture_ptr); // Deletes previous texture, SUS BEHAVIOUR
+    return material;
 }
-__attribute__((optnone)) __attribute__((naked)) void OGLSomething_Patch(void)
+extern "C" void GrassMaterialApplying(RpGeometry* geometry, PPTriPlant* plant)
+{
+    RpGeometryForAllMaterials(geometry, SetGrassModelProperties, plant);
+}
+__attribute__((optnone)) __attribute__((naked)) void GrassMaterialApplying_Patch(void)
 {
     asm volatile(
-        "LDR R1, [R10]\n"
-        "PUSH {R0-R11}\n"
-        "LDR R0, [SP, #4]\n"
-        "BL OGLSomething\n");
+        "PUSH {R0-R9}\n"
+        "LDR R0, [SP, #0]\n"
+        "MOV R1, R10\n"
+        "BL GrassMaterialApplying\n");
     asm volatile(
         "MOV R12, %0\n"
-        "POP {R0-R11}\n"
+        "POP {R0-R9}\n"
         "BX R12\n"
-    :: "r" (OGLSomething_BackTo));
+    :: "r" (GrassMaterialApplying_BackTo));
 }
 
 DECL_HOOKv(InitRW)
@@ -452,9 +459,7 @@ extern "C" void OnModLoad()
             SET_TO(PC_PlantModelSlotTab,        aml->GetSym(hGTASA, "_ZN9CPlantMgr20PC_PlantModelSlotTabE"));
             SET_TO(PC_PlantModelsTab0,          aml->GetSym(hGTASA, "_ZN9CPlantMgr18PC_PlantModelsTab0E"));
             SET_TO(PC_PlantModelsTab1,          aml->GetSym(hGTASA, "_ZN9CPlantMgr18PC_PlantModelsTab1E"));
-            SET_TO(ms_pColPool,                 aml->GetSym(hGTASA, "_ZN9CColStore11ms_pColPoolE"));
 
-            SET_TO(InitColStore,                aml->GetSym(hGTASA, "_ZN9CColStore10InitialiseEv"));
             SET_TO(RwStreamOpen,                aml->GetSym(hGTASA, "_Z12RwStreamOpen12RwStreamType18RwStreamAccessTypePKv"));
             SET_TO(RwStreamFindChunk,           aml->GetSym(hGTASA, "_Z17RwStreamFindChunkP8RwStreamjPjS1_"));
             SET_TO(RpClumpStreamRead,           aml->GetSym(hGTASA, "_Z17RpClumpStreamReadP8RwStream"));
@@ -476,6 +481,7 @@ extern "C" void OnModLoad()
             SET_TO(RpAtomicSetGeometry,         aml->GetSym(hGTASA, "_Z19RpAtomicSetGeometryP8RpAtomicP10RpGeometryj"));
 
             SET_TO(PlantMgr_rwOpenGLSetRenderState, aml->GetSym(hGTASA, "_Z23_rwOpenGLSetRenderState13RwRenderStatePv"));
+            SET_TO(PlantMgr_RwRenderStateSet,   aml->GetSym(hGTASA, "_Z16RwRenderStateSet13RwRenderStatePv"));
             SET_TO(IsSphereVisibleForCamera,    aml->GetSym(hGTASA, "_ZN7CCamera15IsSphereVisibleERK7CVectorf"));
             SET_TO(AddTriPlant,                 aml->GetSym(hGTASA, "_ZN14CGrassRenderer11AddTriPlantEP10PPTriPlantj"));
             SET_TO(MoveLocTriToList,            aml->GetSym(hGTASA, "_ZN9CPlantMgr16MoveLocTriToListEPP12CPlantLocTriS2_S1_"));
@@ -485,10 +491,10 @@ extern "C" void OnModLoad()
 
             HOOKPLT(PlantMgrInit,               pGTASA + 0x673C90);
             HOOKPLT(PlantMgrRender,             pGTASA + 0x6726D0);
-            HOOKPLT(PlantLocTriAdd,             pGTASA + 0x675504);
+            //HOOKPLT(PlantLocTriAdd,             pGTASA + 0x675504); // I spent my life on useless reversed fn :(
             
-            aml->Redirect(pGTASA + 0x222DB2 + 0x1, (uintptr_t)OGLSomething_Patch);
-            //aml->Redirect(pGTASA + 0x222DB2 + 0x1, pGTASA + 0x222E04 + 0x1);
+            aml->Redirect(pGTASA + 0x2CD42A + 0x1, (uintptr_t)GrassMaterialApplying_Patch);
+            GrassMaterialApplying_BackTo = pGTASA + 0x2CD434 + 0x1;
         }
     }
 

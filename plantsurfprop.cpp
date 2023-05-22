@@ -32,11 +32,11 @@ RwTexture*     PC_PlantTextureTab1[4];
 RpAtomic**     PC_PlantModelSlotTab[4];
 RpAtomic*      PC_PlantModelsTab0[4];
 RpAtomic*      PC_PlantModelsTab1[4];
-CPool<ColDef>** ms_pColPool;
 
 
 #define MAXLOCTRIS 4
 void (*PlantMgr_rwOpenGLSetRenderState)(RwRenderState, int);
+void (*PlantMgr_RwRenderStateSet)(RwRenderState, int);
 bool (*IsSphereVisibleForCamera)(CCamera*, const CVector*, float);
 void (*AddTriPlant)(PPTriPlant*, unsigned int);
 void (*MoveLocTriToList)(CPlantLocTri*& oldList, CPlantLocTri*& newList, CPlantLocTri* triangle);
@@ -51,7 +51,6 @@ CPlantSurfProp* GetSurfacePtr(unsigned short index)
         logger->Error("Surface index (%d) is wrong!", index);
         return NULL;
     }
-    logger->Info("surf ptr for %d is 0x%X", (int)index, m_SurfPropPtrTab[index]);
     return m_SurfPropPtrTab[index];
 }
 CPlantSurfProp* AllocSurfacePtr(unsigned short index)
@@ -65,12 +64,10 @@ CPlantSurfProp* AllocSurfacePtr(unsigned short index)
     return NULL;
 }
 
-
-
 void PlantSurfPropMgrLoadPlantsDat(const char* filename)
 {
     logger->Info("Parsing plants.dat...");
-    FileMgrSetDir("data");
+    FileMgrSetDir("DATA");
     FILE* f = FileMgrOpenFile(filename, "r");
     FileMgrSetDir("");
 
@@ -93,7 +90,7 @@ void PlantSurfPropMgrLoadPlantsDat(const char* filename)
             {
                 case 0:
                     SurfaceIdFromName = GetSurfaceIdFromName(NULL, token);
-                    if(SurfaceIdFromName != 0 && SurfaceIdFromName != MAX_SURFACES) // 0 is "DEFAULT" or unknown. MAX_SURFACES is when token is NULL (idk how actually)
+                    if(SurfaceIdFromName != 0) // 0 is "DEFAULT" or unknown
                     {
                         SurfacePtr = GetSurfacePtr(SurfaceIdFromName);
                         if(SurfacePtr != NULL ||
@@ -185,10 +182,7 @@ void PlantSurfPropMgrLoadPlantsDat(const char* filename)
     FileMgrCloseFile(f);
 }
 
-
-/* EVERYTHING BELOW IS NOT WORKING! */
-/* EVERYTHING BELOW IS NOT WORKING! */
-/* EVERYTHING BELOW IS NOT WORKING! */
+/* Grass Part */
 
 void (*StreamingMakeSpaceFor)(int);
 
@@ -208,16 +202,15 @@ const char* grassMdls2[GRASS_MODELS_TAB] =
     "models\\grass\\grass1_4.dff",
 };
 
-void (*InitColStore)();
 RwStream* (*RwStreamOpen)(int, int, const char*);
 bool (*RwStreamFindChunk)(RwStream*, int, int, int);
 RpClump* (*RpClumpStreamRead)(RwStream*);
-void (*RwStreamClose)(RwStreamMemory*, int);
+void (*RwStreamClose)(RwStream*, int);
 RpAtomic* (*GetFirstAtomic)(RpClump*);
 void (*SetFilterModeOnAtomicsTextures)(RpAtomic*, int);
 void (*RpGeometryLock)(RpGeometry*, int);
 void (*RpGeometryUnlock)(RpGeometry*);
-void (*RpGeometryForAllMaterials)(RpGeometry*, RpMaterial* (*)(RpMaterial*, RwRGBA&), RwRGBA&);
+void (*RpGeometryForAllMaterials)(RpGeometry*, RpMaterial* (*)(RpMaterial*, void*), void*);
 void (*RpMaterialSetTexture)(RpMaterial*, RwTexture*);
 RpAtomic* (*RpAtomicClone)(RpAtomic*);
 void (*RpClumpDestroy)(RpClump*);
@@ -229,9 +222,9 @@ RpMaterial* (*RpGeometryTriangleGetMaterial)(RpGeometry*, RpTriangle*); //
 void (*RpGeometryTriangleSetMaterial)(RpGeometry*, RpTriangle*, RpMaterial*); //
 void (*RpAtomicSetGeometry)(RpAtomic*, RpGeometry*, unsigned int);
 
-RpMaterial* SetGrassMaterial(RpMaterial* material, RwRGBA& rgba)
+RpMaterial* SetDefaultGrassMaterial(RpMaterial* material, void* rgba)
 {
-    material->color = rgba;
+    material->color = *(RwRGBA*)rgba;
     RpMaterialSetTexture(material, tex_gras07Si);
     return material;
 }
@@ -242,16 +235,17 @@ void AtomicCreatePrelitIfNeeded(RpAtomic* atomic)
     RpGeometry* geometry = atomic->geometry;
     if((geometry->flags & rpGEOMETRYPRELIT) != 0) return;
     RwInt32 numTriangles = geometry->numTriangles;
+    RwInt32 numVertices = geometry->numVertices;
     
-    RpGeometry* newometry = RpGeometryCreate(geometry->numVertices, geometry->numTriangles, rpGEOMETRYPRELIT | rpGEOMETRYTEXTURED | rpGEOMETRYTRISTRIP);
-    memcpy(newometry->morphTarget->verts, geometry->morphTarget->verts, sizeof(RwV3d) * geometry->numVertices);
-    memcpy(newometry->texCoords[0], geometry->texCoords[0], sizeof(RwTexCoords) * geometry->numVertices);
+    RpGeometry* newometry = RpGeometryCreate(numVertices, geometry->numTriangles, rpGEOMETRYPRELIT | rpGEOMETRYTEXTURED | rpGEOMETRYTRISTRIP);
+    memcpy(newometry->morphTarget->verts, geometry->morphTarget->verts, sizeof(RwV3d) * numVertices);
+    memcpy(newometry->texCoords[0], geometry->texCoords[0], sizeof(RwTexCoords) * numVertices);
     memcpy(newometry->triangles, geometry->triangles, sizeof(RpTriangle) * numTriangles);
     
     for(int i = 0; i < numTriangles; ++i)
     {
-        RpGeometryTriangleSetMaterial(newometry, &newometry->triangles[i], 
-                                      RpGeometryTriangleGetMaterial(geometry, &geometry->triangles[i]));
+        RpMaterial* material = RpGeometryTriangleGetMaterial(geometry, &geometry->triangles[i]);
+        RpGeometryTriangleSetMaterial(newometry, &newometry->triangles[i], material);
     }
     RpGeometryUnlock(newometry);
     newometry->flags |= rpGEOMETRYPOSITIONS; // why?
@@ -268,9 +262,9 @@ bool GeometrySetPrelitConstantColor(RpGeometry* geometry, CRGBA clr)
     if(prelitClrPtr)
     {
         RwInt32 numPrelit = geometry->numVertices;
-        if(numPrelit)
+        for(int i = 0; i < numPrelit; ++i)
         {
-            memset(prelitClrPtr, clr.val, numPrelit * sizeof(RwRGBA));
+            prelitClrPtr[i] = *(RwRGBA*)&clr;
         }
     }
     
@@ -286,48 +280,47 @@ float GetPlantDensity(CPlantLocTri* plant)
 
 bool LoadGrassModels(const char** grassModelsNames, RpAtomic** ret)
 {
+    RpClump* clump = NULL;
     for(int i = 0; i < GRASS_MODELS_TAB; ++i)
     {
-        RpClump* clump = NULL;
         RwStream* stream = RwStreamOpen(2, 1, grassModelsNames[i]);
         if(stream && RwStreamFindChunk(stream, 16, 0, 0)) clump = RpClumpStreamRead(stream);
-        RwStreamClose((RwStreamMemory*)stream, 0);
+        RwStreamClose(stream, 0);
         RpAtomic* FirstAtomic = GetFirstAtomic(clump);
-        SetFilterModeOnAtomicsTextures(FirstAtomic, 4);
+        SetFilterModeOnAtomicsTextures(FirstAtomic, rwFILTERMIPLINEAR);
         
         AtomicCreatePrelitIfNeeded(FirstAtomic);
         RpGeometry* geometry = FirstAtomic->geometry;
         RpGeometryLock(geometry, 4095);
-        geometry->flags = (geometry->flags & 0xFFFFFF8F) | 0x40;
+        geometry->flags = (geometry->flags & 0xFFFFFF8F) | rpGEOMETRYMODULATEMATERIALCOLOR | rpGEOMETRYLIGHT;
         RpGeometryUnlock(geometry);
         
         GeometrySetPrelitConstantColor(geometry, rgbaWhite);
         
         RwRGBA defClr {0, 0, 0, 50};
-        RpGeometryForAllMaterials(geometry, SetGrassMaterial, defClr);
+        RpGeometryForAllMaterials(geometry, SetDefaultGrassMaterial, &defClr);
+
         RpAtomic* CloneAtomic = RpAtomicClone(FirstAtomic);
-        ret[i] = CloneAtomic;
         RpClumpDestroy(clump);
-        SetFilterModeOnAtomicsTextures(CloneAtomic, 2);
+        SetFilterModeOnAtomicsTextures(CloneAtomic, rwFILTERLINEAR);
         RpAtomicSetFrame(CloneAtomic, RwFrameCreate());
+        ret[i] = CloneAtomic;
     }
     return true; // idk
 }
 
 void InitPlantManager()
 {
-    //uintptr_t tdb = LoadTextureDB("envgrass", false, DF_Default);
-    //if(tdb)
-    //{
-    //    logger->Info("Successfully loaded ENVGRASS.TEXDB (ptr:0x%X)", tdb);
-    //    RegisterTextureDB(tdb);
-    //}
-    //else
-    //{
-    //    logger->Error("Failed to load ENVGRASS.TEXDB!");
-    //}
-
-    //StreamingMakeSpaceFor(0x8800); // Does nothing
+    /*uintptr_t tdb = LoadTextureDB("envgrass", false, DF_Default);
+    if(tdb)
+    {
+        logger->Info("Successfully loaded ENVGRASS.TEXDB (ptr:0x%X)", tdb);
+        RegisterTextureDB(tdb);
+    }
+    else
+    {
+        logger->Error("Failed to load ENVGRASS.TEXDB!");
+    }*/
 
     PC_PlantTextureTab0[0] = GetTextureFromTextureDB("txgrass0_0");
     PC_PlantTextureTab0[1] = GetTextureFromTextureDB("txgrass0_1");
@@ -338,6 +331,17 @@ void InitPlantManager()
     PC_PlantTextureTab1[1] = GetTextureFromTextureDB("txgrass1_1");
     PC_PlantTextureTab1[2] = GetTextureFromTextureDB("txgrass1_2");
     PC_PlantTextureTab1[3] = GetTextureFromTextureDB("txgrass1_3");
+
+    //UnregisterTextureDB(tdb);
+
+    for(int i = 0; i < 4; ++i)
+    {
+        RwTextureSetAddressingMacro(PC_PlantTextureTab0[i], rwTEXTUREADDRESSWRAP);
+        RwTextureSetFilterModeMacro(PC_PlantTextureTab0[i], rwFILTERLINEAR);
+
+        RwTextureSetAddressingMacro(PC_PlantTextureTab1[i], rwTEXTUREADDRESSWRAP);
+        RwTextureSetFilterModeMacro(PC_PlantTextureTab1[i], rwFILTERLINEAR);
+    }
     
     tex_gras07Si = GetTextureFromTextureDB("gras07Si");
 
@@ -359,14 +363,12 @@ void InitPlantManager()
         SetPlantModelsTab(3, PC_PlantModelSlotTab[0]);
         SetCloseFarAlphaDist(3.0f, 60.0f);
     }
-
-    //UnregisterTextureDB(tdb);
 }
 
 DECL_HOOKv(PlantSurfPropMgrInit)
 {
     PlantSurfPropMgrInit();
-    PlantSurfPropMgrLoadPlantsDat("plants.dat");
+    PlantSurfPropMgrLoadPlantsDat("PLANTS.DAT");
 }
 DECL_HOOKv(PlantMgrInit)
 {
@@ -374,20 +376,24 @@ DECL_HOOKv(PlantMgrInit)
     InitPlantManager();
 }
 
+inline float lerp(float a, float b, float t)
+{
+    return a + t * (b - a);
+}
 DECL_HOOKv(PlantMgrRender)
 {
     PPTriPlant plant;
     
-    PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEZWRITEENABLE, 0);
-    PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEZTESTENABLE, 1u);
-    PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEVERTEXALPHAENABLE, 1u);
-    PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATESRCBLEND, 5u);
-    PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEDESTBLEND, 6u);
-    PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEFOGENABLE, 1u);
-    PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTIONREF, 0);
-    PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, 8u);
+    PlantMgr_RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, 0);
+    PlantMgr_RwRenderStateSet(rwRENDERSTATEZTESTENABLE, 1u);
+    PlantMgr_RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, 1u);
+    PlantMgr_RwRenderStateSet(rwRENDERSTATESRCBLEND, rwBLENDSRCALPHA);
+    PlantMgr_RwRenderStateSet(rwRENDERSTATEDESTBLEND, rwBLENDINVSRCALPHA);
+    PlantMgr_RwRenderStateSet(rwRENDERSTATEFOGENABLE, 1u);
+    PlantMgr_RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTIONREF, 0);
+    PlantMgr_RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTION, 8u);
 
-    DeActivateDirectional();
+    //DeActivateDirectional();
 
     for(int type = 0; type < MAXLOCTRIS; ++type)
     {
@@ -420,27 +426,28 @@ DECL_HOOKv(PlantMgrRender)
                     plant.wind_bend_scale = surfProp.m_fWindBendingScale;
                     plant.wind_bend_var = surfProp.m_fWindBendingVariation;
     
-                    float intens = (((plantTris->m_ColLighting.night * (*m_fDNBalanceParam)) + (plantTris->m_ColLighting.day * (1.0f - *m_fDNBalanceParam))) / 30.0f) / 256.0f;
+                    float fDay = (float)(plantTris->m_ColLighting.day) * 0.5f / 15.0f;
+                    float fNight = (float)(plantTris->m_ColLighting.night) * 0.5f / 15.0f;
+                    float intens = lerp(fDay, fNight, *m_fDNBalanceParam);
+                    
                     plant.color.red *= intens;
                     plant.color.green *= intens;
                     plant.color.blue *= intens;
+                    plant.color.alpha *= 2.5f;
                     
                     AddTriPlant(&plant, type);
-
-                    logger->Info("Tex for grass is 0x%X (raster 0x%X)", plant.texture_ptr, plant.texture_ptr->raster);
                 }
             }
-            
             plantTris = plantTris->m_pNextTri;
         }
         
         FlushTriPlantBuffer();
     }
 
-    PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEZWRITEENABLE, 1u);
-    PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEZTESTENABLE, 1u);
-    PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTION, 7u);
-    PlantMgr_rwOpenGLSetRenderState(rwRENDERSTATEALPHATESTFUNCTIONREF, 0);
+    PlantMgr_RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, 1u);
+    PlantMgr_RwRenderStateSet(rwRENDERSTATEZTESTENABLE, 1u);
+    PlantMgr_RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTION, 7u);
+    PlantMgr_RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTIONREF, 0);
 }
 
 DECL_HOOK(CPlantLocTri*, PlantLocTriAdd, CPlantLocTri* self, CVector& p1, CVector& p2, CVector& p3, uint8_t surface, tColLighting lightning, bool createsPlants, bool createsObjects)

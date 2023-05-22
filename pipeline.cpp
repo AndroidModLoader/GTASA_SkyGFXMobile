@@ -72,7 +72,7 @@ void CCustomBuildingDNPipeline__CustomPipeRenderCB_SkyGfx(RwResEntry* entry, voi
     {
         RpMaterial* material = meshData->m_pMaterial;
         uint8_t alpha = material->color.alpha;
-        int vertexColor = meshData->m_nVertexColor, alphafunc;
+        int vertexColor = meshData->m_nVertexAlpha, alphafunc;
         bool hasAlphaVertexEnabled = vertexColor || alpha != 255;
 
         if(hasAlphaVertexEnabled && alpha == 0) continue; // Fully invisible
