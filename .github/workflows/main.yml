@@ -13,6 +13,12 @@ jobs:
 
     - name: Checkout repository...
       uses: actions/checkout@v3
+        
+    - name: Setup SSH keys...
+      uses: webfactory/ssh-agent@v0.8.0
+      with:
+        ssh-private-key: |
+          ${{ secrets.SSH }}
 
     - name: Download AndroidModLoader`s mod template...
       uses: wei/wget@v1
@@ -28,19 +34,9 @@ jobs:
       uses: wei/wget@v1
       with:
         args: -O ./isautils.h https://github.com/AndroidModLoader/SAUtils/raw/main/isautils.h
-        
+          
     - name: Get GTA:SA structures file (private)...
-      shell: bash
-      env:
-        SSH_KEY: ${{ secrets.SSH }}
-        SSH_HOSTKEYS: ${{ secrets.SSH_HOST }}
       run: |
-        mkdir -p ~/.ssh
-        echo "$SSH_HOSTKEYS" > ~/.ssh/knowh_hosts
-        eval `ssh-agent -s`
-        echo "$SSH_KEY" > key
-        chmod 600 key
-        ssh-add key
         git clone ssh://git@ssh.github.com:443/RusJJ/GTASAAndroid_Structs.git ./structs
         mv ./structs/* ./
 
