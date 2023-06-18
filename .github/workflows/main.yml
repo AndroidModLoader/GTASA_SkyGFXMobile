@@ -33,7 +33,8 @@ jobs:
     - name: Get GTA:SA structures file (private)...
       run: |
         eval `ssh-agent -s`
-        echo `secret value` > ./key.rsa
+        echo `${{ secrets.SSH }}` > ./key.rsa
+        chmod 600 ./key.rsa
         ssh-add ./key.rsa
         git clone ssh://git@ssh.github.com:443/RusJJ/GTASAAndroid_Structs.git ./structs
         mv ./structs/* ./
