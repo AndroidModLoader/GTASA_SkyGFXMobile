@@ -19,6 +19,7 @@ jobs:
       uses: wei/wget@v1
       with:
         args: -O ./AML_src.zip https://github.com/RusJJ/AndroidModLoader/archive/refs/heads/main.zip
+        local-cache: true
 
     - name: Install AndroidModLoader`s mod template...
       run: |
@@ -29,18 +30,19 @@ jobs:
       uses: wei/wget@v1
       with:
         args: -O ./isautils.h https://github.com/AndroidModLoader/SAUtils/raw/main/isautils.h
+        local-cache: true
         
     - name: Get GTA:SA structures file (private)...
-      run: |
-        eval `ssh-agent -s`
-        echo "$SSH_KEY" > ./key.rsa
-        chmod 600 ./key.rsa
-        ssh-add ./key.rsa
-        git clone ssh://git@ssh.github.com:443/RusJJ/GTASAAndroid_Structs.git ./structs
-        mv ./structs/* ./
       shell: bash
       env:
-        SSH_KEY: ${{secrets.SSH}}
+        SSH_KEY: ${{ secrets.SSH }}
+      run: |
+        eval `ssh-agent -s`
+        echo "$SSH_KEY" > key
+        chmod 600 key
+        ssh-add key
+        git clone ssh://git@ssh.github.com:443/RusJJ/GTASAAndroid_Structs.git ./structs
+        mv ./structs/* ./
 
     - name: Install Android NDK (r24)...
       uses: nttld/setup-ndk@v1.2.0
