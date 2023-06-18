@@ -33,11 +33,14 @@ jobs:
     - name: Get GTA:SA structures file (private)...
       run: |
         eval `ssh-agent -s`
-        echo "${{ secrets.SSH }}" > ./key.rsa
+        echo "$SSH_KEY" > ./key.rsa
         chmod 600 ./key.rsa
         ssh-add ./key.rsa
         git clone ssh://git@ssh.github.com:443/RusJJ/GTASAAndroid_Structs.git ./structs
         mv ./structs/* ./
+      shell: bash
+      env:
+        SSH_KEY: ${{secrets.SSH}}
 
     - name: Install Android NDK (r24)...
       uses: nttld/setup-ndk@v1.2.0
