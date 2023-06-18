@@ -30,13 +30,11 @@ jobs:
       with:
         args: -O ./isautils.h https://github.com/AndroidModLoader/SAUtils/raw/main/isautils.h
         
-    - name: Install secret keys...
-      uses: webfactory/ssh-agent@v0.8.0
-      with:
-        ssh-private-key: ${{ secrets.SSH }}
-        
     - name: Get GTA:SA structures file (private)...
       run: |
+        eval `ssh-agent -s`
+        echo `secret value` > ./key.rsa
+        ssh-add ./key.rsa
         git clone ssh://git@ssh.github.com:443/RusJJ/GTASAAndroid_Structs.git ./structs
         mv ./structs/* ./
 
