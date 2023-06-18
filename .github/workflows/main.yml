@@ -36,7 +36,7 @@ jobs:
         SSH_HOSTKEYS: ${{ secrets.SSH_HOST }}
       run: |
         mkdir -p ~/.ssh
-        ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts
+        echo "$SSH_HOSTKEYS" > ~/.ssh/knowh_hosts
         eval `ssh-agent -s`
         echo "$SSH_KEY" > key
         chmod 600 key
