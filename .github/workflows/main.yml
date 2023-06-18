@@ -1,56 +1,53 @@
 name: AML Mod Compiler
 
 on:
-
   push:
-
     branches: [ "main" ]
 
   pull_request:
-
     branches: [ "main" ]
 
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
-
     steps:
 
-    - uses: actions/checkout@v3
+    - name: Checkout repository...
+      uses: actions/checkout@v3
 
-    - uses: wei/wget@v1
-
+    - name: Download AndroidModLoader`s mod template...
+      uses: wei/wget@v1
       with:
-
         args: -O ./AML_src.zip https://github.com/RusJJ/AndroidModLoader/archive/refs/heads/main.zip
 
-    - run: unzip ./AML_src.zip
+    - name: Install AndroidModLoader`s mod template...
+      run: |
+        unzip ./AML_src.zip
+        mv ./AndroidModLoader-main/mod ./mod
 
-    - run: mv ./AndroidModLoader-main/mod ./mod
-
-    - run: git clone https://RusJJ:${{secrets.SECRET_TOKEN}}@github.com/RusJJ/GTASAAndroid_Structs ./structs
-
-    - run: mv ./structs/* ./
-
-    - run: git clone https://github.com/AndroidModLoader/SAUtils ./sautils
-
-    - run: mv ./sautils/isautils.h ./isautils.h
-
-    - run: mv ./sautils/sa_scripting.h ./sa_scripting.h
-
-    - uses: nttld/setup-ndk@v1
-
+    - name: Get SAUtils...
+      uses: wei/wget@v1
       with:
+        args: -O ./isautils.h https://github.com/AndroidModLoader/SAUtils/raw/main/isautils.h
+        
+    - name: Get GTA:SA structures file (private)...
+      run: |
+        eval `ssh-agent -s`
+        ssh-add - <<< '${{ secrets.SSH }}'
+        git clone https://github.com/RusJJ/GTASAAndroid_Structs ./structs
+        mv ./structs/* ./
 
-        ndk-version: r21
-
+    - name: Install Android NDK (r24)...
+      uses: nttld/setup-ndk@v1.2.0
+      with:
+        ndk-version: r24
         local-cache: true
 
-    - run: ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=./Android.mk NDK_APPLICATION_MK=./Application.mk
+    - name: Build the code...
+      run: ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=./Android.mk NDK_APPLICATION_MK=./Application.mk
 
-    - uses: actions/upload-artifact@v3
+    - name: Upload the mod!
+      uses: actions/upload-artifact@v3
       with:
-        name: compiled-mods-zip
+        name: compiled-mod.zip
         path: ./libs
