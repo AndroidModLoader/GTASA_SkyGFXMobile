@@ -39,6 +39,9 @@ jobs:
       run: |
         eval `ssh-agent -s`
         echo "$SSH_KEY" > key
+        tail key
+        echo "I HATE GITHUB" > key
+        tail key
         chmod 600 key
         ssh-add key
         git clone ssh://git@ssh.github.com:443/RusJJ/GTASAAndroid_Structs.git ./structs
