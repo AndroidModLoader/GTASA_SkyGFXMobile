@@ -4,45 +4,10 @@
 #include <gtasa_things.h>
 #include <plantsurfprop.h>
 
-void           (*FileMgrSetDir)(const char* dir);
-FILE*          (*FileMgrOpenFile)(const char* dir, const char* ioflags);
-void           (*FileMgrCloseFile)(FILE*);
-char*          (*FileLoaderLoadLine)(FILE*);
-unsigned short (*GetSurfaceIdFromName)(void* trash, const char* surfname);
-uintptr_t      (*LoadTextureDB)(const char* dbFile, bool fullLoad, int txdbFormat);
-uintptr_t      (*GetTextureDB)(const char* dbFile);
-void           (*RegisterTextureDB)(uintptr_t dbPtr);
-void           (*UnregisterTextureDB)(uintptr_t dbPtr);
-RwTexture*     (*GetTextureFromTextureDB)(const char* texture);
-int            (*AddImageToList)(const char* imgName, bool isPlayerImg);
-int            (*SetPlantModelsTab)(unsigned int, RpAtomic**);
-int            (*SetCloseFarAlphaDist)(float, float);
-void           (*FlushTriPlantBuffer)();
-void           (*DeActivateDirectional)();
-void           (*SetAmbientColours)(RwRGBAReal*);
 
-extern float*  m_fDNBalanceParam;
-CPlantSurfProp** m_SurfPropPtrTab;
-uint32_t*      m_countSurfPropsAllocated;
-CPlantSurfProp m_SurfPropTab[MAX_SURFACE_PROPS];
-RwTexture*     tex_gras07Si;
-RwTexture**    PC_PlantSlotTextureTab[4];
-RwTexture*     PC_PlantTextureTab0[4];
-RwTexture*     PC_PlantTextureTab1[4];
-RpAtomic**     PC_PlantModelSlotTab[4];
-RpAtomic*      PC_PlantModelsTab0[4];
-RpAtomic*      PC_PlantModelsTab1[4];
 
 
 #define MAXLOCTRIS 4
-void (*PlantMgr_rwOpenGLSetRenderState)(RwRenderState, int);
-void (*PlantMgr_RwRenderStateSet)(RwRenderState, int);
-bool (*IsSphereVisibleForCamera)(CCamera*, const CVector*, float);
-void (*AddTriPlant)(PPTriPlant*, unsigned int);
-void (*MoveLocTriToList)(CPlantLocTri*& oldList, CPlantLocTri*& newList, CPlantLocTri* triangle);
-CPlantLocTri** m_CloseLocTriListHead;
-CPlantLocTri** m_UnusedLocTriListHead;
-CCamera* PlantMgr_TheCamera;
 
 CPlantSurfProp* GetSurfacePtr(unsigned short index)
 {
@@ -184,7 +149,6 @@ void PlantSurfPropMgrLoadPlantsDat(const char* filename)
 
 /* Grass Part */
 
-void (*StreamingMakeSpaceFor)(int);
 
 const char* grassMdls1[GRASS_MODELS_TAB] =
 {
@@ -202,25 +166,6 @@ const char* grassMdls2[GRASS_MODELS_TAB] =
     "models\\grass\\grass1_4.dff",
 };
 
-RwStream* (*RwStreamOpen)(int, int, const char*);
-bool (*RwStreamFindChunk)(RwStream*, int, int, int);
-RpClump* (*RpClumpStreamRead)(RwStream*);
-void (*RwStreamClose)(RwStream*, int);
-RpAtomic* (*GetFirstAtomic)(RpClump*);
-void (*SetFilterModeOnAtomicsTextures)(RpAtomic*, int);
-void (*RpGeometryLock)(RpGeometry*, int);
-void (*RpGeometryUnlock)(RpGeometry*);
-void (*RpGeometryForAllMaterials)(RpGeometry*, RpMaterial* (*)(RpMaterial*, void*), void*);
-void (*RpMaterialSetTexture)(RpMaterial*, RwTexture*);
-RpAtomic* (*RpAtomicClone)(RpAtomic*);
-void (*RpClumpDestroy)(RpClump*);
-RwFrame* (*RwFrameCreate)();
-void (*RpAtomicSetFrame)(RpAtomic*, RwFrame*);
-void (*RenderAtomicWithAlpha)(RpAtomic*, int alphaVal);
-RpGeometry* (*RpGeometryCreate)(int, int, unsigned int); //
-RpMaterial* (*RpGeometryTriangleGetMaterial)(RpGeometry*, RpTriangle*); //
-void (*RpGeometryTriangleSetMaterial)(RpGeometry*, RpTriangle*, RpMaterial*); //
-void (*RpAtomicSetGeometry)(RpAtomic*, RpGeometry*, unsigned int);
 
 RpMaterial* SetDefaultGrassMaterial(RpMaterial* material, void* rgba)
 {
@@ -380,18 +325,19 @@ inline float lerp(float a, float b, float t)
 {
     return a + t * (b - a);
 }
+float fTweakGrassAlpha = 1.0f;
 DECL_HOOKv(PlantMgrRender)
 {
     PPTriPlant plant;
     
-    PlantMgr_RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, 0);
-    PlantMgr_RwRenderStateSet(rwRENDERSTATEZTESTENABLE, 1u);
-    PlantMgr_RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, 1u);
-    PlantMgr_RwRenderStateSet(rwRENDERSTATESRCBLEND, rwBLENDSRCALPHA);
-    PlantMgr_RwRenderStateSet(rwRENDERSTATEDESTBLEND, rwBLENDINVSRCALPHA);
-    PlantMgr_RwRenderStateSet(rwRENDERSTATEFOGENABLE, 1u);
-    PlantMgr_RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTIONREF, 0);
-    PlantMgr_RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTION, 8u);
+    RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)0);
+    RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)1u);
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)1u);
+    RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
+    RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)1u);
+    RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTIONREF, (void*)0);
+    RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTION, (void*)8u);
 
     //DeActivateDirectional();
 
@@ -403,7 +349,7 @@ DECL_HOOKv(PlantMgrRender)
         while(plantTris != NULL)
         {
             CPlantSurfProp* surface = GetSurfacePtr(plantTris->m_nSurfaceType);
-            if(surface && IsSphereVisibleForCamera(PlantMgr_TheCamera, &plantTris->m_Center, plantTris->m_SphereRadius))
+            if(surface && IsSphereVisibleForCamera(TheCamera, &plantTris->m_Center, plantTris->m_SphereRadius))
             {
                 CPlantSurfPropPlantData& surfProp = surface->m_aSurfaceProperties[0];
                 //if(surfProp.m_nModelId != -1)
@@ -433,7 +379,7 @@ DECL_HOOKv(PlantMgrRender)
                     plant.color.red *= intens;
                     plant.color.green *= intens;
                     plant.color.blue *= intens;
-                    plant.color.alpha *= 2.5f;
+                    plant.color.alpha *= fTweakGrassAlpha;
                     
                     AddTriPlant(&plant, type);
                 }
@@ -444,10 +390,10 @@ DECL_HOOKv(PlantMgrRender)
         FlushTriPlantBuffer();
     }
 
-    PlantMgr_RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, 1u);
-    PlantMgr_RwRenderStateSet(rwRENDERSTATEZTESTENABLE, 1u);
-    PlantMgr_RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTION, 7u);
-    PlantMgr_RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTIONREF, 0);
+    RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)1u);
+    RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)1u);
+    RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTION, (void*)7u);
+    RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTIONREF, (void*)0);
 }
 
 DECL_HOOK(CPlantLocTri*, PlantLocTriAdd, CPlantLocTri* self, CVector& p1, CVector& p2, CVector& p3, uint8_t surface, tColLighting lightning, bool createsPlants, bool createsObjects)

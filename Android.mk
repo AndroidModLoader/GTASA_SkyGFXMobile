@@ -3,7 +3,7 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 LOCAL_CPP_EXTENSION := .cpp .cc
 LOCAL_MODULE    := SkyGfxMobile
-LOCAL_SRC_FILES := main.cpp colorfilter.cpp shader.cpp shading.cpp pipeline.cpp effects.cpp plantsurfprop.cpp shadows.cpp rtshadowman.cpp mod/logger.cpp mod/config.cpp
+LOCAL_SRC_FILES := main.cpp externs.cpp colorfilter.cpp shader.cpp shading.cpp pipeline.cpp effects.cpp plantsurfprop.cpp shadows.cpp rtshadowman.cpp mod/logger.cpp mod/config.cpp
 LOCAL_CXXFLAGS = -O3 -mfloat-abi=softfp -mfpu=neon -DNDEBUG -std=c++14
 LOCAL_CXXFLAGS += -DNEW_LIGHTING # Nah, too dark...
 #LOCAL_CXXFLAGS += -DSTOCHASTIC_TEX # Does not work for some reason. And causes a lag, heavy thing.

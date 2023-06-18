@@ -1,16 +1,4 @@
-extern int* deviceChip;
-extern float *openglAmbientLight;
-extern float _rwOpenGLOpaqueBlack[4];
-extern RwInt32 *p_rwOpenGLColorMaterialEnabled;
-extern CColourSet *p_CTimeCycle__m_CurrentColours;
-extern CVector *p_CTimeCycle__m_vecDirnLightToSun;
-extern float *p_gfLaRiotsLightMult;
-extern float *p_CCoronas__LightsMult;
-extern uint8_t *p_CWeather__LightningFlash;
-extern float *skin_map;
-extern int *skin_dirty;
-extern int *skin_num;
-extern int (*GetMobileEffectSetting)();
+#pragma once
 
 #define FLAG_ALPHA_TEST           0x01
 #define FLAG_LIGHTING             0x02
@@ -72,43 +60,6 @@ extern int (*GetMobileEffectSetting)();
     t=concatf(t, tmp, strlen(tmp)+1);        \
     t=concatf(t, "\n", 2);                   \
   } while (0)
-
-  typedef struct {
-  // Checks for GL_OES_depth24
-  char has24BitDepthCap;                   // 0x00
-  // Checks for GL_OES_packed_depth_stencil
-  char hasPackedDepthStencilCap;           // 0x01
-  // Checks for GL_NV_depth_nonlinear
-  char hasDepthNonLinearCap;               // 0x02
-  // Checks for GL_EXT_texture_compression_dxt1 or GL_EXT_texture_compression_s3tc
-  char hasTextureCompressionDXT1OrS3TCCap; // 0x03
-  // Checks for GL_AMD_compressed_ATC_texture
-  char hasTextureCompressionATCCap;        // 0x04
-  // Checks for GL_IMG_texture_compression_pvrtc
-  char hasTextureCompressionPVRTCCap;      // 0x05
-  // Checks for GL_OES_rgb8_rgba8
-  char has32BitRenderTargetCap;            // 0x06
-  // Checks for GL_EXT_texture_filter_anisotropic
-  char hasAnisotropicFilteringCap;         // 0x07
-  // Set when OS_SystemChip() <= 1
-  char unk_08;                             // 0x08
-  // Always set to 0
-  char unk_09;                             // 0x09
-  // Checks for GL_QCOM_binning_control
-  char hasBinningControlCap;               // 0x0A
-  // Checks for GL_QCOM_alpha_test
-  char hasAlphaTestCap;                    // 0x0B
-  // Checks for Adreno (TM) 320 or GL_AMD_compressed_ATC_texture
-  char isAdreno;                           // 0x0C
-  // Set when there is no compression support
-  char isMaliChip;                         // 0x0D
-  // Checks for 225 or 540
-  char isSlowGPU;                          // 0x0E
-  char unk_0f;                             // 0x0F
-} RQCapabilities;
-
-extern RQCapabilities *RQCaps;
-extern int *RQMaxBones;
 
 void BuildVertexSource_Reversed(int flags);
 void BuildPixelSource_Reversed(int flags);

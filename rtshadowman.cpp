@@ -14,21 +14,7 @@ extern ConfigEntry* pMaxRTShadows;
 extern ConfigEntry* pDynamicObjectsShadows;
 extern ConfigEntry* pAllowPlayerClassicShadow;
 
-RwCamera* (*CreateShadowCamera)(ShadowCameraStorage*, int size);
-void (*DestroyShadowCamera)(CShadowCamera*);
-void (*MakeGradientRaster)(ShadowCameraStorage*);
-void (*_rwObjectHasFrameSetFrame)(void*, RwFrame*);
-void (*RwFrameDestroy)(RwFrame*);
-void (*RpLightDestroy)(RpLight*);
-void (*CreateRTShadow)(CRealTimeShadow* shadow, int size, bool blur, int blurPasses, bool hasGradient);
-void (*SetShadowedObject)(CRealTimeShadow* shadow, CPhysical* physical);
 
-int (*CamDistComp)(const void*, const void*);
-bool (*StoreRealTimeShadow)(CPhysical* physical, float shadowDispX, float shadowDispY, float shadowFrontX, float shadowFrontY, float shadowSideX, float shadowSideY);
-void (*UpdateRTShadow)(CRealTimeShadow* shadow);
-float *TimeCycShadowDispX, *TimeCycShadowDispY, *TimeCycShadowFrontX, *TimeCycShadowFrontY, *TimeCycShadowSideX, *TimeCycShadowSideY;
-int *TimeCycCurrentStoredValue;
-int *RTShadowsQuality;
 
 CRealTimeShadowManager_NEW* g_realTimeShadowMan = NULL;
 CShadowCamera** pShadowValues; // Temporary thing
@@ -292,27 +278,6 @@ void PatchRTShadowMan()
 {
     g_realTimeShadowMan =                 new CRealTimeShadowManager_NEW(pMaxRTShadows->GetInt());
     pShadowValues =                       new CShadowCamera*[pMaxRTShadows->GetInt() + MID_QUALITY_SHADOW_CAMERAS];
-    SET_TO(CreateRTShadow,                aml->GetSym(hGTASA, "_ZN15CRealTimeShadow6CreateEibib"));
-    SET_TO(CreateShadowCamera,            aml->GetSym(hGTASA, "_ZN13CShadowCamera6CreateEi"));
-    SET_TO(DestroyShadowCamera,           aml->GetSym(hGTASA, "_ZN13CShadowCamera7DestroyEv"));
-    SET_TO(MakeGradientRaster,            aml->GetSym(hGTASA, "_ZN13CShadowCamera18MakeGradientRasterEv"));
-    SET_TO(_rwObjectHasFrameSetFrame,     aml->GetSym(hGTASA, "_Z25_rwObjectHasFrameSetFramePvP7RwFrame"));
-    SET_TO(RwFrameDestroy,                aml->GetSym(hGTASA, "_Z14RwFrameDestroyP7RwFrame"));
-    SET_TO(RpLightDestroy,                aml->GetSym(hGTASA, "_Z14RpLightDestroyP7RpLight"));
-    SET_TO(SetShadowedObject,             aml->GetSym(hGTASA, "_ZN15CRealTimeShadow17SetShadowedObjectEP9CPhysical"));
-
-    SET_TO(CamDistComp,                   aml->GetSym(hGTASA, "_ZN22CRealTimeShadowManager11CamDistCompEPKvS1_"));
-    SET_TO(StoreRealTimeShadow,           aml->GetSym(hGTASA, "_ZN8CShadows19StoreRealTimeShadowEP9CPhysicalffffff"));
-    SET_TO(UpdateRTShadow,                aml->GetSym(hGTASA, "_ZN15CRealTimeShadow6UpdateEv"));
-    SET_TO(TimeCycShadowDispX,            aml->GetSym(hGTASA, "_ZN10CTimeCycle22m_fShadowDisplacementXE"));
-    SET_TO(TimeCycShadowDispY,            aml->GetSym(hGTASA, "_ZN10CTimeCycle22m_fShadowDisplacementYE"));
-    SET_TO(TimeCycShadowFrontX,           aml->GetSym(hGTASA, "_ZN10CTimeCycle15m_fShadowFrontXE"));
-    SET_TO(TimeCycShadowFrontY,           aml->GetSym(hGTASA, "_ZN10CTimeCycle15m_fShadowFrontYE"));
-    SET_TO(TimeCycShadowSideX,            aml->GetSym(hGTASA, "_ZN10CTimeCycle14m_fShadowSideXE"));
-    SET_TO(TimeCycShadowSideY,            aml->GetSym(hGTASA, "_ZN10CTimeCycle14m_fShadowSideYE"));
-    SET_TO(TimeCycCurrentStoredValue,     aml->GetSym(hGTASA, "_ZN10CTimeCycle20m_CurrentStoredValueE"));
-    if(sautils != NULL)                   SET_TO(RTShadowsQuality, sautils->GetSettingValuePointer(SETITEM_SA_SHADOWS_QUALITY));
-    else                                  SET_TO(RTShadowsQuality, pGTASA + 0x6E049C);
 
     aml->Write(pGTASA + 0x679A98, (uintptr_t)&g_realTimeShadowMan, sizeof(void*));
     aml->Redirect(aml->GetSym(hGTASA, "_ZN22CRealTimeShadowManagerC2Ev"), (uintptr_t)RealTimeShadowManager);

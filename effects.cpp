@@ -4,33 +4,11 @@
 #include <gtasa_things.h>
 #include <effects.h>
 
-RwRaster* (*RwRasterCreate)(RwInt32 width, RwInt32 height, RwInt32 depth, RwInt32 flags) = NULL;
-RwUInt8* (*RwRasterLock)(RwRaster*, unsigned char, int) = NULL;
-void (*RwRasterUnlock)(RwRaster*) = NULL;
-void (*ImmediateModeRenderStatesStore)() = NULL;
-void (*ImmediateModeRenderStatesSet)() = NULL;
-void (*ImmediateModeRenderStatesReStore)() = NULL;
-void (*RwRenderStateSet)(RwRenderState, void*) = NULL;
-void (*DrawQuadSetUVs)(float,float,float,float,float,float,float,float) = NULL;
-void (*PostEffectsDrawQuad)(float,float,float,float,uint8_t,uint8_t,uint8_t,uint8_t,RwRaster*) = NULL;
-void (*DrawQuadSetDefaultUVs)(void) = NULL;
-uint8_t (*CamNoRain)() = NULL;
-uint8_t (*PlayerNoRain)() = NULL;
-RsGlobalType* RsGlobal = NULL;
-int *pnGrainStrength = NULL;
-int *currArea = NULL;
-bool *pbGrainEnable = NULL;
-bool* pbRainEnable = NULL;
-bool *pbInCutscene = NULL;
-bool *pbNightVision = NULL;
-bool *pbInfraredVision = NULL;
-float* pfWeatherRain = NULL;
-float* pfWeatherUnderwaterness = NULL;
-CCamera* effects_TheCamera = NULL;
+
+
 unsigned char grainIntensity;
 
 
-RwRaster *grainRaster = NULL;
 // VU style random number generator -- taken from pcsx2
 uint32_t R;
 void vrinit(uint32_t x) { R = 0x3F800000 | (x & 0x007FFFFF); }
@@ -82,17 +60,7 @@ void GrainEffect(int strength, bool generate)
 }
 
 // Original
-void (*RenderFx)(uintptr_t, uintptr_t, unsigned char) = NULL;
-void (*RenderWaterCannons)() = NULL;
 
-uintptr_t pg_fx;
-bool* pbCCTV;
-bool* pbFog = NULL;
-void (*RenderWaterFog)() = NULL;
-void (*RenderMovingFog)() = NULL;
-void (*RenderVolumetricClouds)() = NULL;
-void (*RenderScreenFogPostEffect)() = NULL;
-void (*RenderCCTVPostEffect)() = NULL;
 
 // Hooks
 DECL_HOOKv(InitialisePostEffects)
@@ -131,7 +99,7 @@ extern "C" void MobileEffectsRender()
 
             if(!CamNoRain() && !PlayerNoRain() && *pfWeatherUnderwaterness <= 0.0f && !*currArea)
             {
-                CVector& cameraPos = effects_TheCamera->GetPosition();
+                CVector& cameraPos = TheCamera->GetPosition();
                 if(cameraPos.z <= 900.0f)
                 {
                     GrainEffect(0.25f * nRainGrain, true);
@@ -145,7 +113,6 @@ extern "C" void MobileEffectsRender()
     if(*pbCCTV) RenderCCTVPostEffect(); // CCTV
 }
 uintptr_t pGTASA_EffectsRender = 0;
-uintptr_t* pdword_952880;
 extern "C" void EffectsRender()
 {
     RenderFx(pg_fx, *pdword_952880, 0);

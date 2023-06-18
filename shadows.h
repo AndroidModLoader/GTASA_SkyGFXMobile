@@ -1,3 +1,5 @@
+#pragma once
+
 struct RwTexture;
 class CShadowCamera;
 class RpLight;

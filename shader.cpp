@@ -8,19 +8,6 @@
 #include <fastcat.h>
 #include <shader.h>
 
-int* deviceChip;
-float *openglAmbientLight;
-float _rwOpenGLOpaqueBlack[4];
-RwInt32 *p_rwOpenGLColorMaterialEnabled;
-CColourSet *p_CTimeCycle__m_CurrentColours;
-CVector *p_CTimeCycle__m_vecDirnLightToSun;
-float *p_gfLaRiotsLightMult;
-float *p_CCoronas__LightsMult;
-uint8_t *p_CWeather__LightningFlash;
-float *skin_map;
-int *skin_dirty;
-int *skin_num;
-int (*GetMobileEffectSetting)();
 
 //extern ConfigEntry* pBonesOptimization;
 //extern ConfigEntry* pMVPOptimization;
@@ -34,15 +21,7 @@ extern ConfigEntry* pExponentialFog;
 #endif // NEW_LIGHTING
 
 char pxlbuf[4096], vtxbuf[4096];
-
-RQCapabilities *RQCaps;
-int *RQMaxBones;
-
-inline int OS_SystemChip()
-{
-    return *deviceChip;
-}
-
+inline int OS_SystemChip() { return *deviceChip; }
 void BuildPixelSource_SkyGfx(int flags)
 {
     char tmp[512];
@@ -514,7 +493,7 @@ void BuildVertexSource_SkyGfx(int flags)
     if(!RQCaps->unk_08 && (flags & FLAG_FOG))
     {
         if(pExponentialFog->GetBool()) VTX_EMIT("float fogDist = length(WorldPos.xyz - CameraPosition.xyz);\nOut_FogAmt = clamp(1.0 - exp2(-1.7 * FogDistances.z*FogDistances.z * fogDist*fogDist * 1.442695), 0.0, 1.0);");
-        else VTX_EMIT("Out_FogAmt = clamp((length(WorldPos.xyz - CameraPosition.xyz) - FogDistances.x) * FogDistances.z, 0.0, 0.80);"); // 0.90 ->
+        else VTX_EMIT("Out_FogAmt = clamp((length(WorldPos.xyz - CameraPosition.xyz) - FogDistances.x) * FogDistances.z, 0.0, 1.00);");
     }
 
     const char* _tmp;
@@ -1148,7 +1127,7 @@ void BuildVertexSource_Reversed(int flags)
     if(!RQCaps->unk_08 && (flags & FLAG_FOG))
     {
         if(pExponentialFog->GetBool()) VTX_EMIT("float fogDist = length(WorldPos.xyz - CameraPosition.xyz);\nOut_FogAmt = clamp(1.0 - exp2(-1.7 * FogDistances.z*FogDistances.z * fogDist*fogDist * 1.442695), 0.0, 1.0);");
-        else VTX_EMIT("Out_FogAmt = clamp((length(WorldPos.xyz - CameraPosition.xyz) - FogDistances.x) * FogDistances.z, 0.0, 0.90);");
+        else VTX_EMIT("Out_FogAmt = clamp((length(WorldPos.xyz - CameraPosition.xyz) - FogDistances.x) * FogDistances.z, 0.0, 1.00);");
         //VTX_EMIT("Out_FogAmt = clamp((length(WorldPos.xyz - CameraPosition.xyz) - FogDistances.x) * FogDistances.z, 0.0, 0.90);");
     }
 
@@ -1318,9 +1297,5 @@ DECL_HOOK(int, RQShaderBuildSource, int flags, char **pxlsrc, char **vtxsrc)
 
 void PatchShaders()
 {
-    SET_TO(GetMobileEffectSetting,          aml->GetSym(hGTASA, "_Z22GetMobileEffectSettingv"));
-    SET_TO(RQCaps,                          aml->GetSym(hGTASA, "RQCaps"));
-    SET_TO(RQMaxBones,                      aml->GetSym(hGTASA, "RQMaxBones"));
-    SET_TO(deviceChip,                      aml->GetSym(hGTASA, "deviceChip"));
     HOOK(RQShaderBuildSource,               aml->GetSym(hGTASA, "_ZN8RQShader11BuildSourceEjPPKcS2_"));
 }
