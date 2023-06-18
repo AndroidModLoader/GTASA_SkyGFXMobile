@@ -3,7 +3,6 @@ name: AML Mod Compiler
 on:
   push:
     branches: [ "main" ]
-
   pull_request:
     branches: [ "main" ]
 
@@ -19,7 +18,6 @@ jobs:
       uses: wei/wget@v1
       with:
         args: -O ./AML_src.zip https://github.com/RusJJ/AndroidModLoader/archive/refs/heads/main.zip
-        local-cache: true
 
     - name: Install AndroidModLoader`s mod template...
       run: |
@@ -30,7 +28,6 @@ jobs:
       uses: wei/wget@v1
       with:
         args: -O ./isautils.h https://github.com/AndroidModLoader/SAUtils/raw/main/isautils.h
-        local-cache: true
         
     - name: Get GTA:SA structures file (private)...
       shell: bash
@@ -38,8 +35,8 @@ jobs:
         SSH_KEY: ${{ secrets.SSH }}
         SSH_HOSTKEYS: ${{ secrets.SSH_HOST }}
       run: |
-        mkdir -p /root/.ssh
-        ssh-keyscan -t rsa github.com >> /root/.ssh/known_hosts
+        mkdir -p ~/.ssh
+        ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts
         eval `ssh-agent -s`
         echo "$SSH_KEY" > key
         chmod 600 key
