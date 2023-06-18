@@ -36,7 +36,10 @@ jobs:
       shell: bash
       env:
         SSH_KEY: ${{ secrets.SSH }}
+        SSH_HOSTKEYS: ${{ secrets.SSH_HOST }}
       run: |
+        mkdir -p /root/.ssh
+        ssh-keyscan -t rsa github.com >> /root/.ssh/known_hosts
         eval `ssh-agent -s`
         echo "$SSH_KEY" > key
         chmod 600 key
