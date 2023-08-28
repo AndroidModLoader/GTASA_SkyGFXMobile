@@ -36,6 +36,59 @@ extern void* hGTASA;
 #define sizeofA(__aVar)  ((int)(sizeof(__aVar)/sizeof(__aVar[0])))
 
 #define NAKEDAT __attribute__((optnone)) __attribute__((naked))
+#define rpPDS_MAKEPIPEID(vendorID, pipeID)              \
+    (((vendorID & 0xFFFF) << 16) | (pipeID & 0xFFFF))
+
+enum RockstarPipelineIDs
+{
+    VEND_ROCKSTAR     = 0x0253F2,
+
+    // PS2 pipes
+    // building
+    PDS_PS2_CustomBuilding_AtmPipeID = rpPDS_MAKEPIPEID(VEND_ROCKSTAR, 0x80),
+    PDS_PS2_CustomBuilding_MatPipeID = rpPDS_MAKEPIPEID(VEND_ROCKSTAR, 0x81),
+    PDS_PS2_CustomBuildingDN_AtmPipeID = rpPDS_MAKEPIPEID(VEND_ROCKSTAR, 0x82),
+    PDS_PS2_CustomBuildingDN_MatPipeID = rpPDS_MAKEPIPEID(VEND_ROCKSTAR, 0x83),
+    PDS_PS2_CustomBuildingEnvMap_AtmPipeID = rpPDS_MAKEPIPEID(VEND_ROCKSTAR, 0x8C),
+    PDS_PS2_CustomBuildingEnvMap_MatPipeID = rpPDS_MAKEPIPEID(VEND_ROCKSTAR, 0x8D),
+    PDS_PS2_CustomBuildingDNEnvMap_AtmPipeID = rpPDS_MAKEPIPEID(VEND_ROCKSTAR, 0x8E),
+    PDS_PS2_CustomBuildingDNEnvMap_MatPipeID = rpPDS_MAKEPIPEID(VEND_ROCKSTAR, 0x8F),
+    PDS_PS2_CustomBuildingUVA_AtmPipeID = rpPDS_MAKEPIPEID(VEND_ROCKSTAR, 0x90),
+    PDS_PS2_CustomBuildingUVA_MatPipeID = rpPDS_MAKEPIPEID(VEND_ROCKSTAR, 0x91),
+    PDS_PS2_CustomBuildingDNUVA_AtmPipeID = rpPDS_MAKEPIPEID(VEND_ROCKSTAR, 0x92),
+    PDS_PS2_CustomBuildingDNUVA_MatPipeID = rpPDS_MAKEPIPEID(VEND_ROCKSTAR, 0x93),
+    // car
+    PDS_PS2_CustomCar_AtmPipeID = rpPDS_MAKEPIPEID(VEND_ROCKSTAR, 0x84),
+    PDS_PS2_CustomCar_MatPipeID = rpPDS_MAKEPIPEID(VEND_ROCKSTAR, 0x85),
+    PDS_PS2_CustomCarEnvMap_AtmPipeID = rpPDS_MAKEPIPEID(VEND_ROCKSTAR, 0x86),
+    PDS_PS2_CustomCarEnvMap_MatPipeID = rpPDS_MAKEPIPEID(VEND_ROCKSTAR, 0x87),
+//    PDS_PS2_CustomCarEnvMapUV2_AtmPipeID = rpPDS_MAKEPIPEID(VEND_ROCKSTAR, 0x8A),    // this does not exist
+    PDS_PS2_CustomCarEnvMapUV2_MatPipeID = rpPDS_MAKEPIPEID(VEND_ROCKSTAR, 0x8B),
+    // skin
+    PDS_PS2_CustomSkinPed_AtmPipeID = rpPDS_MAKEPIPEID(VEND_ROCKSTAR, 0x88),
+    PDS_PS2_CustomSkinPed_MatPipeID = rpPDS_MAKEPIPEID(VEND_ROCKSTAR, 0x89),
+
+    // PC pipes
+    RSPIPE_PC_CustomBuilding_PipeID = rpPDS_MAKEPIPEID(VEND_ROCKSTAR, 0x9C),
+    RSPIPE_PC_CustomBuildingDN_PipeID = rpPDS_MAKEPIPEID(VEND_ROCKSTAR, 0x98),
+    RSPIPE_PC_CustomCarEnvMap_PipeID = rpPDS_MAKEPIPEID(VEND_ROCKSTAR, 0x9A),    // same as XBOX!
+
+    // Xbox pipes
+    RSPIPE_XBOX_CustomBuilding_PipeID = rpPDS_MAKEPIPEID(VEND_ROCKSTAR, 0x9E),
+    RSPIPE_XBOX_CustomBuildingDN_PipeID = rpPDS_MAKEPIPEID(VEND_ROCKSTAR, 0x96),
+    RSPIPE_XBOX_CustomBuildingEnvMap_PipeID = rpPDS_MAKEPIPEID(VEND_ROCKSTAR, 0xA0),
+    RSPIPE_XBOX_CustomBuildingDNEnvMap_PipeID = rpPDS_MAKEPIPEID(VEND_ROCKSTAR, 0xA2),
+    RSPIPE_XBOX_CustomCarEnvMap_PipeID = rpPDS_MAKEPIPEID(VEND_ROCKSTAR, 0x9A),    // same as PC!
+};
+
+enum BuildingPipeline
+{
+    BUILDING_MOBILE,
+    BUILDING_PS2,
+    BUILDING_XBOX,
+
+    NUMBUILDINGPIPES
+};
 
 #define GL_AMBIENT 0x1200
 #define GL_DIFFUSE 0x1201
@@ -73,7 +126,7 @@ extern int* rwOpenGLLightingEnabled;
 extern int* rwOpenGLColorMaterialEnabled;
 extern int* ms_envMapPluginOffset;
 extern int* RasterExtOffset;
-extern char* byte_70BF3C;
+extern char* doPop;
 extern RwRaster *grainRaster;
 extern uintptr_t* pdword_952880;
 extern float*  m_fDNBalanceParam;
@@ -106,109 +159,125 @@ extern uint8_t *p_CWeather__LightningFlash;
 extern float *skin_map;
 extern int *skin_dirty;
 extern int *skin_num;
+extern bool *LightningFlash;
+extern int *ms_extraVertColourPluginOffset;
+extern bool *RwHackNoCompressedTexCoords;
 
 // Functions
-extern RwFrame*             (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);
-extern RpLight*             (*RpLightSetColor)(RpLight *light, const RwRGBAReal *color);
-extern void                 (*emu_glColor4fv)(const GLfloat *v);
-extern void                 (*emu_glLightModelfv)(GLenum pname, const GLfloat *params);
-extern void                 (*emu_glMaterialfv)(GLenum face, GLenum pname, const GLfloat *params);
-extern void                 (*emu_glColorMaterial)(GLenum face, GLenum mode);
-extern void                 (*emu_glEnable)(GLenum cap);
-extern void                 (*emu_glDisable)(GLenum cap);
-extern RwRaster*            (*RwRasterCreate)(RwInt32 width, RwInt32 height, RwInt32 depth, RwInt32 flags);
-extern RwUInt8*             (*RwRasterLock)(RwRaster*, unsigned char, int);
-extern void                 (*RwRasterUnlock)(RwRaster*);
-extern void                 (*ImmediateModeRenderStatesStore)();
-extern void                 (*ImmediateModeRenderStatesSet)();
-extern void                 (*ImmediateModeRenderStatesReStore)();
-extern void                 (*RwRenderStateSet)(RwRenderState, void*);
-extern void                 (*DrawQuadSetUVs)(float,float,float,float,float,float,float,float);
-extern void                 (*PostEffectsDrawQuad)(float,float,float,float,uint8_t,uint8_t,uint8_t,uint8_t,RwRaster*);
-extern void                 (*DrawQuadSetDefaultUVs)(void);
-extern uint8_t              (*CamNoRain)();
-extern uint8_t              (*PlayerNoRain)();
-extern void                 (*RenderFx)(uintptr_t, uintptr_t, unsigned char);
-extern void                 (*RenderWaterCannons)();
-extern void                 (*RenderWaterFog)();
-extern void                 (*RenderMovingFog)();
-extern void                 (*RenderVolumetricClouds)();
-extern void                 (*RenderScreenFogPostEffect)();
-extern void                 (*RenderCCTVPostEffect)();
-extern void                 (*_rxPipelineDestroy)(RxPipeline*);
-extern RxPipeline*          (*RxPipelineCreate)();
-extern RxLockedPipe*        (*RxPipelineLock)(RxPipeline*);
-extern RxNodeDefinition*    (*RxNodeDefinitionGetOpenGLAtomicAllInOne)();
-extern void*                (*RxLockedPipeAddFragment)(RxLockedPipe*, int, RxNodeDefinition*, int);
-extern RxLockedPipe*        (*RxLockedPipeUnlock)(RxLockedPipe*);
-extern RxPipelineNode*      (*RxPipelineFindNodeByName)(RxPipeline*, const char*, int, int);
-extern void                 (*RxOpenGLAllInOneSetInstanceCallBack)(RxPipelineNode*, void*);
-extern void                 (*RxOpenGLAllInOneSetRenderCallBack)(RxPipelineNode*, void*);
-extern void                 (*_rwOpenGLSetRenderState)(RwRenderState, int);
-extern void                 (*_rwOpenGLGetRenderState)(RwRenderState, void*);
-extern void                 (*_rwOpenGLSetRenderStateNoExtras)(RwRenderState, void*);
-extern void                 (*_rwOpenGLLightsSetMaterialPropertiesORG)(const RpMaterial *mat, RwUInt32 flags);
-extern void                 (*SetNormalMatrix)(float, float, RwV2d);
-extern void                 (*DrawStoredMeshData)(RxOpenGLMeshInstanceData*);
-extern void                 (*ResetEnvMap)();
-extern void                 (*SetSecondVertexColor)(uint8_t, float);
-extern void                 (*EnableAlphaModulate)(float);
-extern void                 (*DisableAlphaModulate)();
-extern void                 (*SetEnvMap)(void*, float, int);
-extern void                 (*FileMgrSetDir)(const char* dir);
-extern FILE*                (*FileMgrOpenFile)(const char* dir, const char* ioflags);
-extern void                 (*FileMgrCloseFile)(FILE*);
-extern char*                (*FileLoaderLoadLine)(FILE*);
-extern unsigned short       (*GetSurfaceIdFromName)(void* trash, const char* surfname);
-extern uintptr_t            (*LoadTextureDB)(const char* dbFile, bool fullLoad, int txdbFormat);
-extern uintptr_t            (*GetTextureDB)(const char* dbFile);
-extern void                 (*RegisterTextureDB)(uintptr_t dbPtr);
-extern void                 (*UnregisterTextureDB)(uintptr_t dbPtr);
-extern RwTexture*           (*GetTextureFromTextureDB)(const char* texture);
-extern int                  (*AddImageToList)(const char* imgName, bool isPlayerImg);
-extern int                  (*SetPlantModelsTab)(unsigned int, RpAtomic**);
-extern int                  (*SetCloseFarAlphaDist)(float, float);
-extern void                 (*FlushTriPlantBuffer)();
-extern void                 (*DeActivateDirectional)();
-extern void                 (*SetAmbientColours)(RwRGBAReal*);
-extern bool                 (*IsSphereVisibleForCamera)(CCamera*, const CVector*, float);
-extern void                 (*AddTriPlant)(PPTriPlant*, unsigned int);
-extern void                 (*MoveLocTriToList)(CPlantLocTri*& oldList, CPlantLocTri*& newList, CPlantLocTri* triangle);
-extern void                 (*StreamingMakeSpaceFor)(int);
-extern RwStream*            (*RwStreamOpen)(int, int, const char*);
-extern bool                 (*RwStreamFindChunk)(RwStream*, int, int, int);
-extern RpClump*             (*RpClumpStreamRead)(RwStream*);
-extern void                 (*RwStreamClose)(RwStream*, int);
-extern RpAtomic*            (*GetFirstAtomic)(RpClump*);
-extern void                 (*SetFilterModeOnAtomicsTextures)(RpAtomic*, int);
-extern void                 (*RpGeometryLock)(RpGeometry*, int);
-extern void                 (*RpGeometryUnlock)(RpGeometry*);
-extern void                 (*RpGeometryForAllMaterials)(RpGeometry*, RpMaterial* (*)(RpMaterial*, void*), void*);
-extern void                 (*RpMaterialSetTexture)(RpMaterial*, RwTexture*);
-extern RpAtomic*            (*RpAtomicClone)(RpAtomic*);
-extern void                 (*RpClumpDestroy)(RpClump*);
-extern RwFrame*             (*RwFrameCreate)();
-extern void                 (*RpAtomicSetFrame)(RpAtomic*, RwFrame*);
-extern void                 (*RenderAtomicWithAlpha)(RpAtomic*, int alphaVal);
-extern RpGeometry*          (*RpGeometryCreate)(int, int, unsigned int); //
-extern RpMaterial*          (*RpGeometryTriangleGetMaterial)(RpGeometry*, RpTriangle*); //
-extern void                 (*RpGeometryTriangleSetMaterial)(RpGeometry*, RpTriangle*, RpMaterial*); //
-extern void                 (*RpAtomicSetGeometry)(RpAtomic*, RpGeometry*, unsigned int);
-extern RwCamera*            (*CreateShadowCamera)(ShadowCameraStorage*, int size);
-extern void                 (*DestroyShadowCamera)(CShadowCamera*);
-extern void                 (*MakeGradientRaster)(ShadowCameraStorage*);
-extern void                 (*_rwObjectHasFrameSetFrame)(void*, RwFrame*);
-extern void                 (*RwFrameDestroy)(RwFrame*);
-extern void                 (*RpLightDestroy)(RpLight*);
-extern void                 (*CreateRTShadow)(CRealTimeShadow* shadow, int size, bool blur, int blurPasses, bool hasGradient);
-extern void                 (*SetShadowedObject)(CRealTimeShadow* shadow, CPhysical* physical);
-extern int                  (*CamDistComp)(const void*, const void*);
-extern bool                 (*StoreRealTimeShadow)(CPhysical* physical, float shadowDispX, float shadowDispY, float shadowFrontX, float shadowFrontY, float shadowSideX, float shadowSideY);
-extern void                 (*UpdateRTShadow)(CRealTimeShadow* shadow);
-extern int                  (*GetMobileEffectSetting)();
-extern void                 (*EntityPreRender)(CEntity* entity);
-extern void                 (*Radiosity)(int32_t intensityLimit, int32_t filterPasses, int32_t renderPasses, int32_t intensity);
-extern void                 (*HeatHazeFX)(float, bool);
+extern RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);
+extern RpLight*            (*RpLightSetColor)(RpLight *light, const RwRGBAReal *color);
+extern void                (*emu_glColor4fv)(const GLfloat *v);
+extern void                (*emu_glLightModelfv)(GLenum pname, const GLfloat *params);
+extern void                (*emu_glMaterialfv)(GLenum face, GLenum pname, const GLfloat *params);
+extern void                (*emu_glColorMaterial)(GLenum face, GLenum mode);
+extern void                (*emu_glEnable)(GLenum cap);
+extern void                (*emu_glDisable)(GLenum cap);
+extern RwRaster*           (*RwRasterCreate)(RwInt32 width, RwInt32 height, RwInt32 depth, RwInt32 flags);
+extern RwUInt8*            (*RwRasterLock)(RwRaster*, unsigned char, int);
+extern void                (*RwRasterUnlock)(RwRaster*);
+extern void                (*ImmediateModeRenderStatesStore)();
+extern void                (*ImmediateModeRenderStatesSet)();
+extern void                (*ImmediateModeRenderStatesReStore)();
+extern void                (*RwRenderStateSet)(RwRenderState, void*);
+extern void                (*DrawQuadSetUVs)(float,float,float,float,float,float,float,float);
+extern void                (*PostEffectsDrawQuad)(float,float,float,float,uint8_t,uint8_t,uint8_t,uint8_t,RwRaster*);
+extern void                (*DrawQuadSetDefaultUVs)(void);
+extern uint8_t             (*CamNoRain)();
+extern uint8_t             (*PlayerNoRain)();
+extern void                (*RenderFx)(uintptr_t, uintptr_t, unsigned char);
+extern void                (*RenderWaterCannons)();
+extern void                (*RenderWaterFog)();
+extern void                (*RenderMovingFog)();
+extern void                (*RenderVolumetricClouds)();
+extern void                (*RenderScreenFogPostEffect)();
+extern void                (*RenderCCTVPostEffect)();
+extern void                (*_rxPipelineDestroy)(RxPipeline*);
+extern RxPipeline*         (*RxPipelineCreate)();
+extern RxLockedPipe*       (*RxPipelineLock)(RxPipeline*);
+extern RxNodeDefinition*   (*RxNodeDefinitionGetOpenGLAtomicAllInOne)();
+extern void*               (*RxLockedPipeAddFragment)(RxLockedPipe*, int, RxNodeDefinition*, int);
+extern RxLockedPipe*       (*RxLockedPipeUnlock)(RxLockedPipe*);
+extern RxPipelineNode*     (*RxPipelineFindNodeByName)(RxPipeline*, const char*, int, int);
+extern void                (*RxOpenGLAllInOneSetInstanceCallBack)(RxPipelineNode*, void*);
+extern void                (*RxOpenGLAllInOneSetRenderCallBack)(RxPipelineNode*, void*);
+extern void                (*_rwOpenGLSetRenderState)(RwRenderState, int);
+extern void                (*_rwOpenGLGetRenderState)(RwRenderState, void*);
+extern void                (*_rwOpenGLSetRenderStateNoExtras)(RwRenderState, void*);
+extern void                (*_rwOpenGLLightsSetMaterialPropertiesORG)(const RpMaterial *mat, RwUInt32 flags);
+extern void                (*SetNormalMatrix)(float, float, RwV2d);
+extern void                (*DrawStoredMeshData)(RxOpenGLMeshInstanceData*);
+extern void                (*ResetEnvMap)();
+extern void                (*SetSecondVertexColor)(uint8_t, float);
+extern void                (*EnableAlphaModulate)(float);
+extern void                (*DisableAlphaModulate)();
+extern void                (*SetEnvMap)(void*, float, int);
+extern void                (*FileMgrSetDir)(const char* dir);
+extern FILE*               (*FileMgrOpenFile)(const char* dir, const char* ioflags);
+extern void                (*FileMgrCloseFile)(FILE*);
+extern char*               (*FileLoaderLoadLine)(FILE*);
+extern unsigned short      (*GetSurfaceIdFromName)(void* trash, const char* surfname);
+extern uintptr_t           (*LoadTextureDB)(const char* dbFile, bool fullLoad, int txdbFormat);
+extern uintptr_t           (*GetTextureDB)(const char* dbFile);
+extern void                (*RegisterTextureDB)(uintptr_t dbPtr);
+extern void                (*UnregisterTextureDB)(uintptr_t dbPtr);
+extern RwTexture*          (*GetTextureFromTextureDB)(const char* texture);
+extern int                 (*AddImageToList)(const char* imgName, bool isPlayerImg);
+extern int                 (*SetPlantModelsTab)(unsigned int, RpAtomic**);
+extern int                 (*SetCloseFarAlphaDist)(float, float);
+extern void                (*FlushTriPlantBuffer)();
+extern void                (*DeActivateDirectional)();
+extern void                (*SetAmbientColours)(RwRGBAReal*);
+extern bool                (*IsSphereVisibleForCamera)(CCamera*, const CVector*, float);
+extern void                (*AddTriPlant)(PPTriPlant*, unsigned int);
+extern void                (*MoveLocTriToList)(CPlantLocTri*& oldList, CPlantLocTri*& newList, CPlantLocTri* triangle);
+extern void                (*StreamingMakeSpaceFor)(int);
+extern RwStream*           (*RwStreamOpen)(int, int, const char*);
+extern bool                (*RwStreamFindChunk)(RwStream*, int, int, int);
+extern RpClump*            (*RpClumpStreamRead)(RwStream*);
+extern void                (*RwStreamClose)(RwStream*, int);
+extern RpAtomic*           (*GetFirstAtomic)(RpClump*);
+extern void                (*SetFilterModeOnAtomicsTextures)(RpAtomic*, int);
+extern void                (*RpGeometryLock)(RpGeometry*, int);
+extern void                (*RpGeometryUnlock)(RpGeometry*);
+extern void                (*RpGeometryForAllMaterials)(RpGeometry*, RpMaterial* (*)(RpMaterial*, void*), void*);
+extern void                (*RpMaterialSetTexture)(RpMaterial*, RwTexture*);
+extern RpAtomic*           (*RpAtomicClone)(RpAtomic*);
+extern void                (*RpClumpDestroy)(RpClump*);
+extern RwFrame*            (*RwFrameCreate)();
+extern void                (*RpAtomicSetFrame)(RpAtomic*, RwFrame*);
+extern void                (*RenderAtomicWithAlpha)(RpAtomic*, int alphaVal);
+extern RpGeometry*         (*RpGeometryCreate)(int, int, unsigned int); //
+extern RpMaterial*         (*RpGeometryTriangleGetMaterial)(RpGeometry*, RpTriangle*); //
+extern void                (*RpGeometryTriangleSetMaterial)(RpGeometry*, RpTriangle*, RpMaterial*); //
+extern void                (*RpAtomicSetGeometry)(RpAtomic*, RpGeometry*, unsigned int);
+extern RwCamera*           (*CreateShadowCamera)(ShadowCameraStorage*, int size);
+extern void                (*DestroyShadowCamera)(CShadowCamera*);
+extern void                (*MakeGradientRaster)(ShadowCameraStorage*);
+extern void                (*_rwObjectHasFrameSetFrame)(void*, RwFrame*);
+extern void                (*RwFrameDestroy)(RwFrame*);
+extern void                (*RpLightDestroy)(RpLight*);
+extern void                (*CreateRTShadow)(CRealTimeShadow* shadow, int size, bool blur, int blurPasses, bool hasGradient);
+extern void                (*SetShadowedObject)(CRealTimeShadow* shadow, CPhysical* physical);
+extern int                 (*CamDistComp)(const void*, const void*);
+extern bool                (*StoreRealTimeShadow)(CPhysical* physical, float shadowDispX, float shadowDispY, float shadowFrontX, float shadowFrontY, float shadowSideX, float shadowSideY);
+extern void                (*UpdateRTShadow)(CRealTimeShadow* shadow);
+extern int                 (*GetMobileEffectSetting)();
+extern void                (*EntityPreRender)(CEntity* entity);
+extern void                (*Radiosity)(int32_t intensityLimit, int32_t filterPasses, int32_t renderPasses, int32_t intensity);
+extern void                (*HeatHazeFX)(float, bool);
+extern bool                (*IsVisionFXActive)();
+extern float               (*TimeCycGetAmbientRed)();
+extern float               (*TimeCycGetAmbientGreen)();
+extern float               (*TimeCycGetAmbientBlue)();
+extern uint32_t            (*GetPipelineID)(RpAtomic*);
+extern RwRGBA*             (*GetExtraVertColourPtr)(RpGeometry*);
+extern void                (*emu_ArraysDelete)(ArrayState*);
+extern void                (*_rxOpenGLAllInOneAtomicInstanceVertexArray)(RxOpenGLMeshInstanceData *, RpAtomic const*, RpGeometry const*, RpGeometryFlag, int, int, unsigned char *, RwRGBA *, RwRGBA *);
+extern void                (*emu_ArraysReset)();
+extern void                (*emu_ArraysIndices)(void*, unsigned int, unsigned int);
+extern void                (*emu_ArraysVertex)(void*, unsigned int, unsigned int, unsigned int);
+extern void                (*emu_ArraysVertexAttrib)(unsigned int, int, unsigned int, unsigned char, unsigned int);
+extern ArrayState*         (*emu_ArraysStore)(unsigned char, unsigned char);
 
 // Main
 void ResolveExternals();

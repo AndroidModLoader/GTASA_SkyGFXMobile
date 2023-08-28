@@ -12,6 +12,7 @@ uintptr_t pGTASA;
 
 /* SkyGFX Externs */
 void StartColorfilter();
+void StartBuildingPipeline();
 
 /* Main */
 extern "C" void OnModLoad()
@@ -37,8 +38,12 @@ extern "C" void OnModLoad()
     cfg->Bind("GitHub", "", "About")->SetString("https://github.com/AndroidModLoader/GTASA_SkyGFXMobile"); cfg->ClearLast();
     cfg->Save();
 
+    /* Get game functions and variables */
+    ResolveExternals();
+
     /* Uhm... Modules? */
     StartColorfilter();
+    StartBuildingPipeline();
 }
 
 static Config cfgLocal("SkyGFXMobile");

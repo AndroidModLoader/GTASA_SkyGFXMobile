@@ -16,7 +16,7 @@ LOCAL_CXXFLAGS = -O3 -mfloat-abi=softfp -mfpu=neon -DNDEBUG -std=c++14
 LOCAL_SRC_FILES := main.cpp mod/logger.cpp mod/config.cpp
 
 LOCAL_SRC_FILES += externs.cpp
-LOCAL_SRC_FILES += skygfx/colorfilter.cpp
+LOCAL_SRC_FILES += skygfx/colorfilter.cpp skygfx/buildingpipe.cpp
 
 ### Includes
 LOCAL_C_INCLUDES += ./include
