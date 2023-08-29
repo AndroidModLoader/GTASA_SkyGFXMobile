@@ -28,6 +28,17 @@ void ColorfilterSettingChanged(int oldVal, int newVal, void* data)
     pCFGColorFilter->SetInt(newVal);
     pCFGColorFilter->Clamp(0, COLFIL_MAX - 1);
     g_nColorFilter = pCFGColorFilter->GetInt();
+
+    if(g_nColorFilter == COLFIL_MOBILE)
+    {
+        aml->Write(pGTASA + 0x5B6444, "\x8D\xED\x06\x3A", 4);
+    }
+    else
+    {
+        aml->Write(pGTASA + 0x5B6444, pGTASA + 0x5B63DC, 2);
+        aml->Write(pGTASA + 0x5B6446, pGTASA + 0x5B63EA, 2);
+    }
+
     cfg->Save();
 }
 
@@ -125,11 +136,10 @@ void StartColorfilter()
 {
     ColorFilter_BackTo = pGTASA + 0x5B6444 + 0x1;
     aml->Redirect(pGTASA + 0x5B643C + 0x1, (uintptr_t)ColorFilter_Inject);
-    aml->Write(pGTASA + 0x5B6444, pGTASA + 0x5B63DC, 2);
-    aml->Write(pGTASA + 0x5B6446, pGTASA + 0x5B63EA, 2);
 
     pCFGColorFilter = cfg->Bind("Colorfilter", COLFIL_MOBILE, "Visuals");
     pCFGColorFilter->Clamp(0, COLFIL_MAX - 1);
     g_nColorFilter = pCFGColorFilter->GetInt();
+    if(g_nColorFilter != COLFIL_MOBILE) ColorfilterSettingChanged(COLFIL_MOBILE, g_nColorFilter, NULL);
     AddSetting("Colorfilter", g_nColorFilter, 0, sizeofA(aColorFilterNames)-1, aColorFilterNames, ColorfilterSettingChanged, NULL);
 }
