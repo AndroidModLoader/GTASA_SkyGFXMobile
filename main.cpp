@@ -13,6 +13,7 @@ uintptr_t pGTASA;
 /* SkyGFX Externs */
 void StartColorfilter();
 void StartBuildingPipeline();
+void StartShaders();
 
 /* Main */
 extern "C" void OnModLoad()
@@ -42,6 +43,7 @@ extern "C" void OnModLoad()
     ResolveExternals();
 
     /* Uhm... Modules? */
+    StartShaders();
     StartColorfilter();
     StartBuildingPipeline();
 }

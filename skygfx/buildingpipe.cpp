@@ -2,11 +2,49 @@
 
 /* Variables */
 RwRGBAReal buildingAmbient;
+int g_nBuildingPipeline = BUILDING_MOBILE;
+bool g_bDualPass = false;
+const char* aPipelineNames[NUMBUILDINGPIPES] = 
+{
+    "Default (Mobile)",
+    "PS2",
+    "Xbox",
+};
+const char* aDualPassSwitch[2] = 
+{
+    "FEM_OFF",
+    "FEM_ON",
+};
 
 /* Configs */
 ConfigEntry* pCFGBuildingPipeline;
 ConfigEntry* pCFGLightningIlluminatesWorld;
 ConfigEntry* pCFGExplicitBuildingPipe;
+ConfigEntry* pCFGDualRenderPass;
+
+/* Shaders */
+ES2Shader* pCustomBuildingShader = NULL;
+
+// Temporarily. Need way more shaders.
+const char szCustomBuildingPixel[] =
+    "precision mediump float;varying lowp vec4 Out_Color;\n"
+    "uniform sampler2D Diffuse;varying mediump vec2 Out_Tex0;\n"
+    "void main() {\n"
+    "  lowp vec4 diffuseColor = texture2D(Diffuse, Out_Tex0);\n"
+    "  diffuseColor *= Out_Color;\n"
+    "  gl_FragColor = diffuseColor;\n"
+    "}";
+const char szCustomBuildingVertex[] =
+    "#version 100\nprecision highp float;uniform mat4 ProjMatrix;uniform mat4 ViewMatrix;uniform mat4 ObjMatrix;\n"
+    "uniform vec3 CameraPosition;attribute vec4 GlobalColor;attribute vec3 Position;varying lowp vec4 Out_Color;\n"
+    "varying mediump vec2 Out_Tex0;attribute vec2 TexCoord0;\n"
+    "void main() {\n"
+    "  vec4 WorldPos = ObjMatrix * vec4(Position, 1.0);\n"
+    "  vec4 ViewPos = ViewMatrix * WorldPos;\n"
+    "  gl_Position = ProjMatrix * ViewPos;\n"
+    "  Out_Tex0 = TexCoord0 / 512.0;\n"
+    "  Out_Color = GlobalColor;\n"
+    "}";
 
 /* Hooks */
 DECL_HOOKv(CustomBuildingPipelineUpdate)
@@ -35,6 +73,60 @@ DECL_HOOK(bool, IsCBPCPipelineAttached, RpAtomic *atomic)
     RpGeometry *geo = atomic ? atomic->geometry : NULL;
     RxPipeline *pipe = atomic ? atomic->pipeline : NULL;
     return (pipe == NULL && GetExtraVertColourPtr(geo) && geo->preLitLum);
+}
+
+/* Functions */
+inline bool RenderMeshes(RxOpenGLMeshInstanceData* meshData)
+{
+    if(g_bDualPass)
+    {
+        RwBool hasAlpha = rwIsAlphaBlendOn();
+        int alphafunc, alpharef;
+        int zwrite;
+
+        _rwOpenGLGetRenderState(rwRENDERSTATEZWRITEENABLE, &zwrite);
+        _rwOpenGLGetRenderState(rwRENDERSTATEALPHATESTFUNCTION, &alphafunc);
+
+        if(hasAlpha && zwrite)
+        {
+            _rwOpenGLGetRenderState(rwRENDERSTATEALPHATESTFUNCTIONREF, &alpharef);
+            RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTIONREF, (void*)128);
+            RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTION, (void*)rwALPHATESTFUNCTIONGREATEREQUAL);
+            RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)true);
+            DrawStoredMeshData(meshData);
+            RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTION, (void*)rwALPHATESTFUNCTIONLESS);
+		    RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)false);
+            DrawStoredMeshData(meshData);
+            RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)zwrite);
+            RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTIONREF, (void*)alpharef);
+            RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTION, (void*)alphafunc);
+        }
+        else if(!zwrite)
+        {
+            RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTION, (void*)rwALPHATESTFUNCTIONALWAYS);
+            DrawStoredMeshData(meshData);
+            RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTION, (void*)alphafunc);
+        }
+        else DrawStoredMeshData(meshData);
+    }
+    else
+    {
+        DrawStoredMeshData(meshData);
+    }
+    return g_bDualPass;
+}
+void PipelineSettingChanged(int oldVal, int newVal, void* data)
+{
+    pCFGBuildingPipeline->SetInt(newVal);
+    pCFGBuildingPipeline->Clamp(0, NUMBUILDINGPIPES - 1);
+    g_nBuildingPipeline = pCFGBuildingPipeline->GetInt();
+    cfg->Save();
+}
+void DualPassSettingChanged(int oldVal, int newVal, void* data)
+{
+    pCFGDualRenderPass->SetBool(newVal != 0);
+    g_bDualPass = pCFGDualRenderPass->GetBool();
+    cfg->Save();
 }
 
 /* Building Pipelines */
@@ -168,6 +260,17 @@ RwBool CustomPipeInstanceCB_Mobile(void *object, RxOpenGLMeshInstanceData *insta
     instanceData->m_StoredMeshes = emu_ArraysStore(reinstance != 0, 1u);
     return true;
 }
+RwBool CustomPipeInstanceCB_Switch(void *object, RxOpenGLMeshInstanceData *instanceData, RwBool instanceDLandVA, RwBool reinstance)
+{
+    switch(g_nBuildingPipeline)
+    {
+        case BUILDING_PS2:
+        case BUILDING_XBOX:
+            return CustomPipeInstanceCB_PS2(object, instanceData, instanceDLandVA, reinstance);
+
+        default: return CustomPipeInstanceCB_Mobile(object, instanceData, instanceDLandVA, reinstance);
+    }
+}
 
 void CustomPipeRenderCB_Mobile(RwResEntry *entry, void *obj, RwUInt8 type, RwUInt32 flags)
 {
@@ -214,7 +317,7 @@ void CustomPipeRenderCB_Mobile(RwResEntry *entry, void *obj, RwUInt8 type, RwUIn
         {
             CustomEnvMapPipeMaterialData* envData = *(CustomEnvMapPipeMaterialData**)((int)material + *ms_envMapPluginOffset);
             RwTexture* envTexture = envData->pEnvTexture;
-            envTexture->filterMode2 = 17; // What is this? Special ENV texture mode?
+            envTexture->filterMode = 17; // What is this? Special ENV texture mode?
             SetEnvMap(*(void **)((char*)&envTexture->raster->parent + *RasterExtOffset), envData->GetShininess() * 1.5f, 0);
             SetNormalMatrix(envData->GetScaleX(), envData->GetScaleY(), RwV2d(0, 0));
             *doPop = 0;
@@ -235,7 +338,7 @@ void CustomPipeRenderCB_Mobile(RwResEntry *entry, void *obj, RwUInt8 type, RwUIn
         {
             _rwOpenGLSetRenderStateNoExtras(rwRENDERSTATETEXTURERASTER, (void*)texture->raster);
             _rwOpenGLSetRenderState(rwRENDERSTATETEXTUREFILTER, texture->filterMode);
-            DrawStoredMeshData(meshData); // Dual Pass here?
+            DrawStoredMeshData(meshData); // Dual Pass here? Or shaders?!
             if (hasAlphaVertexEnabled) DisableAlphaModulate();
             if (hasEnvMap) ResetEnvMap();
         }
@@ -245,7 +348,9 @@ void CustomPipeRenderCB_Mobile(RwResEntry *entry, void *obj, RwUInt8 type, RwUIn
 }
 void CustomPipeRenderCB_PS2(RwResEntry *entry, void *obj, RwUInt8 type, RwUInt32 flags)
 {
-
+    ForceCustomShader(pCustomBuildingShader);
+    CustomPipeRenderCB_Mobile(entry, obj, type, flags);
+    ForceCustomShader(NULL); // Allow other shaders to be used
 }
 void CustomPipeRenderCB_Xbox(RwResEntry *entry, void *obj, RwUInt8 type, RwUInt32 flags)
 {
@@ -253,7 +358,7 @@ void CustomPipeRenderCB_Xbox(RwResEntry *entry, void *obj, RwUInt8 type, RwUInt3
 }
 void CustomPipeRenderCB_Switch(RwResEntry *repEntry, void *object, RwUInt8 type, RwUInt32 flags)
 {
-    switch(pCFGBuildingPipeline->GetInt())
+    switch(g_nBuildingPipeline)
     {
         case BUILDING_PS2:
         {
@@ -288,7 +393,7 @@ DECL_HOOK(RxPipeline*, CreateCustomObjPipe)
     }
     RxPipelineNode* NodeByName = RxPipelineFindNodeByName(pipeline, OpenGLAtomicAllInOne->name, 0, 0);
 
-    RxOpenGLAllInOneSetInstanceCallBack(NodeByName, (void*)CustomPipeInstanceCB_Mobile);
+    RxOpenGLAllInOneSetInstanceCallBack(NodeByName, (void*)CustomPipeInstanceCB_Switch);
     RxOpenGLAllInOneSetRenderCallBack(NodeByName, (void*)CustomPipeRenderCB_Switch);
 
     pipeline->pluginId = RSPIPE_PC_CustomBuilding_PipeID;
@@ -309,7 +414,7 @@ DECL_HOOK(RxPipeline*, CreateCustomObjPipeDN)
     }
     RxPipelineNode* NodeByName = RxPipelineFindNodeByName(pipeline, OpenGLAtomicAllInOne->name, 0, 0);
 
-    RxOpenGLAllInOneSetInstanceCallBack(NodeByName, (void*)CustomPipeInstanceCB_Mobile);
+    RxOpenGLAllInOneSetInstanceCallBack(NodeByName, (void*)CustomPipeInstanceCB_Switch);
     RxOpenGLAllInOneSetRenderCallBack(NodeByName, (void*)CustomPipeRenderCB_Switch);
 
     pipeline->pluginId = RSPIPE_PC_CustomBuildingDN_PipeID;
@@ -325,6 +430,7 @@ void StartBuildingPipeline()
     pCFGBuildingPipeline->Clamp(BUILDING_MOBILE, NUMBUILDINGPIPES - 1);
     pCFGLightningIlluminatesWorld = cfg->Bind("LightningIlluminatesWorld", false, "Pipeline");
     pCFGExplicitBuildingPipe = cfg->Bind("ExplicitBuildingPipe", -1, "Pipeline");
+    pCFGDualRenderPass = cfg->Bind("DualRenderPass", false, "Pipeline");
 
     HOOKPLT(CustomBuildingPipelineUpdate, pGTASA + 0x67526C);
     if(pCFGExplicitBuildingPipe->GetInt() >= 0)
@@ -333,4 +439,14 @@ void StartBuildingPipeline()
     }
     HOOKPLT(CreateCustomObjPipe, pGTASA + 0x674AC0);
     HOOKPLT(CreateCustomObjPipeDN, pGTASA + 0x6727E4);
+
+    g_bDualPass = pCFGDualRenderPass->GetBool();
+    g_nBuildingPipeline = pCFGBuildingPipeline->GetInt();
+    AddSetting("Building Pipeline", g_nBuildingPipeline, 0, sizeofA(aPipelineNames)-1, aPipelineNames, PipelineSettingChanged, NULL);
+    //AddSetting("Dual Pass Render", g_bDualPass, 0, sizeofA(aDualPassSwitch)-1, aDualPassSwitch, DualPassSettingChanged, NULL);
+
+    shadercreation += []
+    {
+        pCustomBuildingShader = CreateCustomShader(0x10 | 0x20, szCustomBuildingPixel, szCustomBuildingVertex, sizeof(szCustomBuildingPixel), sizeof(szCustomBuildingVertex));
+    };
 }

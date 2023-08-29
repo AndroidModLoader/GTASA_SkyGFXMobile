@@ -4,11 +4,46 @@
 #include <mod/amlmod.h>
 #include <mod/logger.h>
 #include <mod/config.h>
+#include <list>
 
 #include <GLES2/gl2.h>
 
+#ifdef AML32
+    #include "GTASA_STRUCTS.h"
+    #define BYVER(__for32, __for64) (__for32)
+#else
+    #include "GTASA_STRUCTS_210.h"
+    #define BYVER(__for32, __for64) (__for64)
+#endif
+#define sizeofA(__aVar)  ((int)(sizeof(__aVar)/sizeof(__aVar[0])))
+
+
+
 extern uintptr_t pGTASA;
 extern void* hGTASA;
+
+template <typename T>
+struct BasicEvent
+{
+    std::list<T> listeners;
+
+    inline void Call()
+    {
+        auto end = listeners.end();
+        for(auto it = listeners.begin(); it != end; ++it) (*it)();
+    }
+    inline void operator+=(T fn) { listeners.push_back(fn); }
+};
+
+typedef void (*SimpleVoidFn)();
+extern BasicEvent<SimpleVoidFn> shadercreation;
+
+extern ES2Shader* pForcedShader;
+ES2Shader* CreateCustomShader(uint32_t flags, const char* pxlsrc, const char* vtxsrc, size_t pxllen = 0, size_t vtxlen = 0);
+inline void ForceCustomShader(ES2Shader* shader)
+{
+    pForcedShader = shader;
+}
 
 #if __has_include(<isautils.h>)
     #include <isautils.h>
@@ -25,15 +60,6 @@ extern void* hGTASA;
         /* No SAUtils */
     }
 #endif
-
-#ifdef AML32
-    #include "GTASA_STRUCTS.h"
-    #define BYVER(__for32, __for64) (__for32)
-#else
-    #include "GTASA_STRUCTS_210.h"
-    #define BYVER(__for32, __for64) (__for64)
-#endif
-#define sizeofA(__aVar)  ((int)(sizeof(__aVar)/sizeof(__aVar[0])))
 
 #define NAKEDAT __attribute__((optnone)) __attribute__((naked))
 #define rpPDS_MAKEPIPEID(vendorID, pipeID)              \
@@ -162,6 +188,7 @@ extern int *skin_num;
 extern bool *LightningFlash;
 extern int *ms_extraVertColourPluginOffset;
 extern bool *RwHackNoCompressedTexCoords;
+extern RQShader **curSelectedShader;
 
 // Functions
 extern RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);
@@ -278,8 +305,15 @@ extern void                (*emu_ArraysIndices)(void*, unsigned int, unsigned in
 extern void                (*emu_ArraysVertex)(void*, unsigned int, unsigned int, unsigned int);
 extern void                (*emu_ArraysVertexAttrib)(unsigned int, int, unsigned int, unsigned char, unsigned int);
 extern ArrayState*         (*emu_ArraysStore)(unsigned char, unsigned char);
+extern bool                (*rwIsAlphaBlendOn)();
+extern ES2Shader*          (*RQCreateShader)(const char* pixel, const char* vertex, uint32_t flags);
+extern void                (*OS_ThreadMakeCurrent)();
+extern void                (*OS_ThreadUnmakeCurrent)();
+extern GLenum              (*getGLError)();
+extern void                (*SelectEmuShader)(EmuShader*, bool isNewSelection);
 
 // Main
 void ResolveExternals();
+void ForceCustomShader(ES2Shader* shader = NULL);
 
 #endif // __EXTERNS

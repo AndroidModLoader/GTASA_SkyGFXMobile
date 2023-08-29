@@ -14,7 +14,7 @@ enum
 /* Variables */
 unsigned char g_nColorFilter = COLFIL_MOBILE;
 ConfigEntry* pCFGColorFilter;
-const char* aColorFilterNames[4] = 
+const char* aColorFilterNames[COLFIL_MAX] = 
 {
     "Default (Mobile)",
     "PS2 Style",

@@ -61,6 +61,7 @@ int *skin_num;
 bool *LightningFlash;
 int *ms_extraVertColourPluginOffset;
 bool *RwHackNoCompressedTexCoords;
+RQShader **curSelectedShader;
 
 // Functions
 RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);
@@ -177,6 +178,12 @@ void                (*emu_ArraysIndices)(void*, unsigned int, unsigned int);
 void                (*emu_ArraysVertex)(void*, unsigned int, unsigned int, unsigned int);
 void                (*emu_ArraysVertexAttrib)(unsigned int, int, unsigned int, unsigned char, unsigned int);
 ArrayState*         (*emu_ArraysStore)(unsigned char, unsigned char);
+bool                (*rwIsAlphaBlendOn)();
+ES2Shader*          (*RQCreateShader)(const char* pixel, const char* vertex, uint32_t flags);
+void                (*OS_ThreadMakeCurrent)();
+void                (*OS_ThreadUnmakeCurrent)();
+GLenum              (*getGLError)();
+void                (*SelectEmuShader)(EmuShader*, bool isNewSelection);
 
 // Main
 void ResolveExternals()
@@ -356,4 +363,11 @@ void ResolveExternals()
     SET_TO(emu_ArraysVertex,                aml->GetSym(hGTASA, "_Z16emu_ArraysVertexPvjjj"));
     SET_TO(emu_ArraysVertexAttrib,          aml->GetSym(hGTASA, "_Z22emu_ArraysVertexAttribjijhi"));
     SET_TO(emu_ArraysStore,                 aml->GetSym(hGTASA, "_Z15emu_ArraysStorehh"));
+    SET_TO(rwIsAlphaBlendOn,                aml->GetSym(hGTASA, "_Z16rwIsAlphaBlendOnv"));
+    SET_TO(curSelectedShader,               aml->GetSym(hGTASA, "_ZN9EmuShader17curSelectedShaderE"));
+    SET_TO(RQCreateShader,                  aml->GetSym(hGTASA, "_Z14RQCreateShaderPKcS0_j"));
+    SET_TO(OS_ThreadMakeCurrent,            aml->GetSym(hGTASA, "_Z20OS_ThreadMakeCurrentv"));
+    SET_TO(OS_ThreadUnmakeCurrent,          aml->GetSym(hGTASA, "_Z22OS_ThreadUnmakeCurrentv"));
+    SET_TO(getGLError,                      pGTASA + 0x1949A4);
+    SET_TO(SelectEmuShader,                 aml->GetSym(hGTASA, "_ZN9EmuShader6SelectEb"));
 }
