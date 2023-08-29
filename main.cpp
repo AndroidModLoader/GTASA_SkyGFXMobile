@@ -11,9 +11,10 @@ void* hGTASA;
 uintptr_t pGTASA;
 
 /* SkyGFX Externs */
+void StartShaders();
 void StartColorfilter();
 void StartBuildingPipeline();
-void StartShaders();
+void StartShading();
 
 /* Main */
 extern "C" void OnModLoad()
@@ -46,6 +47,7 @@ extern "C" void OnModLoad()
     StartShaders();
     StartColorfilter();
     StartBuildingPipeline();
+    StartShading();
 }
 
 static Config cfgLocal("SkyGFXMobile");
