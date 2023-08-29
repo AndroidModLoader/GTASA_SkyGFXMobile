@@ -16,6 +16,18 @@ void ShadingSettingChanged(int oldVal, int newVal, void* data)
 {
     pCFGPS2Shading->SetBool(newVal != 0);
     g_bPS2Shading = pCFGPS2Shading->GetBool();
+    
+    if(g_bPS2Shading)
+    {
+        aml->PlaceNOP(pGTASA + 0x1C1382 + 0x1);
+        aml->PlaceNOP(pGTASA + 0x1C13BA + 0x1);
+    }
+    else
+    {
+        aml->Write(pGTASA + 0x1C1382, "\x0B\xD4", 2);
+        aml->Write(pGTASA + 0x1C13BA, "\x0B\xD0", 2);
+    }
+
     cfg->Save();
 }
 inline void _rwOpenGLEnableColorMaterial(RwInt32 enable)
@@ -152,6 +164,7 @@ void StartShading()
 {
     pCFGPS2Shading = cfg->Bind("PS2Shading", false, "Shading");
     g_bPS2Shading = pCFGPS2Shading->GetBool();
+    if(g_bPS2Shading) ShadingSettingChanged(0, 1, NULL);
     
     HOOKPLT(_rwOpenGLLightsSetMaterialProperties, pGTASA + 0x67381C);
     HOOKPLT(SetLightsWithTimeOfDayColour, pGTASA + 0x674048);
