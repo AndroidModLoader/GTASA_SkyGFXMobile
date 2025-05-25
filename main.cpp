@@ -25,17 +25,18 @@ extern "C" void OnModLoad()
     /* Libraries */
     hGTASA = aml->GetLibHandle("libGTASA.so");
     pGTASA = aml->GetLib("libGTASA.so");
-    #ifdef _SAUTILS_INTERFACE
-        sautils = (ISAUtils*)GetInterface("SAUtils");
-        if(sautils)
-        {
-            skygfxSettingsTab = sautils->AddSettingsTab("SkyGFX", "menu_maindisplay");
-        }
-    #endif
+
+  #ifdef _SAUTILS_INTERFACE
+    sautils = (ISAUtils*)GetInterface("SAUtils");
+    if(sautils)
+    {
+        skygfxSettingsTab = sautils->AddSettingsTab("SkyGFX", "menu_maindisplay");
+    }
+  #endif
     
     /* Info in a config */
-    cfg->Bind("Author", "", "About")->SetString("[-=KILL MAN=-]"); cfg->ClearLast();
-    cfg->Bind("IdeasFrom", "", "About")->SetString("aap, TheOfficialFloW"); cfg->ClearLast();
+    cfg->Bind("MobileAuthor", "", "About")->SetString("[-=KILL MAN=-]"); cfg->ClearLast();
+    cfg->Bind("MainStuffDevelopedBy", "", "About")->SetString("aap, TheOfficialFloW"); cfg->ClearLast();
     cfg->Bind("Discord", "", "About")->SetString("https://discord.gg/2MY7W39kBg"); cfg->ClearLast();
     cfg->Bind("GitHub", "", "About")->SetString("https://github.com/AndroidModLoader/GTASA_SkyGFXMobile"); cfg->ClearLast();
     cfg->Save();
@@ -44,10 +45,10 @@ extern "C" void OnModLoad()
     ResolveExternals();
 
     /* Uhm... Modules? */
-    StartShaders();
+    //StartShaders();
     StartColorfilter();
-    StartBuildingPipeline();
-    StartShading();
+    //StartBuildingPipeline();
+    //StartShading();
 }
 
 static Config cfgLocal("SkyGFXMobile");

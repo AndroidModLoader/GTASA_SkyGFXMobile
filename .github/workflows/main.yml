@@ -12,7 +12,7 @@ jobs:
     steps:
 
     - name: Checkout repository...
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         submodules: recursive
         
@@ -52,7 +52,7 @@ jobs:
       run: ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=./Android.mk NDK_APPLICATION_MK=./Application.mk NDK_DEBUG=0 -j12
 
     - name: Upload the mod!
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: compiled-mod.zip
         path: ./libs

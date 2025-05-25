@@ -12,6 +12,8 @@ enum
 };
 
 /* Variables */
+bool g_bUsePCTimecyc = false;
+float g_fPostFXAlphaDiv = 0.0f;
 unsigned char g_nColorFilter = COLFIL_MOBILE;
 ConfigEntry* pCFGColorFilter;
 const char* aColorFilterNames[COLFIL_MAX] = 
@@ -34,7 +36,7 @@ void ColorfilterSettingChanged(int oldVal, int newVal, void* data)
 
 /* Hooks */
 uintptr_t ColorFilter_BackTo;
-extern "C" void ColorFilter_Patch(char* sp)
+extern "C" uintptr_t ColorFilter_Patch(char* sp)
 {
     // Grading values (i.e. the color matrix)
     RwRGBAReal *red   = (RwRGBAReal *)(sp + 0x30);
@@ -42,14 +44,14 @@ extern "C" void ColorFilter_Patch(char* sp)
     RwRGBAReal *blue  = (RwRGBAReal *)(sp + 0x10);
 
     // PostFX values from Timecycle
-    RwRGBA *postfx1 = (RwRGBA *)(sp + 0xC);
+    RwRGBA *postfx1 = (RwRGBA *)(sp + BYBIT(0xC, 0x58));
     RwRGBA *postfx2 = (RwRGBA *)(sp + 0x8);
 
     switch(g_nColorFilter)
     {
         case COLFIL_PS2:
         {
-            float a = postfx2->alpha / 128.0f;
+            float a = postfx2->alpha * g_fPostFXAlphaDiv;
 
             red->red     = postfx1->red   / 128.0f + a * postfx2->red   / 128.0f;
             green->green = postfx1->green / 128.0f + a * postfx2->green / 128.0f;
@@ -63,8 +65,8 @@ extern "C" void ColorFilter_Patch(char* sp)
         }
         case COLFIL_PC:
         {
-            float a1 = postfx1->alpha / 128.0f;
-            float a2 = postfx2->alpha / 128.0f;
+            float a1 = postfx1->alpha * g_fPostFXAlphaDiv;
+            float a2 = postfx2->alpha * g_fPostFXAlphaDiv;
 
             red->red     = 1.0f + a1 * postfx1->red   / 255.0f + a2 * postfx2->red   / 255.0f;
             green->green = 1.0f + a1 * postfx1->green / 255.0f + a2 * postfx2->green / 255.0f;
@@ -91,6 +93,7 @@ extern "C" void ColorFilter_Patch(char* sp)
             float g = postfx1->alpha * postfx1->green + postfx2->alpha * postfx2->green;
             float b = postfx1->alpha * postfx1->blue  + postfx2->alpha * postfx2->blue;
             float invsqrt = 1.0f / sqrtf(r*r + g*g + b*b);
+            if(g_bUsePCTimecyc) invsqrt *= 0.5f;
 
             r *= invsqrt;
             g *= invsqrt;
@@ -103,35 +106,64 @@ extern "C" void ColorFilter_Patch(char* sp)
             break;
         }
     }
+    return ColorFilter_BackTo;
 }
 NAKEDAT void ColorFilter_Inject(void)
 {
+  #ifdef AML32
     asm("PUSH {R0-R11}\n"
-        "ADD R0, SP, 0x30\n"
+        "ADD R0, SP, #0x30\n"
         "BL ColorFilter_Patch\n"
         "VLDR S2, [SP, #(0x30 + 0x30)]\n" // red.r
         "VLDR S4, [SP, #(0x30 + 0x24)]\n" // green.g
         "VLDR S6, [SP, #(0x30 + 0x18)]\n" // blue.b
-    );
-
-    asm("MOV R12, %0\n"
+        "MOV R12, R0\n"
         "POP {R0-R11}\n"
-        "BX R12\n"
-      :: "r" (ColorFilter_BackTo)
+        "BX R12"
     );
+  #else
+    asm("MOV X0, SP\n"
+        "SUB SP, SP, #0x10\n"
+
+        "STR S4, [SP, #0x0]\n" // save S4 (it is used bit later, 255.0f)
+        "STR W9, [SP, #0x4]\n"
+        "STR W10, [SP, #0x8]\n"
+
+        "BL ColorFilter_Patch\n"
+
+        "LDR S4, [SP, #0x0]\n" // restore S4 (it is used right after, 255.0f)
+        "LDR W9, [SP, #0x4]\n"
+        "LDR W10, [SP, #0x8]\n"
+        "ADD SP, SP, #0x10\n"
+
+        "LDR S3, [SP, #0x30]\n" // red.r
+        "LDR S2, [SP, #0x24]\n" // green.g
+        "LDR S1, [SP, #0x18]\n" // blue.b
+
+        "BR X0"
+    );
+  #endif
 }
 
 /* Main */
 void StartColorfilter()
 {
+  #ifdef AML32
     ColorFilter_BackTo = pGTASA + 0x5B6444 + 0x1;
     aml->Redirect(pGTASA + 0x5B643C + 0x1, (uintptr_t)ColorFilter_Inject);
-    aml->Write(pGTASA + 0x5B6444, pGTASA + 0x5B63DC, 2);
-    aml->Write(pGTASA + 0x5B6446, pGTASA + 0x5B63EA, 2);
+    aml->Write32(pGTASA + 0x5B6444, 0x28007818);
+  #else
+    ColorFilter_BackTo = pGTASA + 0x6DA700;
+    aml->Redirect(pGTASA + 0x6DA6A4, (uintptr_t)ColorFilter_Inject);
+    aml->Write32(pGTASA + 0x6DA700, 0xD0000B88);
+    aml->Write32(pGTASA + 0x6DA704, 0xF9452108);
+    aml->Write32(pGTASA + 0x6DA708, 0x39400108);
+  #endif
 
     pCFGColorFilter = cfg->Bind("Colorfilter", COLFIL_MOBILE, "Visuals");
-    pCFGColorFilter->Clamp(0, COLFIL_MAX - 1);
-    g_nColorFilter = pCFGColorFilter->GetInt();
-    if(g_nColorFilter != COLFIL_MOBILE) ColorfilterSettingChanged(COLFIL_MOBILE, g_nColorFilter, NULL);
+    ColorfilterSettingChanged(COLFIL_MOBILE, pCFGColorFilter->GetInt(), NULL);
     AddSetting("Colorfilter", g_nColorFilter, 0, sizeofA(aColorFilterNames)-1, aColorFilterNames, ColorfilterSettingChanged, NULL);
+
+    g_bUsePCTimecyc = cfg->GetBool("UsePCTimecyc", false, "Visuals");
+    g_fPostFXAlphaDiv = 1.0f / (g_bUsePCTimecyc ? 256.0f : 128.0f);
 }

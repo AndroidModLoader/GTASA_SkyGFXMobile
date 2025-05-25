@@ -166,8 +166,8 @@ void StartShading()
     g_bPS2Shading = pCFGPS2Shading->GetBool();
     if(g_bPS2Shading) ShadingSettingChanged(0, 1, NULL);
     
-    HOOKPLT(_rwOpenGLLightsSetMaterialProperties, pGTASA + 0x67381C);
-    HOOKPLT(SetLightsWithTimeOfDayColour, pGTASA + 0x674048);
+    HOOKPLT(_rwOpenGLLightsSetMaterialProperties, pGTASA + BYBIT(0x67381C, 0x845F18));
+    HOOKPLT(SetLightsWithTimeOfDayColour, pGTASA + BYBIT(0x674048, 0x846C88));
 
     AddSetting("PS2 Shading", g_bPS2Shading, 0, sizeofA(aShadingSwitch)-1, aShadingSwitch, ShadingSettingChanged, NULL);
 }

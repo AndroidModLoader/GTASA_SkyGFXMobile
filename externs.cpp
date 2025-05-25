@@ -27,7 +27,6 @@ int* ms_envMapPluginOffset;
 int* RasterExtOffset;
 char* doPop;
 RwRaster *grainRaster;
-uintptr_t* pdword_952880;
 extern float*  m_fDNBalanceParam;
 CPlantSurfProp** m_SurfPropPtrTab;
 uint32_t*      m_countSurfPropsAllocated;
@@ -182,7 +181,6 @@ bool                (*rwIsAlphaBlendOn)();
 ES2Shader*          (*RQCreateShader)(const char* pixel, const char* vertex, uint32_t flags);
 void                (*OS_ThreadMakeCurrent)();
 void                (*OS_ThreadUnmakeCurrent)();
-GLenum              (*getGLError)();
 void                (*SelectEmuShader)(EmuShader*, bool isNewSelection);
 
 // Main
@@ -230,7 +228,7 @@ void ResolveExternals()
     SET_TO(rwOpenGLColorMaterialEnabled,    aml->GetSym(hGTASA, "_rwOpenGLColorMaterialEnabled"));
     SET_TO(ms_envMapPluginOffset,           aml->GetSym(hGTASA, "_ZN24CCustomCarEnvMapPipeline21ms_envMapPluginOffsetE"));
     SET_TO(RasterExtOffset,                 aml->GetSym(hGTASA, "RasterExtOffset"));
-    SET_TO(doPop,                           pGTASA + 0x70BF3C);
+    SET_TO(doPop,                           pGTASA + BYBIT(0x70BF3C, 0x8EABEC));
     SET_TO(SetSecondVertexColor,            aml->GetSym(hGTASA, "_Z24emu_SetSecondVertexColorhf"));
     SET_TO(EnableAlphaModulate,             aml->GetSym(hGTASA, "_Z23emu_EnableAlphaModulatef"));
     SET_TO(DisableAlphaModulate,            aml->GetSym(hGTASA, "_Z24emu_DisableAlphaModulatev"));
@@ -262,7 +260,6 @@ void ResolveExternals()
     SET_TO(RenderCCTVPostEffect,            aml->GetSym(hGTASA, "_ZN12CPostEffects4CCTVEv"));
     SET_TO(pbFog,                           aml->GetSym(hGTASA, "_ZN12CPostEffects6m_bFogE"));
     SET_TO(RenderScreenFogPostEffect,       aml->GetSym(hGTASA, "_ZN12CPostEffects3FogEv"));
-    SET_TO(pdword_952880,                   pGTASA + 0x952880);
     SET_TO(pg_fx,                           aml->GetSym(hGTASA, "g_fx"));
     SET_TO(RenderFx,                        aml->GetSym(hGTASA, "_ZN4Fx_c6RenderEP8RwCamerah"));
     SET_TO(RenderWaterCannons,              aml->GetSym(hGTASA, "_ZN13CWaterCannons6RenderEv"));
@@ -340,7 +337,7 @@ void ResolveExternals()
     SET_TO(TimeCycShadowSideY,              aml->GetSym(hGTASA, "_ZN10CTimeCycle14m_fShadowSideYE"));
     SET_TO(TimeCycCurrentStoredValue,       aml->GetSym(hGTASA, "_ZN10CTimeCycle20m_CurrentStoredValueE"));
     if(sautils != NULL)                     SET_TO(RTShadowsQuality, sautils->GetSettingValuePointer(SETITEM_SA_SHADOWS_QUALITY));
-    else                                    SET_TO(RTShadowsQuality, pGTASA + 0x6E049C);
+    else                                    SET_TO(RTShadowsQuality, pGTASA + BYBIT(0x6E049C, 0x8BEB6E));
     SET_TO(GetMobileEffectSetting,          aml->GetSym(hGTASA, "_Z22GetMobileEffectSettingv"));
     SET_TO(RQCaps,                          aml->GetSym(hGTASA, "RQCaps"));
     SET_TO(RQMaxBones,                      aml->GetSym(hGTASA, "RQMaxBones"));
@@ -368,6 +365,5 @@ void ResolveExternals()
     SET_TO(RQCreateShader,                  aml->GetSym(hGTASA, "_Z14RQCreateShaderPKcS0_j"));
     SET_TO(OS_ThreadMakeCurrent,            aml->GetSym(hGTASA, "_Z20OS_ThreadMakeCurrentv"));
     SET_TO(OS_ThreadUnmakeCurrent,          aml->GetSym(hGTASA, "_Z22OS_ThreadUnmakeCurrentv"));
-    SET_TO(getGLError,                      pGTASA + 0x1949A4);
     SET_TO(SelectEmuShader,                 aml->GetSym(hGTASA, "_ZN9EmuShader6SelectEb"));
 }
