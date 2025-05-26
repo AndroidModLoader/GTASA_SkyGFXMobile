@@ -15,6 +15,8 @@ void StartShaders();
 void StartColorfilter();
 void StartBuildingPipeline();
 void StartShading();
+void StartVehiclePipeline();
+void StartMiscStuff();
 
 /* Main */
 extern "C" void OnModLoad()
@@ -45,8 +47,10 @@ extern "C" void OnModLoad()
     ResolveExternals();
 
     /* Uhm... Modules? */
-    //StartShaders();
     StartColorfilter();
+    StartVehiclePipeline();
+    StartMiscStuff();
+    //StartShaders();
     //StartBuildingPipeline();
     //StartShading();
 }
