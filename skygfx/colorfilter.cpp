@@ -28,7 +28,7 @@ const char* aColorFilterNames[COLFIL_MAX] =
 void ColorfilterSettingChanged(int oldVal, int newVal, void* data)
 {
     if(oldVal == newVal) return;
-    
+
     pCFGColorFilter->SetInt(newVal);
     pCFGColorFilter->Clamp(0, COLFIL_MAX - 1);
     g_nColorFilter = pCFGColorFilter->GetInt();
@@ -156,7 +156,7 @@ void StartColorfilter()
     aml->Write32(pGTASA + 0x5B6444, 0x28007818);
   #else
     ColorFilter_BackTo = pGTASA + 0x6DA700;
-    aml->Redirect(pGTASA + 0x6DA6A4, (uintptr_t)ColorFilter_Inject);
+    aml->Redirect(pGTASA + 0x6DA6F0, (uintptr_t)ColorFilter_Inject);
     aml->Write32(pGTASA + 0x6DA700, 0xD0000B88);
     aml->Write32(pGTASA + 0x6DA704, 0xF9452108);
     aml->Write32(pGTASA + 0x6DA708, 0x39400108);
