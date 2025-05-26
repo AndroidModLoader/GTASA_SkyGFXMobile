@@ -12,7 +12,7 @@ enum
 };
 
 /* Variables */
-bool g_bUsePCTimecyc = false;
+bool g_bUsePCTimecyc = true;
 float g_fPostFXAlphaDiv = 0.0f;
 unsigned char g_nColorFilter = COLFIL_MOBILE;
 ConfigEntry* pCFGColorFilter;
@@ -166,6 +166,6 @@ void StartColorfilter()
     ColorfilterSettingChanged(COLFIL_MOBILE, pCFGColorFilter->GetInt(), NULL);
     AddSetting("Colorfilter", g_nColorFilter, 0, sizeofA(aColorFilterNames)-1, aColorFilterNames, ColorfilterSettingChanged, NULL);
 
-    g_bUsePCTimecyc = cfg->GetBool("UsePCTimecyc", false, "Visuals");
+    g_bUsePCTimecyc = cfg->GetBool("UsePCTimecyc", g_bUsePCTimecyc, "Visuals");
     g_fPostFXAlphaDiv = 1.0f / (g_bUsePCTimecyc ? 256.0f : 128.0f);
 }
