@@ -27,6 +27,8 @@ const char* aColorFilterNames[COLFIL_MAX] =
 /* Functions */
 void ColorfilterSettingChanged(int oldVal, int newVal, void* data)
 {
+    if(oldVal == newVal) return;
+    
     pCFGColorFilter->SetInt(newVal);
     pCFGColorFilter->Clamp(0, COLFIL_MAX - 1);
     g_nColorFilter = pCFGColorFilter->GetInt();
@@ -53,9 +55,9 @@ extern "C" uintptr_t ColorFilter_Patch(char* sp)
         {
             float a = postfx2->alpha * g_fPostFXAlphaDiv;
 
-            red->red     = postfx1->red   / 128.0f + a * postfx2->red   / 128.0f;
-            green->green = postfx1->green / 128.0f + a * postfx2->green / 128.0f;
-            blue->blue   = postfx1->blue  / 128.0f + a * postfx2->blue  / 128.0f;
+            red->red     = ( postfx1->red   + a * postfx2->red   ) * 0.0078125f;
+            green->green = ( postfx1->green + a * postfx2->green ) * 0.0078125f;
+            blue->blue   = ( postfx1->blue  + a * postfx2->blue  ) * 0.0078125f;
 
             red->green = red->blue   = red->alpha   = 0.0f;
             green->red = green->blue = green->alpha = 0.0f;
@@ -68,9 +70,9 @@ extern "C" uintptr_t ColorFilter_Patch(char* sp)
             float a1 = postfx1->alpha * g_fPostFXAlphaDiv;
             float a2 = postfx2->alpha * g_fPostFXAlphaDiv;
 
-            red->red     = 1.0f + a1 * postfx1->red   / 255.0f + a2 * postfx2->red   / 255.0f;
-            green->green = 1.0f + a1 * postfx1->green / 255.0f + a2 * postfx2->green / 255.0f;
-            blue->blue   = 1.0f + a1 * postfx1->blue  / 255.0f + a2 * postfx2->blue  / 255.0f;
+            red->red     = 1.0f + ( a1 * postfx1->red   + a2 * postfx2->red   ) * 0.00390625f;
+            green->green = 1.0f + ( a1 * postfx1->green + a2 * postfx2->green ) * 0.00390625f;
+            blue->blue   = 1.0f + ( a1 * postfx1->blue  + a2 * postfx2->blue  ) * 0.00390625f;
 
             red->green = red->blue   = red->alpha   = 0.0f;
             green->red = green->blue = green->alpha = 0.0f;
