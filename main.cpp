@@ -50,9 +50,9 @@ extern "C" void OnModLoad()
     StartColorfilter();
     StartVehiclePipeline();
     StartMiscStuff();
+    StartShading();
     //StartShaders();
     //StartBuildingPipeline();
-    //StartShading();
 }
 
 static Config cfgLocal("SkyGFXMobile");
