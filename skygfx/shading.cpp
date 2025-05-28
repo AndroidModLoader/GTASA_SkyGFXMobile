@@ -69,7 +69,7 @@ inline void _rwOpenGLEnableColorMaterial(RwInt32 enable)
 /* Hooks */
 DECL_HOOKv(_rwOpenGLLightsSetMaterialProperties, const RpMaterial *mat, RwUInt32 flags)
 {
-    if(g_nShading != SHADING_PS2)
+    if(g_nShading == SHADING_MOBILE || g_nShading == SHADING_NONE)
     {
         _rwOpenGLLightsSetMaterialProperties(mat, flags);
         return;
@@ -307,6 +307,6 @@ void StartShading()
     ShadingSettingChanged(SHADING_MOBILE, pCFGShading->GetInt(), NULL);
     AddSetting("Shading Style", g_nShading, 0, sizeofA(aShadingSwitch)-1, aShadingSwitch, ShadingSettingChanged, NULL);
     
-    //HOOKPLT(_rwOpenGLLightsSetMaterialProperties, pGTASA + BYBIT(0x67381C, 0x845F18));
+    HOOKPLT(_rwOpenGLLightsSetMaterialProperties, pGTASA + BYBIT(0x67381C, 0x845F18));
     HOOKPLT(SetLightsWithTimeOfDayColour, pGTASA + BYBIT(0x674048, 0x846C88));
 }
