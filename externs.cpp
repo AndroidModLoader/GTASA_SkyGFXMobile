@@ -61,6 +61,8 @@ bool *LightningFlash;
 int *ms_extraVertColourPluginOffset;
 bool *RwHackNoCompressedTexCoords;
 RQShader **curSelectedShader;
+float *AmbientLightColor;
+bool *AmbientLightDirty;
 
 // Functions
 RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);
@@ -366,4 +368,6 @@ void ResolveExternals()
     SET_TO(OS_ThreadMakeCurrent,            aml->GetSym(hGTASA, "_Z20OS_ThreadMakeCurrentv"));
     SET_TO(OS_ThreadUnmakeCurrent,          aml->GetSym(hGTASA, "_Z22OS_ThreadUnmakeCurrentv"));
     SET_TO(SelectEmuShader,                 aml->GetSym(hGTASA, "_ZN9EmuShader6SelectEb"));
+    SET_TO(AmbientLightColor,               aml->GetSym(hGTASA, "AmbientLightColor"));
+    SET_TO(AmbientLightDirty,               aml->GetSym(hGTASA, "AmbientLightDirty"));
 }

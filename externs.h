@@ -235,6 +235,8 @@ extern bool *LightningFlash;
 extern int *ms_extraVertColourPluginOffset;
 extern bool *RwHackNoCompressedTexCoords;
 extern RQShader **curSelectedShader;
+extern float *AmbientLightColor;
+extern bool *AmbientLightDirty;
 
 // Functions
 extern RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);
