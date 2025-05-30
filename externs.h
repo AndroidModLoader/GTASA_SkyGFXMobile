@@ -363,4 +363,11 @@ extern void                (*SelectEmuShader)(EmuShader*, bool isNewSelection);
 void ResolveExternals();
 void ForceCustomShader(ES2Shader* shader = NULL);
 
+// Other
+static const char* aYesNo[2] = 
+{
+    "FEM_OFF",
+    "FEM_ON",
+};
+
 #endif // __EXTERNS

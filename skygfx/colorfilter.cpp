@@ -12,10 +12,10 @@ enum
 };
 
 /* Variables */
-bool g_bUsePCTimecyc = true;
 float g_fPostFXAlphaDiv = 0.0f;
 unsigned char g_nColorFilter = COLFIL_MOBILE;
-ConfigEntry* pCFGColorFilter;
+bool g_bUsePCTimecyc = true;
+
 const char* aColorFilterNames[COLFIL_MAX] = 
 {
     "Default (Mobile)",
@@ -23,6 +23,10 @@ const char* aColorFilterNames[COLFIL_MAX] =
     "PC Style",
     "No Colorfilter",
 };
+
+/* Configs */
+ConfigEntry* pCFGColorFilter;
+ConfigEntry* pCFGUsePCTimecyc;
 
 /* Functions */
 void ColorfilterSettingChanged(int oldVal, int newVal, void* data)
@@ -33,6 +37,17 @@ void ColorfilterSettingChanged(int oldVal, int newVal, void* data)
     pCFGColorFilter->Clamp(0, COLFIL_MAX - 1);
     g_nColorFilter = pCFGColorFilter->GetInt();
 
+    cfg->Save();
+}
+void PCTimecycSettingChanged(int oldVal, int newVal, void* data)
+{
+    if(oldVal == newVal) return;
+
+    pCFGUsePCTimecyc->SetBool(newVal != 0);
+    g_bUsePCTimecyc = pCFGUsePCTimecyc->GetBool();
+
+    g_fPostFXAlphaDiv = 1.0f / (g_bUsePCTimecyc ? 256.0f : 128.0f);
+    
     cfg->Save();
 }
 
@@ -166,6 +181,7 @@ void StartColorfilter()
     ColorfilterSettingChanged(COLFIL_MOBILE, pCFGColorFilter->GetInt(), NULL);
     AddSetting("Colorfilter", g_nColorFilter, 0, sizeofA(aColorFilterNames)-1, aColorFilterNames, ColorfilterSettingChanged, NULL);
 
-    g_bUsePCTimecyc = cfg->GetBool("UsePCTimecyc", g_bUsePCTimecyc, "Visuals");
-    g_fPostFXAlphaDiv = 1.0f / (g_bUsePCTimecyc ? 256.0f : 128.0f);
+    pCFGUsePCTimecyc = cfg->Bind("UsePCTimecyc", g_bUsePCTimecyc, "Visuals");
+    PCTimecycSettingChanged(1, pCFGUsePCTimecyc->GetBool(), NULL);
+    AddSetting("Using PC Timecyc", (g_bUsePCTimecyc != 0), 0, sizeofA(aYesNo)-1, aYesNo, PCTimecycSettingChanged, NULL);
 }
