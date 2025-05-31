@@ -379,5 +379,5 @@ void ResolveExternals()
     SET_TO(SelectEmuShader,                 aml->GetSym(hGTASA, "_ZN9EmuShader6SelectEb"));
     SET_TO(AmbientLightColor,               aml->GetSym(hGTASA, "AmbientLightColor"));
     SET_TO(AmbientLightDirty,               aml->GetSym(hGTASA, "AmbientLightDirty"));
-    SET_TO(ms_fFarClip,                     aml->GetSym(hGTASA, "_ZN5CDraw12ms_fFarClip"))
+    SET_TO(ms_fFarClip,                     aml->GetSym(hGTASA, "_ZN5CDraw12ms_fFarClip"));
 }
