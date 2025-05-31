@@ -26,6 +26,7 @@ ConfigEntry* pCFGEnvMapType;
 /* Hooks */
 DECL_HOOKv(RenderEnvMap)
 {
+    float saveVal = *ms_fFarClip;
     *ms_fFarClip = 0.98f * 60.0f; // env sphere farclip
 
     // TODO: need to rewrite RenderScene(0) (which is above that func)
@@ -43,6 +44,8 @@ DECL_HOOKv(RenderEnvMap)
         RenderClouds();
         RenderCoronas();
     }
+
+    *ms_fFarClip = saveVal;
 }
 DECL_HOOKv(EnvMapColor, CRGBA* self, UInt8 red, UInt8 green, UInt8 blue, UInt8 alpha)
 {
