@@ -39,6 +39,7 @@ DECL_HOOKv(RenderEnvMap)
     else if(g_nEnvMapType == ENVMAP_XBOX)
     {
         RenderClouds();
+        RenderCoronas();
     }
 }
 DECL_HOOKv(EnvMapColor, CRGBA* self, UInt8 red, UInt8 green, UInt8 blue, UInt8 alpha)
