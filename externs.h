@@ -361,6 +361,7 @@ extern void                (*SelectEmuShader)(EmuShader*, bool isNewSelection);
 extern void                (*RenderCoronas)();
 extern void                (*RenderSkyPolys)();
 extern void                (*RenderPlants)();
+extern void                (*RenderClouds)();
 
 // Main
 void ResolveExternals();

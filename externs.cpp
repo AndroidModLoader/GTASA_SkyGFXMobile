@@ -187,6 +187,7 @@ void                (*SelectEmuShader)(EmuShader*, bool isNewSelection);
 void                (*RenderCoronas)();
 void                (*RenderSkyPolys)();
 void                (*RenderPlants)();
+void                (*RenderClouds)();
 
 // Main
 void ResolveExternals()
@@ -333,6 +334,7 @@ void ResolveExternals()
     SET_TO(RenderCoronas,                   aml->GetSym(hGTASA, "_ZN8CCoronas6RenderEv"));
     SET_TO(RenderSkyPolys,                  aml->GetSym(hGTASA, "_ZN7CClouds14RenderSkyPolysEv"));
     SET_TO(RenderPlants,                    *(uintptr_t*)(pGTASA + BYBIT(0x6726D0, 0x844308)));
+    SET_TO(RenderClouds,                    *(uintptr_t*)(pGTASA + BYVER(0x672FFC, 0x8451A0)));
 
     SET_TO(CamDistComp,                     aml->GetSym(hGTASA, "_ZN22CRealTimeShadowManager11CamDistCompEPKvS1_"));
     SET_TO(StoreRealTimeShadow,             aml->GetSym(hGTASA, "_ZN8CShadows19StoreRealTimeShadowEP9CPhysicalffffff"));
