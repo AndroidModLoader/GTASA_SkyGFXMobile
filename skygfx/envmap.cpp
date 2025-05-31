@@ -26,6 +26,8 @@ ConfigEntry* pCFGEnvMapType;
 /* Hooks */
 DECL_HOOKv(RenderEnvMap)
 {
+    *ms_fFarClip = 0.98f * 60.0f; // env sphere farclip
+
     // TODO: need to rewrite RenderScene(0) (which is above that func)
     if(g_nEnvMapType == ENVMAP_MOBILE)
     {
@@ -56,9 +58,9 @@ DECL_HOOKv(EnvMapColor, CRGBA* self, UInt8 red, UInt8 green, UInt8 blue, UInt8 a
     }
     else if(g_nEnvMapType == ENVMAP_XBOX)
     {
-        red   = 0.6f * p_CTimeCycle__m_CurrentColours->skybotr + 0.4f * 255;
-        green = 0.6f * p_CTimeCycle__m_CurrentColours->skybotg + 0.4f * 255;
-        blue  = 0.6f * p_CTimeCycle__m_CurrentColours->skybotb + 0.4f * 255;
+        red   = 0.7f * p_CTimeCycle__m_CurrentColours->skybotr + 0.3f * 255;
+        green = 0.7f * p_CTimeCycle__m_CurrentColours->skybotg + 0.3f * 255;
+        blue  = 0.7f * p_CTimeCycle__m_CurrentColours->skybotb + 0.3f * 255;
     }
 
     self->r = red;

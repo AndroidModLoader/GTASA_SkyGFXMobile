@@ -237,6 +237,7 @@ extern bool *RwHackNoCompressedTexCoords;
 extern RQShader **curSelectedShader;
 extern float *AmbientLightColor;
 extern bool *AmbientLightDirty;
+extern float *ms_fFarClip;
 
 // Functions
 extern RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);
