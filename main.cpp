@@ -17,9 +17,10 @@ void StartBuildingPipeline();
 void StartShading();
 void StartVehiclePipeline();
 void StartMiscStuff();
+void StartEnvMapStuff();
 
 /* Main */
-extern "C" void OnModLoad()
+extern "C" void OnAllModsLoaded()
 {
     /* Logging */
     logger->SetTag("SkyGFX Mobile");
@@ -51,6 +52,7 @@ extern "C" void OnModLoad()
     StartVehiclePipeline();
     StartMiscStuff();
     StartShading();
+    StartEnvMapStuff();
     //StartShaders();
     //StartBuildingPipeline();
 }

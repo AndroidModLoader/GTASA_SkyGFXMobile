@@ -184,6 +184,9 @@ ES2Shader*          (*RQCreateShader)(const char* pixel, const char* vertex, uin
 void                (*OS_ThreadMakeCurrent)();
 void                (*OS_ThreadUnmakeCurrent)();
 void                (*SelectEmuShader)(EmuShader*, bool isNewSelection);
+void                (*RenderCoronas)();
+void                (*RenderSkyPolys)();
+void                (*RenderPlants)();
 
 // Main
 void ResolveExternals()
@@ -327,6 +330,9 @@ void ResolveExternals()
     SET_TO(RwFrameDestroy,                  aml->GetSym(hGTASA, "_Z14RwFrameDestroyP7RwFrame"));
     SET_TO(RpLightDestroy,                  aml->GetSym(hGTASA, "_Z14RpLightDestroyP7RpLight"));
     SET_TO(SetShadowedObject,               aml->GetSym(hGTASA, "_ZN15CRealTimeShadow17SetShadowedObjectEP9CPhysical"));
+    SET_TO(RenderCoronas,                   aml->GetSym(hGTASA, "_ZN8CCoronas6RenderEv"));
+    SET_TO(RenderSkyPolys,                  aml->GetSym(hGTASA, "_ZN7CClouds14RenderSkyPolysEv"));
+    SET_TO(RenderPlants,                    *(uintptr_t*)(pGTASA + BYBIT(0x6726D0, 0x844308)));
 
     SET_TO(CamDistComp,                     aml->GetSym(hGTASA, "_ZN22CRealTimeShadowManager11CamDistCompEPKvS1_"));
     SET_TO(StoreRealTimeShadow,             aml->GetSym(hGTASA, "_ZN8CShadows19StoreRealTimeShadowEP9CPhysicalffffff"));

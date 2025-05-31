@@ -18,10 +18,8 @@ LOCAL_SRC_FILES := main.cpp mod/logger.cpp mod/config.cpp
 LOCAL_SRC_FILES += externs.cpp
 LOCAL_SRC_FILES += skygfx/colorfilter.cpp skygfx/buildingpipe.cpp \
 				   skygfx/shaders.cpp skygfx/shading.cpp \
-				   skygfx/vehiclepipe.cpp skygfx/misc.cpp
-
-### Includes
-LOCAL_C_INCLUDES += ./include
+				   skygfx/vehiclepipe.cpp skygfx/misc.cpp \
+				   skygfx/envmap.cpp
 
 ### Libraries
 LOCAL_LDLIBS += -llog

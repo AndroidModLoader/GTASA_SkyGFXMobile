@@ -358,6 +358,9 @@ extern ES2Shader*          (*RQCreateShader)(const char* pixel, const char* vert
 extern void                (*OS_ThreadMakeCurrent)();
 extern void                (*OS_ThreadUnmakeCurrent)();
 extern void                (*SelectEmuShader)(EmuShader*, bool isNewSelection);
+extern void                (*RenderCoronas)();
+extern void                (*RenderSkyPolys)();
+extern void                (*RenderPlants)();
 
 // Main
 void ResolveExternals();
