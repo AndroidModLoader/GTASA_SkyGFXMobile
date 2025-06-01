@@ -47,8 +47,13 @@ void StartShaders()
 
     // Fog wall fix
     // 110 max including terminator
-    const char* sFogPart = "Out_FogAmt=clamp((length(WorldPos.xyz-CameraPosition.xyz)-0.5f*FogDistances.x)*FogDistances.z*1.2f,0.0f,1.0f);";
+    const char* sFogPart = "Out_FogAmt=clamp((length(WorldPos.xyz-CameraPosition.xyz)-0.5*FogDistances.x)*FogDistances.z*1.2,0.0,1.0);";
     aml->Write(pGTASA + BYBIT(0x5EB972, 0x71202E), sFogPart, strlen(sFogPart)+1);
+
+    // Specular light on vehicles
+    // 99 max including terminator
+    const char* sSpecPart = "float specAmt=max(pow(dot(reflVector,DirLightDirection),64.0),0.0)*EnvMapCoefficient*1.5;";
+    aml->Write(pGTASA + BYBIT(0x5EBF0F, 0x7125CD), sSpecPart, strlen(sSpecPart)+1);
 
     HOOKPLT(InitialiseGame, pGTASA + BYBIT(0x6740A4, 0x846D20));
     HOOKPLT(AssignEmuShader, pGTASA + BYBIT(0x674170, 0x846E68));
