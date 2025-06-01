@@ -53,7 +53,7 @@ extern "C" void OnAllModsLoaded()
     StartMiscStuff();
     StartShading();
     StartEnvMapStuff();
-    //StartShaders();
+    StartShaders();
     //StartBuildingPipeline();
 }
 

@@ -118,7 +118,7 @@ void SetLightsWithTimeOfDayColour_PC_PS2(RpWorld* world)
         p_AmbientLightColourForFrame->green = p_CTimeCycle__m_CurrentColours->ambg * ambMult;
         p_AmbientLightColourForFrame->blue  = p_CTimeCycle__m_CurrentColours->ambb * ambMult;
 
-        ambMult = *p_CCoronas__LightsMult * 1.25f; // def. 1.5f
+        ambMult = *p_CCoronas__LightsMult * 1.22f; // def. 1.5f
         p_AmbientLightColourForFrame_PedsCarsAndObjects->red = p_CTimeCycle__m_CurrentColours->ambobjr * ambMult;
         p_AmbientLightColourForFrame_PedsCarsAndObjects->green = p_CTimeCycle__m_CurrentColours->ambobjg * ambMult;
         p_AmbientLightColourForFrame_PedsCarsAndObjects->blue = p_CTimeCycle__m_CurrentColours->ambobjb * ambMult;

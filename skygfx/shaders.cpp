@@ -32,15 +32,21 @@ DECL_HOOKv(AssignEmuShader, bool hasNormals)
     {
         FakeShaderContainer.shader = pForcedShader;
         FakeShaderContainer.programFlags = pForcedShader->flags;
-        SelectEmuShader(&FakeShaderContainer, true); // Always TRUE in original code?
+        SelectEmuShader(&FakeShaderContainer, true); // TRUE if needs to update uniforms
     }
 }
 
 /* Main */
 void StartShaders()
 {
-    HOOKPLT(InitialiseGame, pGTASA + 0x6740A4);
-    HOOKPLT(AssignEmuShader, pGTASA + 0x674170);
+  #ifdef AML32
+    
+  #else
+    
+  #endif
+
+    HOOKPLT(InitialiseGame, pGTASA + BYBIT(0x6740A4, 0x846D20));
+    HOOKPLT(AssignEmuShader, pGTASA + BYBIT(0x674170, 0x846E68));
 }
 
 /* Backup */

@@ -12,6 +12,7 @@ enum
 
 /* Variables */
 int g_nEnvMapType = ENVMAP_MOBILE;
+float g_fForcedEnvRadius = 50.0f;
 
 const char* aEnvMapNames[ENVMAP_MAX] = 
 {
@@ -27,7 +28,7 @@ ConfigEntry* pCFGEnvMapType;
 DECL_HOOKv(RenderEnvMap)
 {
     float saveVal = *ms_fFarClip;
-    *ms_fFarClip = 0.98f * 60.0f; // env sphere farclip
+    *ms_fFarClip = 0.985f * g_fForcedEnvRadius; // env sphere farclip
 
     // TODO: need to rewrite RenderScene(0) (which is above that func)
     if(g_nEnvMapType == ENVMAP_MOBILE)
@@ -37,12 +38,12 @@ DECL_HOOKv(RenderEnvMap)
     else if(g_nEnvMapType == ENVMAP_VCS_LCS)
     {
         RenderSkyPolys();
-        RenderCoronas(); // TODO: Not working here
+        //RenderCoronas(); // TODO: Not working here
     }
     else if(g_nEnvMapType == ENVMAP_XBOX)
     {
-        RenderClouds();
-        RenderCoronas();
+        //RenderClouds();
+        //RenderCoronas();
     }
 
     *ms_fFarClip = saveVal;
@@ -61,9 +62,9 @@ DECL_HOOKv(EnvMapColor, CRGBA* self, UInt8 red, UInt8 green, UInt8 blue, UInt8 a
     }
     else if(g_nEnvMapType == ENVMAP_XBOX)
     {
-        red   = 0.7f * p_CTimeCycle__m_CurrentColours->skybotr + 0.3f * 255;
-        green = 0.7f * p_CTimeCycle__m_CurrentColours->skybotg + 0.3f * 255;
-        blue  = 0.7f * p_CTimeCycle__m_CurrentColours->skybotb + 0.3f * 255;
+        red   = 0.70f * p_CTimeCycle__m_CurrentColours->skybotr + 0.30f * 255;
+        green = 0.75f * p_CTimeCycle__m_CurrentColours->skybotg + 0.25f * 255;
+        blue  = 0.70f * p_CTimeCycle__m_CurrentColours->skybotb + 0.30f * 255;
     }
 
     self->r = red;
@@ -95,14 +96,14 @@ void StartEnvMapStuff()
     aml->PlaceNOP(pGTASA + 0x5C4EC2, 1);
     aml->PlaceNOP(pGTASA + 0x5C4EC8, 1);
     aml->PlaceNOP(pGTASA + 0x5C4ECE, 1);
-    aml->WriteFloat(pGTASA + 0x5C5000 - 4, 120.0f);
-    aml->WriteFloat(pGTASA + 0x5C5000, 120.0f); // envMap radius
+    aml->WriteFloat(pGTASA + 0x5C4FFC, g_fForcedEnvRadius);
+    aml->WriteFloat(pGTASA + 0x5C5000, g_fForcedEnvRadius); // envMap radius
   #else
     aml->Write32(pGTASA + 0x6E94A4, 0x2A0903E1);
     aml->Write32(pGTASA + 0x6E94AC, 0x2A0B03E2);
     aml->Write32(pGTASA + 0x6E94B4, 0x2A0803E3);
-    aml->WriteFloat(pGTASA + 0x764DD4 - 4, 120.0f);
-    aml->WriteFloat(pGTASA + 0x764DD4, 120.0f); // envMap radius
+    aml->WriteFloat(pGTASA + 0x764DD0, g_fForcedEnvRadius);
+    aml->WriteFloat(pGTASA + 0x764DD4, g_fForcedEnvRadius); // envMap radius
   #endif
     
     HOOKBLX(RenderEnvMap, pGTASA + BYBIT(0x5C4F94, 0x6E9594));
