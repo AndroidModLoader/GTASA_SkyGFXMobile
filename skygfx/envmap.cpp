@@ -28,7 +28,7 @@ ConfigEntry* pCFGEnvMapType;
 DECL_HOOKv(RenderEnvMap)
 {
     float saveVal = *ms_fFarClip;
-    *ms_fFarClip = 0.985f * g_fForcedEnvRadius; // env sphere farclip
+    *ms_fFarClip = 0.995f * g_fForcedEnvRadius; // env sphere farclip
 
     // TODO: need to rewrite RenderScene(0) (which is above that func)
     if(g_nEnvMapType == ENVMAP_MOBILE)

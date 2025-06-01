@@ -47,7 +47,7 @@ void StartShaders()
 
     // Fog wall fix
     // 110 max including terminator
-    const char* sFogPart = "Out_FogAmt=clamp((length(WorldPos.xyz-CameraPosition.xyz)-0.2*FogDistances.x)*FogDistances.z*6.0,0.0,1.0);";
+    const char* sFogPart = "Out_FogAmt=clamp((length(WorldPos.xyz-CameraPosition.xyz)-0.6*FogDistances.x)*FogDistances.z*2.0,0.0,1.0);";
     aml->Write(pGTASA + BYBIT(0x5EB972, 0x71202E), sFogPart, strlen(sFogPart)+1);
 
     // Specular light on vehicles
