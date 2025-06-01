@@ -95,12 +95,14 @@ void StartEnvMapStuff()
     aml->PlaceNOP(pGTASA + 0x5C4EC2, 1);
     aml->PlaceNOP(pGTASA + 0x5C4EC8, 1);
     aml->PlaceNOP(pGTASA + 0x5C4ECE, 1);
-    aml->WriteFloat(pGTASA + 0x5C5000, 60.0f); // envMap radius
+    aml->WriteFloat(pGTASA + 0x5C5000 - 4, 120.0f);
+    aml->WriteFloat(pGTASA + 0x5C5000, 120.0f); // envMap radius
   #else
     aml->Write32(pGTASA + 0x6E94A4, 0x2A0903E1);
     aml->Write32(pGTASA + 0x6E94AC, 0x2A0B03E2);
     aml->Write32(pGTASA + 0x6E94B4, 0x2A0803E3);
-    aml->WriteFloat(pGTASA + 0x764DD4, 60.0f); // envMap radius
+    aml->WriteFloat(pGTASA + 0x764DD4 - 4, 120.0f);
+    aml->WriteFloat(pGTASA + 0x764DD4, 120.0f); // envMap radius
   #endif
     
     HOOKBLX(RenderEnvMap, pGTASA + BYBIT(0x5C4F94, 0x6E9594));
