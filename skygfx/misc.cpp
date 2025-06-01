@@ -34,4 +34,7 @@ void StartMiscStuff()
         // TODO: value for +216.1 ...
       #endif
     }
+
+    // A test fix for camnorm textures being dark at some angles (might broke everything)
+    aml->PlaceNOP(pGTASA + BYBIT(0x221ED6, 0x2CC86C), 1);
 }
