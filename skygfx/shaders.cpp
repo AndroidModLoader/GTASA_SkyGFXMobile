@@ -45,6 +45,11 @@ void StartShaders()
     
   #endif
 
+    // Fog wall fix
+    // 110 max including terminator
+    const char* sFogPart = "Out_FogAmt=clamp((length(WorldPos.xyz-CameraPosition.xyz)-0.5f*FogDistances.x)*FogDistances.z*1.2f,0.0f,1.0f);";
+    aml->Write(pGTASA + BYBIT(0x5EB972, 0x71202E), sFogPart, strlen(sFogPart)+1);
+
     HOOKPLT(InitialiseGame, pGTASA + BYBIT(0x6740A4, 0x846D20));
     HOOKPLT(AssignEmuShader, pGTASA + BYBIT(0x674170, 0x846E68));
 }
