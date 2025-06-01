@@ -12,7 +12,7 @@ enum
 
 /* Variables */
 int g_nEnvMapType = ENVMAP_MOBILE;
-float g_fForcedEnvRadius = 50.0f;
+float g_fForcedEnvRadius = 75.0f; // def. 60
 
 const char* aEnvMapNames[ENVMAP_MAX] = 
 {
