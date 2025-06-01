@@ -36,5 +36,9 @@ void StartMiscStuff()
     }
 
     // A test fix for camnorm textures being dark at some angles (might broke everything)
-    aml->PlaceNOP(pGTASA + BYBIT(0x221ED6, 0x2CC86C), 1);
+  #ifdef AML32
+
+  #else
+    aml->Write32(pGTASA + 0x2CBD5C, 0x52800020);
+  #endif
 }
