@@ -5,6 +5,10 @@ bool g_bRemoveDumbWaterColorCalculations = true;
 bool g_bFixMirrorIssue = true;
 
 /* Hooks */
+DECL_HOOKv(enableLights, int e)
+{
+    enableLights(1);
+}
 
 /* Functions */
 
@@ -35,10 +39,6 @@ void StartMiscStuff()
       #endif
     }
 
-    // A test fix for camnorm textures being dark at some angles (might broke everything)
-  #ifdef AML32
-
-  #else
-    aml->Write32(pGTASA + 0x2CBD5C, 0x52800020);
-  #endif
+    // A test fix or camnorm textures being dark at some angles (might broke everything)
+    HOOK(enableLights, aml->GetSym(hGTASA, "_Z21_rwOpenGLLightsEnablei"));
 }
