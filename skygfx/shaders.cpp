@@ -50,6 +50,20 @@ void StartShaders()
     const char* sFogPart = "Out_FogAmt=clamp((length(WorldPos.xyz-CameraPosition.xyz)-0.6*FogDistances.x)*FogDistances.z*2.0,0.0,1.0);";
     aml->Write(pGTASA + BYBIT(0x5EB972, 0x71202E), sFogPart, strlen(sFogPart)+1);
 
+    // Water Sun Reflections are now affected by the fog
+  #ifdef AML32
+    aml->Write8(pGTASA + 0x5A36B2, 0x01);
+  #else
+    aml->Write32(pGTASA + 0x6C6F00, 0xD2800021);
+  #endif
+
+    // Sun Z-Test disabled (to match PS2? TODO: reverse)
+  #ifdef AML32
+    aml->Write8(pGTASA + 0x5A26AE, 0x00);
+  #else
+    aml->Write32(pGTASA + 0x6C6008, 0x2A1F03E1);
+  #endif
+
     // Specular light on vehicles
     // 99 max including terminator
     const char* sSpecPart = "float specAmt=max(pow(dot(reflVector,DirLightDirection),64.0),0.0)*EnvMapCoefficient*1.5;";

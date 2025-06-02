@@ -5,10 +5,6 @@ bool g_bRemoveDumbWaterColorCalculations = true;
 bool g_bFixMirrorIssue = true;
 
 /* Hooks */
-DECL_HOOKv(enableLights, int e)
-{
-    enableLights(1);
-}
 
 /* Functions */
 
@@ -38,7 +34,4 @@ void StartMiscStuff()
         // TODO: value for +216.1 ...
       #endif
     }
-
-    // A test fix or camnorm textures being dark at some angles (might broke everything)
-    HOOK(enableLights, aml->GetSym(hGTASA, "_Z21_rwOpenGLLightsEnablei"));
 }
