@@ -18,6 +18,7 @@ void StartShading();
 void StartVehiclePipeline();
 void StartMiscStuff();
 void StartEnvMapStuff();
+void StartRenderQueue();
 
 /* Main */
 extern "C" void OnAllModsLoaded()
@@ -54,6 +55,7 @@ extern "C" void OnAllModsLoaded()
     StartShading();
     StartEnvMapStuff();
     StartShaders();
+    StartRenderQueue();
     //StartBuildingPipeline();
 }
 

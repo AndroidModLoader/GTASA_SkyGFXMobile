@@ -64,6 +64,7 @@ RQShader **curSelectedShader;
 float *AmbientLightColor;
 bool *AmbientLightDirty;
 float *ms_fFarClip;
+RenderQueue* renderQueue;
 
 // Functions
 RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);
@@ -189,6 +190,9 @@ void                (*RenderCoronas)();
 void                (*RenderSkyPolys)();
 void                (*RenderPlants)();
 void                (*RenderClouds)();
+void                (*OS_MutexObtain)(OSMutex);
+void                (*RQ_Process)(RenderQueue*);
+void                (*RQ_Flush)(RenderQueue*);
 
 // Main
 void ResolveExternals()
@@ -336,6 +340,9 @@ void ResolveExternals()
     SET_TO(RenderSkyPolys,                  aml->GetSym(hGTASA, "_ZN7CClouds14RenderSkyPolysEv"));
     SET_TO(RenderPlants,                    *(uintptr_t*)(pGTASA + BYBIT(0x6726D0, 0x844308)));
     SET_TO(RenderClouds,                    *(uintptr_t*)(pGTASA + BYVER(0x672FFC, 0x8451A0)));
+    SET_TO(OS_MutexObtain,                  aml->GetSym(hGTASA, "_Z14OS_MutexObtainPv"));
+    SET_TO(RQ_Process,                      aml->GetSym(hGTASA, "_ZN11RenderQueue7ProcessEv"));
+    SET_TO(RQ_Flush,                        aml->GetSym(hGTASA, "_ZN11RenderQueue5FlushEv"));
 
     SET_TO(CamDistComp,                     aml->GetSym(hGTASA, "_ZN22CRealTimeShadowManager11CamDistCompEPKvS1_"));
     SET_TO(StoreRealTimeShadow,             aml->GetSym(hGTASA, "_ZN8CShadows19StoreRealTimeShadowEP9CPhysicalffffff"));
@@ -380,4 +387,5 @@ void ResolveExternals()
     SET_TO(AmbientLightColor,               aml->GetSym(hGTASA, "AmbientLightColor"));
     SET_TO(AmbientLightDirty,               aml->GetSym(hGTASA, "AmbientLightDirty"));
     SET_TO(ms_fFarClip,                     aml->GetSym(hGTASA, "_ZN5CDraw12ms_fFarClipZE"));
+    SET_TO(renderQueue,                     aml->GetSym(hGTASA, "renderQueue"));
 }
