@@ -113,15 +113,15 @@ inline bool RenderMeshes(RxOpenGLMeshInstanceData* meshData)
             RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTION, (void*)rwALPHATESTFUNCTIONLESS);
 		    RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)false);
             DrawStoredMeshData(meshData);
-            RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)zwrite);
-            RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTIONREF, (void*)alpharef);
-            RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTION, (void*)alphafunc);
+            RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)(intptr_t)zwrite);
+            RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTIONREF, (void*)(intptr_t)alpharef);
+            RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTION, (void*)(intptr_t)alphafunc);
         }
         else if(!zwrite)
         {
             RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTION, (void*)rwALPHATESTFUNCTIONALWAYS);
             DrawStoredMeshData(meshData);
-            RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTION, (void*)alphafunc);
+            RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTION, (void*)(intptr_t)alphafunc);
         }
         else DrawStoredMeshData(meshData);
     }
@@ -463,7 +463,6 @@ void StartBuildingPipeline()
 }
 
 /* Shaders */
-inline int OS_SystemChip() { return *deviceChip; }
 void BuildPixelSource_PS2Pipeline(char** buf, int flags)
 {
     char tmp[512];

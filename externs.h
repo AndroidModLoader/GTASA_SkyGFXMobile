@@ -374,5 +374,6 @@ static const char* aYesNo[2] =
     "FEM_OFF",
     "FEM_ON",
 };
+inline int OS_SystemChip() { return *deviceChip; }
 
 #endif // __EXTERNS

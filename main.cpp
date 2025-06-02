@@ -3,7 +3,7 @@
 MYMOD(net.rusjj.skygfxmobile, SkyGFX Mobile Beta, 0.3, aap & TheOfficialFloW & RusJJ)
 NEEDGAME(com.rockstargames.gtasa)
 BEGIN_DEPLIST()
-    ADD_DEPENDENCY_VER(net.rusjj.aml, 1.1)
+    ADD_DEPENDENCY_VER(net.rusjj.aml, 1.2)
 END_DEPLIST()
 
 /* Saves */
