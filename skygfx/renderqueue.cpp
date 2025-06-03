@@ -1,7 +1,5 @@
 #include <externs.h>
 #include "include/renderqueue.h"
-#include <GLES2/gl2.h>
-#include <GLES2/gl2ext.h>
 
 // =====================================================================================
 // =====================================================================================
@@ -12,7 +10,7 @@
 // =====================================================================================
 
 /* Variables */
-
+ExtendedRQ extRQ;
 
 /* Functions */
 void RQ_Command_erqColorMask(uint8_t** data)
@@ -28,7 +26,16 @@ void RQ_Command_erqBlendFuncSeparate(uint8_t** data)
     GLenum sfactorAlpha = *(GLenum*)*data; *data += sizeof(int);
     GLenum dfactorAlpha = *(GLenum*)*data; *data += sizeof(int);
 
-    glBlendFuncSeparate(sfactorRGB, dfactorRGB, sfactorAlpha, dfactorAlpha);
+    if(glIsEnabled(GL_BLEND))
+    {
+        glBlendFuncSeparate(sfactorRGB, dfactorRGB, sfactorAlpha, dfactorAlpha);
+    }
+    else
+    {
+        glEnable(GL_BLEND);
+        glBlendFuncSeparate(sfactorRGB, dfactorRGB, sfactorAlpha, dfactorAlpha);
+        glDisable(GL_BLEND);
+    }
 }
 void RQ_Command_erqBlendFunc(uint8_t** data)
 {
@@ -53,13 +60,15 @@ DECL_HOOKv(RQ_Command_rqDebugMarker, uint8_t** data)
     int cmd = *(int*)*data;
     *data += sizeof(int);
 
+    #define CASE_RQ(__cmd) case __cmd: return RQ_Command_##__cmd(data)
+
     switch(cmd)
     {
-        case erqColorMask:          return RQ_Command_erqColorMask(data);
-        case erqBlendFuncSeparate:  return RQ_Command_erqBlendFuncSeparate(data);
-        case erqBlendFunc:          return RQ_Command_erqBlendFunc(data);
-        case erqEnable:             return RQ_Command_erqEnable(data);
-        case erqDisable:            return RQ_Command_erqDisable(data);
+        CASE_RQ( erqColorMask );
+        CASE_RQ( erqBlendFuncSeparate );
+        CASE_RQ( erqBlendFunc );
+        CASE_RQ( erqEnable );
+        CASE_RQ( erqDisable );
     }
 }
 
@@ -68,5 +77,3 @@ void StartRenderQueue()
 {
     HOOKPLT(RQ_Command_rqDebugMarker, pGTASA + BYBIT(0x677850, 0x84D0C8));
 }
-
-ExtendedRQ extRQ;

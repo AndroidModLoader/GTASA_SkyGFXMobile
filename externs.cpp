@@ -64,7 +64,7 @@ RQShader **curSelectedShader;
 float *AmbientLightColor;
 bool *AmbientLightDirty;
 float *ms_fFarClip;
-RenderQueue* renderQueue;
+RenderQueue** renderQueue;
 
 // Functions
 RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);
@@ -191,6 +191,7 @@ void                (*RenderSkyPolys)();
 void                (*RenderPlants)();
 void                (*RenderClouds)();
 void                (*OS_MutexObtain)(OSMutex);
+void                (*OS_MutexRelease)(OSMutex);
 void                (*RQ_Process)(RenderQueue*);
 void                (*RQ_Flush)(RenderQueue*);
 
@@ -279,8 +280,8 @@ void ResolveExternals()
     SET_TO(RenderVolumetricClouds,          aml->GetSym(hGTASA, "_ZN7CClouds22VolumetricCloudsRenderEv"));
     SET_TO(FileMgrSetDir,                   aml->GetSym(hGTASA, "_ZN8CFileMgr6SetDirEPKc"));
     SET_TO(FileMgrOpenFile,                 aml->GetSym(hGTASA, "_ZN8CFileMgr8OpenFileEPKcS1_"));
-    SET_TO(FileMgrCloseFile,                aml->GetSym(hGTASA, "_ZN8CFileMgr9CloseFileEj"));
-    SET_TO(FileLoaderLoadLine,              aml->GetSym(hGTASA, "_ZN11CFileLoader8LoadLineEj"));
+    SET_TO(FileMgrCloseFile,                aml->GetSym(hGTASA, BYBIT("_ZN8CFileMgr9CloseFileEj", "_ZN8CFileMgr9CloseFileEy")));
+    SET_TO(FileLoaderLoadLine,              aml->GetSym(hGTASA, BYBIT("_ZN11CFileLoader8LoadLineEj", "_ZN11CFileLoader8LoadLineEy")));
     SET_TO(GetSurfaceIdFromName,            aml->GetSym(hGTASA, "_ZN14SurfaceInfos_c20GetSurfaceIdFromNameEPc"));
     SET_TO(m_SurfPropPtrTab,                aml->GetSym(hGTASA, "_ZN17CPlantSurfPropMgr16m_SurfPropPtrTabE"));
     SET_TO(m_countSurfPropsAllocated,       aml->GetSym(hGTASA, "_ZN17CPlantSurfPropMgr25m_countSurfPropsAllocatedE"));
@@ -341,6 +342,7 @@ void ResolveExternals()
     SET_TO(RenderPlants,                    *(uintptr_t*)(pGTASA + BYBIT(0x6726D0, 0x844308)));
     SET_TO(RenderClouds,                    *(uintptr_t*)(pGTASA + BYVER(0x672FFC, 0x8451A0)));
     SET_TO(OS_MutexObtain,                  aml->GetSym(hGTASA, "_Z14OS_MutexObtainPv"));
+    SET_TO(OS_MutexRelease,                 aml->GetSym(hGTASA, "_Z15OS_MutexReleasePv"));
     SET_TO(RQ_Process,                      aml->GetSym(hGTASA, "_ZN11RenderQueue7ProcessEv"));
     SET_TO(RQ_Flush,                        aml->GetSym(hGTASA, "_ZN11RenderQueue5FlushEv"));
 
@@ -371,7 +373,7 @@ void ResolveExternals()
     SET_TO(GetPipelineID,                   aml->GetSym(hGTASA, "_Z13GetPipelineIDP8RpAtomic"));
     SET_TO(GetExtraVertColourPtr,           aml->GetSym(hGTASA, "_ZN25CCustomBuildingDNPipeline21GetExtraVertColourPtrEP10RpGeometry"));
     SET_TO(ms_extraVertColourPluginOffset,  aml->GetSym(hGTASA, "_ZN25CCustomBuildingDNPipeline30ms_extraVertColourPluginOffsetE"));
-    SET_TO(emu_ArraysDelete,                aml->GetSym(hGTASA, "_Z16emu_ArraysDeletej"));
+    SET_TO(emu_ArraysDelete,                aml->GetSym(hGTASA, BYBIT("_Z16emu_ArraysDeletej", "_Z16emu_ArraysDeletey")));
     SET_TO(RwHackNoCompressedTexCoords,     aml->GetSym(hGTASA, "RwHackNoCompressedTexCoords"));
     SET_TO(_rxOpenGLAllInOneAtomicInstanceVertexArray, aml->GetSym(hGTASA, "_Z42_rxOpenGLAllInOneAtomicInstanceVertexArrayP24RxOpenGLMeshInstanceDataPK8RpAtomicPK10RpGeometry14RpGeometryFlagiiPhP6RwRGBASA_"));
     SET_TO(emu_ArraysIndices,               aml->GetSym(hGTASA, "_Z17emu_ArraysIndicesPvjj"));

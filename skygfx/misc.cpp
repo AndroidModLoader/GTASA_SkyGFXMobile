@@ -1,4 +1,5 @@
 #include <externs.h>
+#include "include/renderqueue.h"
 
 /* Variables */
 bool g_bRemoveDumbWaterColorCalculations = true;
@@ -9,6 +10,11 @@ bool g_bPS2Sun = true;
 ConfigEntry* pCFGPS2SunZTest;
 
 /* Hooks */
+DECL_HOOKv(MoonMask_RenderSprite, float ScreenX, float ScreenY, float ScreenZ, float SizeX, float SizeY, UInt8 R, UInt8 G, UInt8 B, Int16 Intensity16, float RecipZ, UInt8 Alpha, bool8 FlipU, bool8 FlipV, float uvPad1, float uvPad2)
+{
+    ERQ_BlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_SRC_ALPHA, GL_ZERO);
+    MoonMask_RenderSprite(ScreenX, ScreenY, ScreenZ, SizeX, SizeY, R, G, B, Intensity16, RecipZ, Alpha, FlipU, FlipV, uvPad1, uvPad2);
+}
 
 /* Functions */
 void PS2SunZTestSettingChanged(int oldVal, int newVal, void* data)
@@ -61,4 +67,16 @@ void StartMiscStuff()
     pCFGPS2SunZTest = cfg->Bind("PS2SunZTest", g_bPS2Sun, "Visual");
     PS2SunZTestSettingChanged(false, pCFGPS2SunZTest->GetBool(), NULL);
     AddSetting("PS2 Sun Z-Test", g_bPS2Sun, 0, sizeofA(aYesNo)-1, aYesNo, PS2SunZTestSettingChanged, NULL);
+
+    // Better RGBA quality rasters
+  #ifdef AML32
+    aml->Write8(pGTASA + 0x1AE95E, 0x01); // RwRasterCreate -> _rwOpenGLRasterCreate
+    aml->Write8(pGTASA + 0x1BBA5E, 0x01); // emu_SetAltRenderTarget -> backTarget
+  #else
+    aml->Write32(pGTASA + 0x23FDE0, 0x52800022); // RwRasterCreate -> _rwOpenGLRasterCreate
+    aml->Write32(pGTASA + 0x24ECC4, 0x52800022); // emu_SetAltRenderTarget -> backTarget
+  #endif
+
+    // Moon phases (works here, doesnt work in SAMP. HELLO?)
+    HOOKBL(MoonMask_RenderSprite, pGTASA + BYBIT(0x59EE32, 0x6C2DE4));
 }

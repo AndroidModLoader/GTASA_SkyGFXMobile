@@ -238,7 +238,7 @@ extern RQShader **curSelectedShader;
 extern float *AmbientLightColor;
 extern bool *AmbientLightDirty;
 extern float *ms_fFarClip;
-extern RenderQueue* renderQueue;
+extern RenderQueue** renderQueue;
 
 // Functions
 extern RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);
@@ -365,6 +365,7 @@ extern void                (*RenderSkyPolys)();
 extern void                (*RenderPlants)();
 extern void                (*RenderClouds)();
 extern void                (*OS_MutexObtain)(OSMutex);
+extern void                (*OS_MutexRelease)(OSMutex);
 extern void                (*RQ_Process)(RenderQueue*);
 extern void                (*RQ_Flush)(RenderQueue*);
 
