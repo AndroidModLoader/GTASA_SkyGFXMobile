@@ -53,12 +53,49 @@ void RQ_Command_erqDisable(uint8_t** data)
     GLenum cap = *(GLenum*)*data; *data += sizeof(int);
     glDisable(cap);
 }
+void RQ_Command_erqBackupViewport(uint8_t** data)
+{
+    glGetIntegerv(GL_VIEWPORT, &extRQ.m_aViewportBackup[0]);
+    extRQ.m_bViewportBackupped = true;
+}
+void RQ_Command_erqRestoreViewport(uint8_t** data)
+{
+    if(extRQ.m_bViewportBackupped)
+    {
+        glViewport(extRQ.m_aViewportBackup[0], extRQ.m_aViewportBackup[1], extRQ.m_aViewportBackup[2], extRQ.m_aViewportBackup[3]);
+        extRQ.m_bViewportBackupped = false;
+    }
+}
+void RQ_Command_erqViewport(uint8_t** data)
+{
+    int x = RQUEUE_READINT(data);
+    int y = RQUEUE_READINT(data);
+    glViewport(0, 0, x, y);
+}
+void RQ_Command_erqRenderFast(uint8_t** data)
+{
+    GLuint id = (GLuint)RQUEUE_READINT(data);
+    int x = RQUEUE_READINT(data);
+    int y = RQUEUE_READINT(data);
+
+    //glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, id);
+    glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, x, y);
+    glBindTexture(GL_TEXTURE_2D, boundTextures[*curActiveTexture]);
+}
 
 /* Hooks */
 DECL_HOOKv(RQ_Command_rqDebugMarker, uint8_t** data)
 {
     int cmd = *(int*)*data;
     *data += sizeof(int);
+
+    // Fallback to the default (not used?)
+    if(cmd == GL_GENERATE_MIPMAP_HINT)
+    {
+        glHint(GL_GENERATE_MIPMAP_HINT, *(GLenum*)*data);
+        *data += sizeof(int);
+    }
 
     #define CASE_RQ(__cmd) case __cmd: return RQ_Command_##__cmd(data)
 
@@ -69,6 +106,10 @@ DECL_HOOKv(RQ_Command_rqDebugMarker, uint8_t** data)
         CASE_RQ( erqBlendFunc );
         CASE_RQ( erqEnable );
         CASE_RQ( erqDisable );
+        CASE_RQ( erqBackupViewport );
+        CASE_RQ( erqRestoreViewport );
+        CASE_RQ( erqViewport );
+        CASE_RQ( erqRenderFast );
     }
 }
 

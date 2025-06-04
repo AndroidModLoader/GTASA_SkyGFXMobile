@@ -65,6 +65,10 @@ float *AmbientLightColor;
 bool *AmbientLightDirty;
 float *ms_fFarClip;
 RenderQueue** renderQueue;
+RwRaster** pRasterFrontBuffer;
+int *curActiveTexture;
+int *boundTextures;
+GlobalSceneTag* Scene;
 
 // Functions
 RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);
@@ -194,6 +198,10 @@ void                (*OS_MutexObtain)(OSMutex);
 void                (*OS_MutexRelease)(OSMutex);
 void                (*RQ_Process)(RenderQueue*);
 void                (*RQ_Flush)(RenderQueue*);
+void                (*RwCameraEndUpdate)(RwCamera*);
+void                (*RsCameraBeginUpdate)(RwCamera*);
+void                (*SpeedFX)(float);
+CVector*            (*FindPlayerSpeed)(int);
 
 // Main
 void ResolveExternals()
@@ -345,6 +353,10 @@ void ResolveExternals()
     SET_TO(OS_MutexRelease,                 aml->GetSym(hGTASA, "_Z15OS_MutexReleasePv"));
     SET_TO(RQ_Process,                      aml->GetSym(hGTASA, "_ZN11RenderQueue7ProcessEv"));
     SET_TO(RQ_Flush,                        aml->GetSym(hGTASA, "_ZN11RenderQueue5FlushEv"));
+    SET_TO(RwCameraEndUpdate,               aml->GetSym(hGTASA, "_Z17RwCameraEndUpdateP8RwCamera"));
+    SET_TO(RsCameraBeginUpdate,             aml->GetSym(hGTASA, "_Z19RsCameraBeginUpdateP8RwCamera"));
+    SET_TO(SpeedFX,                         aml->GetSym(hGTASA, "_ZN12CPostEffects7SpeedFXEf"));
+    SET_TO(FindPlayerSpeed,                 aml->GetSym(hGTASA, "_Z15FindPlayerSpeedi"));
 
     SET_TO(CamDistComp,                     aml->GetSym(hGTASA, "_ZN22CRealTimeShadowManager11CamDistCompEPKvS1_"));
     SET_TO(StoreRealTimeShadow,             aml->GetSym(hGTASA, "_ZN8CShadows19StoreRealTimeShadowEP9CPhysicalffffff"));
@@ -390,4 +402,8 @@ void ResolveExternals()
     SET_TO(AmbientLightDirty,               aml->GetSym(hGTASA, "AmbientLightDirty"));
     SET_TO(ms_fFarClip,                     aml->GetSym(hGTASA, "_ZN5CDraw12ms_fFarClipZE"));
     SET_TO(renderQueue,                     aml->GetSym(hGTASA, "renderQueue"));
+    SET_TO(pRasterFrontBuffer,              aml->GetSym(hGTASA, "_ZN12CPostEffects18pRasterFrontBufferE"));
+    SET_TO(curActiveTexture,                aml->GetSym(hGTASA, "_ZN10ES2Texture16curActiveTextureE"));
+    SET_TO(boundTextures,                   aml->GetSym(hGTASA, "_ZN10ES2Texture13boundTexturesE"));
+    SET_TO(Scene,                           aml->GetSym(hGTASA, "Scene"));
 }

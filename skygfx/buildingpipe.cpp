@@ -111,7 +111,7 @@ inline bool RenderMeshes(RxOpenGLMeshInstanceData* meshData)
             RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)true);
             DrawStoredMeshData(meshData);
             RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTION, (void*)rwALPHATESTFUNCTIONLESS);
-		    RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)false);
+            RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)false);
             DrawStoredMeshData(meshData);
             RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)(intptr_t)zwrite);
             RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTIONREF, (void*)(intptr_t)alpharef);

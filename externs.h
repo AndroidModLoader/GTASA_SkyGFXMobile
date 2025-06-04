@@ -239,6 +239,10 @@ extern float *AmbientLightColor;
 extern bool *AmbientLightDirty;
 extern float *ms_fFarClip;
 extern RenderQueue** renderQueue;
+extern RwRaster** pRasterFrontBuffer;
+extern int *curActiveTexture;
+extern int *boundTextures;
+extern GlobalSceneTag* Scene;
 
 // Functions
 extern RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);
@@ -368,6 +372,10 @@ extern void                (*OS_MutexObtain)(OSMutex);
 extern void                (*OS_MutexRelease)(OSMutex);
 extern void                (*RQ_Process)(RenderQueue*);
 extern void                (*RQ_Flush)(RenderQueue*);
+extern void                (*RwCameraEndUpdate)(RwCamera*);
+extern void                (*RsCameraBeginUpdate)(RwCamera*);
+extern void                (*SpeedFX)(float);
+extern CVector*            (*FindPlayerSpeed)(int);
 
 // Main
 void ResolveExternals();

@@ -18,29 +18,41 @@
 }
 
 // bytes count should be aligned to 4 or 8 !!!!
-#define RQUEUE_WRITEBYTE(__v)                           \
-{                                                       \
-    *(uint8_t*)((*renderQueue)->mainWorkPointer) = (__v);  \
-    (*renderQueue)->mainWorkPointer += 4;                  \
-}
-
-#define RQUEUE_WRITEINT(__v)                        \
-{                                                   \
-    *(int*)((*renderQueue)->mainWorkPointer) = (__v);  \
-    (*renderQueue)->mainWorkPointer += 4;              \
-}
-
-#define RQUEUE_WRITEFLOAT(__v)                          \
-{                                                       \
-    *(float*)((*renderQueue)->mainWorkPointer) = (__v);    \
-    (*renderQueue)->mainWorkPointer += 4;                  \
-}
-
-#define RQUEUE_WRITEPTR(__v)                                \
+#define RQUEUE_WRITEBYTE(__v)                               \
 {                                                           \
+    *(uint8_t*)((*renderQueue)->mainWorkPointer) = (__v);   \
+    (*renderQueue)->mainWorkPointer += sizeof(int);         \
+}
+#define RQUEUE_READBYTE(__data)                             \
+    *(uint8_t*)*__data;                                     \
+    *__data += sizeof(int);
+
+#define RQUEUE_WRITEINT(__v)                                \
+{                                                           \
+    *(int*)((*renderQueue)->mainWorkPointer) = (__v);       \
+    (*renderQueue)->mainWorkPointer += sizeof(int);         \
+}
+#define RQUEUE_READINT(__data)                              \
+    *(int*)*__data;                                         \
+    *__data += sizeof(int);
+
+#define RQUEUE_WRITEFLOAT(__v)                              \
+{                                                           \
+    *(float*)((*renderQueue)->mainWorkPointer) = (__v);     \
+    (*renderQueue)->mainWorkPointer += sizeof(float);       \
+}
+#define RQUEUE_READFLOAT(__data)                            \
+    *(float*)*__data;                                       \
+    *__data += sizeof(float);
+
+#define RQUEUE_WRITEPTR(__v)                                   \
+{                                                              \
     *(void**)((*renderQueue)->mainWorkPointer) = (void*)(__v); \
     (*renderQueue)->mainWorkPointer += sizeof(void*);          \
 }
+#define RQUEUE_READPTR(__data)                              \
+    *(void**)*__data;                                       \
+    *__data += sizeof(void*);
 
 /* This Might Be Incorrect... */
 #define RQUEUE_CLOSE()                                                                                              \
@@ -66,6 +78,10 @@ enum ExtendedRQCommand : __int32
     erqBlendFunc,
     erqEnable,
     erqDisable,
+    erqBackupViewport,
+    erqRestoreViewport,
+    erqViewport,
+    erqRenderFast,
 
     EXRQC_END
 };
@@ -74,6 +90,9 @@ struct ExtendedRQ
 {
     ExtendedRQ() { memset(this, 0, sizeof(*this)); }
 
+    bool m_bViewportBackupped;
+
+    GLint m_aViewportBackup[4];
 };
 extern ExtendedRQ extRQ;
 
@@ -86,6 +105,22 @@ inline void ERQ_BlendFuncSeparate(GLenum sfactorRGB, GLenum dfactorRGB, GLenum s
     RQUEUE_WRITEINT(dfactorRGB);
     RQUEUE_WRITEINT(sfactorAlpha);
     RQUEUE_WRITEINT(dfactorAlpha);
+
+    RQUEUE_CLOSE();
+}
+inline void ERQ_RenderFast(RwRaster* dst)
+{
+    if(!dst) return;
+
+    ES2Texture* tex = *(ES2Texture**)((char*)&dst->parent + *RasterExtOffset);
+    if(!tex) return;
+
+    RQUEUE_QUEUE(rqDebugMarker);
+    
+    RQUEUE_WRITEINT(erqRenderFast);
+    RQUEUE_WRITEINT(tex->texID);
+    RQUEUE_WRITEINT(dst->width);
+    RQUEUE_WRITEINT(dst->height);
 
     RQUEUE_CLOSE();
 }

@@ -15,6 +15,16 @@ DECL_HOOKv(MoonMask_RenderSprite, float ScreenX, float ScreenY, float ScreenZ, f
     ERQ_BlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_SRC_ALPHA, GL_ZERO);
     MoonMask_RenderSprite(ScreenX, ScreenY, ScreenZ, SizeX, SizeY, R, G, B, Intensity16, RecipZ, Alpha, FlipU, FlipV, uvPad1, uvPad2);
 }
+DECL_HOOKv(PostFX_Render)
+{
+    RwCameraEndUpdate(Scene->camera);
+    //ERQ_RenderFast(*pRasterFrontBuffer);
+    RsCameraBeginUpdate(Scene->camera);
+
+    PostFX_Render();
+
+    SpeedFX( FindPlayerSpeed(-1)->Magnitude() );
+}
 
 /* Functions */
 void PS2SunZTestSettingChanged(int oldVal, int newVal, void* data)
@@ -79,4 +89,5 @@ void StartMiscStuff()
 
     // Moon phases (works here, doesnt work in SAMP. HELLO?)
     HOOKBL(MoonMask_RenderSprite, pGTASA + BYBIT(0x59EE32, 0x6C2DE4));
+    HOOK(PostFX_Render, aml->GetSym(hGTASA, "_ZN12CPostEffects12MobileRenderEv"));
 }
