@@ -120,6 +120,10 @@ extern "C" uintptr_t ColorFilter_Patch(char* sp)
             green->green *= (1.5f + g * 1.732f) * 0.4f;
             blue->blue   *= (1.5f + b * 1.732f) * 0.4f;
 
+            red->green = red->blue   = red->alpha   = 0.0f;
+            green->red = green->blue = green->alpha = 0.0f;
+            blue->red  = blue->green = blue->alpha  = 0.0f;
+
             break;
         }
     }
