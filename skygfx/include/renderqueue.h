@@ -137,7 +137,7 @@ inline bool ERQ_HasAlphaBlending()
 inline void RQ_SetAlphaTest(GLenum func, GLclampf ref)
 {
     RQUEUE_QUEUE(rqSetAlphaTest);
-    RQUEUE_WRITEINT(func);
+    RQUEUE_WRITEINT(func - GL_NEVER);
     RQUEUE_WRITEFLOAT(ref);
     RQUEUE_CLOSE();
 }
