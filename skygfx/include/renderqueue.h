@@ -82,6 +82,7 @@ enum ExtendedRQCommand : __int32
     erqRestoreViewport,
     erqViewport,
     erqRenderFast,
+    erqAlphaBlendStatus,
 
     EXRQC_END
 };
@@ -91,6 +92,7 @@ struct ExtendedRQ
     ExtendedRQ() { memset(this, 0, sizeof(*this)); }
 
     bool m_bViewportBackupped;
+    bool m_bAlphaBlending;
 
     GLint m_aViewportBackup[4];
 };
@@ -122,5 +124,20 @@ inline void ERQ_RenderFast(RwRaster* dst)
     RQUEUE_WRITEINT(dst->width);
     RQUEUE_WRITEINT(dst->height);
 
+    RQUEUE_CLOSE();
+}
+inline bool ERQ_HasAlphaBlending()
+{
+    RQUEUE_QUEUE(rqDebugMarker);
+    RQUEUE_WRITEINT(erqAlphaBlendStatus);
+    RQUEUE_CLOSE();
+
+    return extRQ.m_bAlphaBlending;
+}
+inline void RQ_SetAlphaTest(GLenum func, GLclampf ref)
+{
+    RQUEUE_QUEUE(rqSetAlphaTest);
+    RQUEUE_WRITEINT(func);
+    RQUEUE_WRITEFLOAT(ref);
     RQUEUE_CLOSE();
 }

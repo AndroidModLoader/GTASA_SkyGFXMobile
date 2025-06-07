@@ -3,7 +3,7 @@
 MYMOD(net.rusjj.skygfxmobile, SkyGFX Mobile Beta, 0.3, aap & TheOfficialFloW & RusJJ)
 NEEDGAME(com.rockstargames.gtasa)
 BEGIN_DEPLIST()
-    ADD_DEPENDENCY_VER(net.rusjj.aml, 1.2)
+    ADD_DEPENDENCY_VER(net.rusjj.aml, 1.3)
 END_DEPLIST()
 
 /* Saves */
@@ -56,7 +56,7 @@ extern "C" void OnAllModsLoaded()
     StartEnvMapStuff();
     StartShaders();
     StartRenderQueue();
-    //StartBuildingPipeline();
+    StartBuildingPipeline();
 }
 
 static Config cfgLocal("SkyGFXMobile");

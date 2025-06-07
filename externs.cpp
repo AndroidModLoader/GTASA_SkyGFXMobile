@@ -69,6 +69,8 @@ RwRaster** pRasterFrontBuffer;
 int *curActiveTexture;
 int *boundTextures;
 GlobalSceneTag* Scene;
+GLenum* currentAlphaFunc;
+float* currentAlphaFuncVal;
 
 // Functions
 RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);
@@ -357,6 +359,8 @@ void ResolveExternals()
     SET_TO(RsCameraBeginUpdate,             aml->GetSym(hGTASA, "_Z19RsCameraBeginUpdateP8RwCamera"));
     SET_TO(SpeedFX,                         aml->GetSym(hGTASA, "_ZN12CPostEffects7SpeedFXEf"));
     SET_TO(FindPlayerSpeed,                 aml->GetSym(hGTASA, "_Z15FindPlayerSpeedi"));
+    SET_TO(currentAlphaFunc,                pGTASA + BYBIT(0x67A26C, 0x852330));
+    SET_TO(currentAlphaFuncVal,             pGTASA + BYVER(0x67A270, 0x852334));
 
     SET_TO(CamDistComp,                     aml->GetSym(hGTASA, "_ZN22CRealTimeShadowManager11CamDistCompEPKvS1_"));
     SET_TO(StoreRealTimeShadow,             aml->GetSym(hGTASA, "_ZN8CShadows19StoreRealTimeShadowEP9CPhysicalffffff"));

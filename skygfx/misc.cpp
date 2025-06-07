@@ -89,5 +89,7 @@ void StartMiscStuff()
 
     // Moon phases (works here, doesnt work in SAMP. HELLO?)
     HOOKBL(MoonMask_RenderSprite, pGTASA + BYBIT(0x59EE32, 0x6C2DE4));
-    HOOK(PostFX_Render, aml->GetSym(hGTASA, "_ZN12CPostEffects12MobileRenderEv"));
+
+    // Cannot add PostEffects buffer, yet.
+    //HOOK(PostFX_Render, aml->GetSym(hGTASA, "_ZN12CPostEffects12MobileRenderEv"));
 }

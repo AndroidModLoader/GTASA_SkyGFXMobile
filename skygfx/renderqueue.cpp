@@ -83,6 +83,10 @@ void RQ_Command_erqRenderFast(uint8_t** data)
     glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, x, y);
     glBindTexture(GL_TEXTURE_2D, boundTextures[*curActiveTexture]);
 }
+void RQ_Command_erqAlphaBlendStatus(uint8_t** data)
+{
+    extRQ.m_bAlphaBlending = (glIsEnabled(GL_BLEND) == GL_TRUE);
+}
 
 /* Hooks */
 DECL_HOOKv(RQ_Command_rqDebugMarker, uint8_t** data)
@@ -110,6 +114,7 @@ DECL_HOOKv(RQ_Command_rqDebugMarker, uint8_t** data)
         CASE_RQ( erqRestoreViewport );
         CASE_RQ( erqViewport );
         CASE_RQ( erqRenderFast );
+        CASE_RQ( erqAlphaBlendStatus );
     }
 }
 

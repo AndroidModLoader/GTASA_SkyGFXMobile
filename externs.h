@@ -243,6 +243,8 @@ extern RwRaster** pRasterFrontBuffer;
 extern int *curActiveTexture;
 extern int *boundTextures;
 extern GlobalSceneTag* Scene;
+extern GLenum* currentAlphaFunc;
+extern float* currentAlphaFuncVal;
 
 // Functions
 extern RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);
