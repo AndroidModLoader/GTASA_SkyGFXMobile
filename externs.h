@@ -242,9 +242,11 @@ extern RenderQueue** renderQueue;
 extern RwRaster** pRasterFrontBuffer;
 extern int *curActiveTexture;
 extern int *boundTextures;
-extern GlobalSceneTag* Scene;
-extern GLenum* currentAlphaFunc;
-extern float* currentAlphaFuncVal;
+extern GlobalSceneTag *Scene;
+extern GLenum *currentAlphaFunc;
+extern float *currentAlphaFuncVal;
+extern uint32_t *curShaderStateFlags;
+extern rwOGlRenderState *RenderState;
 
 // Functions
 extern RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);

@@ -68,9 +68,11 @@ RenderQueue** renderQueue;
 RwRaster** pRasterFrontBuffer;
 int *curActiveTexture;
 int *boundTextures;
-GlobalSceneTag* Scene;
-GLenum* currentAlphaFunc;
-float* currentAlphaFuncVal;
+GlobalSceneTag *Scene;
+GLenum *currentAlphaFunc;
+float *currentAlphaFuncVal;
+uint32_t *curShaderStateFlags;
+rwOGlRenderState *RenderState;
 
 // Functions
 RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);
@@ -412,4 +414,6 @@ void ResolveExternals()
     SET_TO(Scene,                           aml->GetSym(hGTASA, "Scene"));
     SET_TO(currentAlphaFunc,                pGTASA + BYBIT(0x67A26C, 0x852330));
     SET_TO(currentAlphaFuncVal,             pGTASA + BYVER(0x67A270, 0x852334));
+    SET_TO(curShaderStateFlags,             aml->GetSym(hGTASA, "curShaderStateFlags"));
+    SET_TO(RenderState,                     pGTASA + BYBIT(0x6B3208, 0x890120));
 }

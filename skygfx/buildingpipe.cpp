@@ -55,13 +55,14 @@ inline void RenderMeshes(RxOpenGLMeshInstanceData* meshData, bool dualPass)
         RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)false);
         DrawStoredMeshData(meshData);
         RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)true);
+        RQ_SetAlphaTest(alphaFunc, alphaRef);
     }
     else
     {
         RQ_SetAlphaTest(GL_ALWAYS, 1.0f);
         DrawStoredMeshData(meshData);
+        RQ_SetAlphaTest(alphaFunc, alphaRef);
     }
-    RQ_SetAlphaTest(alphaFunc, alphaRef);
 
     /*int zwrite = 0;
     RwBool hasAlpha = rwIsAlphaBlendOn();
@@ -175,7 +176,11 @@ DECL_HOOKv(RenderBuilding, CBuilding* self)
 }
 DECL_HOOKv(RenderDNBuildingMesh, RxOpenGLMeshInstanceData* meshData)
 {
-    RenderMeshes(meshData, g_nDualPass != DPASS_DISABLED && g_nLastBuildingDistSq < g_nBuildingDualPassDistSq);
+    RwRaster* curRaster = RenderState->texRaster[RenderState->activeTexUnit];
+    RenderMeshes(meshData, curRaster &&
+                           (!curRaster->dbEntry || curRaster->dbEntry->alphaFormat > 1) &&
+                           g_nDualPass != DPASS_DISABLED &&
+                           g_nLastBuildingDistSq < g_nBuildingDualPassDistSq );
 }
 
 /* Main */
