@@ -15,6 +15,7 @@ enum
 int g_nLastBuildingDistSq = 99999999;
 int g_nBuildingDualPassDistSq = 50 * 50; // "CMP int,int" gives more performance (not much but still)
 int g_nDualPass = DPASS_DISABLED;
+float g_fDualPassThreshold = 0.5f;
 const char* aDualPassSwitch[DPASS_MAX] = 
 {
     "Disabled",
@@ -49,9 +50,9 @@ inline void RenderMeshes(RxOpenGLMeshInstanceData* meshData, bool dualPass)
     _rwOpenGLGetRenderState(rwRENDERSTATEZWRITEENABLE, &zwrite);
     if(zwrite)
     {
-        RQ_SetAlphaTest(GL_GEQUAL, 0.5f);
+        RQ_SetAlphaTest(GL_GEQUAL, g_fDualPassThreshold);
         DrawStoredMeshData(meshData);
-        RQ_SetAlphaTest(GL_LESS, 0.5f);
+        RQ_SetAlphaTest(GL_LESS, g_fDualPassThreshold);
         RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)false);
         DrawStoredMeshData(meshData);
         RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)true);
@@ -176,11 +177,13 @@ DECL_HOOKv(RenderBuilding, CBuilding* self)
 }
 DECL_HOOKv(RenderDNBuildingMesh, RxOpenGLMeshInstanceData* meshData)
 {
-    RwRaster* curRaster = RenderState->texRaster[RenderState->activeTexUnit];
-    RenderMeshes(meshData, curRaster &&
-                           (!curRaster->dbEntry || curRaster->dbEntry->alphaFormat > 1) &&
-                           g_nDualPass != DPASS_DISABLED &&
-                           g_nLastBuildingDistSq < g_nBuildingDualPassDistSq );
+    bool doDual = (g_nDualPass != DPASS_DISABLED && g_nLastBuildingDistSq < g_nBuildingDualPassDistSq);
+    if(doDual)
+    {
+        RwRaster* curRaster = RenderState->texRaster[RenderState->activeTexUnit];
+        doDual = curRaster && (!curRaster->dbEntry || curRaster->dbEntry->alphaFormat > 1);
+    }
+    RenderMeshes(meshData, doDual);
 }
 
 /* Main */
@@ -192,6 +195,8 @@ void StartBuildingPipeline()
     DualPassSettingChanged(DPASS_DISABLED, pCFGDualPass->GetInt(), NULL);
     AddSetting("Building DualPass", g_nDualPass, 0, sizeofA(aDualPassSwitch)-1, aDualPassSwitch, DualPassSettingChanged, NULL);
 
+    g_fDualPassThreshold = cfg->GetFloat("DualPassThreshold", g_fDualPassThreshold, "Pipeline");
+    
     //HOOKPLT(CCustomBuildingDNPipeline_CustomPipeRenderCB, pGTASA + BYBIT(0x677CB4, 0x84D988)); // mesh->material crash??
     HOOKPLT(RenderBuilding, pGTASA + BYBIT(0x662014, 0x824F48));
     HOOKBLX(RenderDNBuildingMesh, pGTASA + BYBIT(0x2CA983, 0x38BEC4)); // doing this temporarily (reason: upper)
