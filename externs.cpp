@@ -204,6 +204,7 @@ void                (*RwCameraEndUpdate)(RwCamera*);
 void                (*RsCameraBeginUpdate)(RwCamera*);
 void                (*SpeedFX)(float);
 CVector*            (*FindPlayerSpeed)(int);
+CPlayerPed*         (*FindPlayerPed)(int);
 
 // Main
 void ResolveExternals()
@@ -359,8 +360,7 @@ void ResolveExternals()
     SET_TO(RsCameraBeginUpdate,             aml->GetSym(hGTASA, "_Z19RsCameraBeginUpdateP8RwCamera"));
     SET_TO(SpeedFX,                         aml->GetSym(hGTASA, "_ZN12CPostEffects7SpeedFXEf"));
     SET_TO(FindPlayerSpeed,                 aml->GetSym(hGTASA, "_Z15FindPlayerSpeedi"));
-    SET_TO(currentAlphaFunc,                pGTASA + BYBIT(0x67A26C, 0x852330));
-    SET_TO(currentAlphaFuncVal,             pGTASA + BYVER(0x67A270, 0x852334));
+    SET_TO(FindPlayerPed,                   aml->GetSym(hGTASA, "_Z13FindPlayerPedi"));
 
     SET_TO(CamDistComp,                     aml->GetSym(hGTASA, "_ZN22CRealTimeShadowManager11CamDistCompEPKvS1_"));
     SET_TO(StoreRealTimeShadow,             aml->GetSym(hGTASA, "_ZN8CShadows19StoreRealTimeShadowEP9CPhysicalffffff"));
@@ -410,4 +410,6 @@ void ResolveExternals()
     SET_TO(curActiveTexture,                aml->GetSym(hGTASA, "_ZN10ES2Texture16curActiveTextureE"));
     SET_TO(boundTextures,                   aml->GetSym(hGTASA, "_ZN10ES2Texture13boundTexturesE"));
     SET_TO(Scene,                           aml->GetSym(hGTASA, "Scene"));
+    SET_TO(currentAlphaFunc,                pGTASA + BYBIT(0x67A26C, 0x852330));
+    SET_TO(currentAlphaFuncVal,             pGTASA + BYVER(0x67A270, 0x852334));
 }

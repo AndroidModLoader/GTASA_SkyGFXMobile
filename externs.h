@@ -378,6 +378,7 @@ extern void                (*RwCameraEndUpdate)(RwCamera*);
 extern void                (*RsCameraBeginUpdate)(RwCamera*);
 extern void                (*SpeedFX)(float);
 extern CVector*            (*FindPlayerSpeed)(int);
+extern CPlayerPed*         (*FindPlayerPed)(int);
 
 // Main
 void ResolveExternals();

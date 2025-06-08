@@ -30,17 +30,6 @@ void ShadingSettingChanged(int oldVal, int newVal, void* data)
     pCFGShading->SetInt(newVal);
     pCFGShading->Clamp(0, SHADING_MAX - 1);
     g_nShading = pCFGShading->GetInt();
-    
-    /*if(g_bPS2Shading)
-    {
-        aml->PlaceNOP(pGTASA + 0x1C1382 + 0x1);
-        aml->PlaceNOP(pGTASA + 0x1C13BA + 0x1);
-    }
-    else
-    {
-        aml->Write(pGTASA + 0x1C1382, "\x0B\xD4", 2);
-        aml->Write(pGTASA + 0x1C13BA, "\x0B\xD0", 2);
-    }*/
 
     cfg->Save();
 }
