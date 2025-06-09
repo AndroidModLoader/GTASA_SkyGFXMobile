@@ -7,6 +7,7 @@ bool g_bFixMirrorIssue = true;
 bool g_bPS2Sun = true;
 bool g_bFixSandstorm = true;
 bool g_bFixFog = true;
+bool g_bExtendRainSplashes = true;
 
 /* Configs */
 ConfigEntry* pCFGPS2SunZTest;
@@ -55,6 +56,7 @@ void StartMiscStuff()
     g_bFixMirrorIssue = cfg->GetBool("FixMirrorIssue", g_bFixMirrorIssue, "Visual"); // SkyGFX 4.0b: fixed mirror issue
     g_bFixSandstorm = cfg->GetBool("FixSandstormIntensity", g_bFixSandstorm, "Visual");
     g_bFixFog = cfg->GetBool("FixFogIntensity", g_bFixFog, "Visual");
+    g_bExtendRainSplashes = cfg->GetBool("ExtendedRainSplashes", g_bExtendRainSplashes, "Visual");
 
     if(g_bRemoveDumbWaterColorCalculations)
     {
@@ -89,6 +91,15 @@ void StartMiscStuff()
     if(g_bFixFog)
     {
         aml->PlaceNOP(pGTASA + BYBIT(0x5CDB90, 0x6F2204), 1);
+    }
+
+    if(g_bExtendRainSplashes)
+    {
+      #ifdef AML32
+        aml->Write32(pGTASA + 0x5CD9E0, 0x0000E9CD);
+      #else
+        aml->Write32(pGTASA + 0x6F2070, 0x52800024);
+      #endif
     }
 
     // Sun Z-Test disabled (to match PS2 logic, same in reverse on PS2)
