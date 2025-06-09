@@ -5,6 +5,8 @@
 bool g_bRemoveDumbWaterColorCalculations = true;
 bool g_bFixMirrorIssue = true;
 bool g_bPS2Sun = true;
+bool g_bFixSandstorm = true;
+bool g_bFixFog = true;
 
 /* Configs */
 ConfigEntry* pCFGPS2SunZTest;
@@ -51,6 +53,8 @@ void StartMiscStuff()
 {
     g_bRemoveDumbWaterColorCalculations = cfg->GetBool("RemoveDumbWaterColorCalc", g_bRemoveDumbWaterColorCalculations, "Visual");
     g_bFixMirrorIssue = cfg->GetBool("FixMirrorIssue", g_bFixMirrorIssue, "Visual"); // SkyGFX 4.0b: fixed mirror issue
+    g_bFixSandstorm = cfg->GetBool("FixSandstormIntensity", g_bFixSandstorm, "Visual");
+    g_bFixFog = cfg->GetBool("FixFogIntensity", g_bFixFog, "Visual");
 
     if(g_bRemoveDumbWaterColorCalculations)
     {
@@ -71,6 +75,20 @@ void StartMiscStuff()
         aml->WriteFloat(pGTASA + 0x764D50, -216.1f);
         // TODO: value for +216.1 ...
       #endif
+    }
+
+    if(g_bFixSandstorm)
+    {
+      #ifdef AML32
+        aml->Write16(pGTASA + 0x5CE16C, 0xE00C);
+      #else
+        aml->Write32(pGTASA + 0x6F26F8, 0x1400000A);
+      #endif
+    }
+
+    if(g_bFixFog)
+    {
+        aml->PlaceNOP(pGTASA + BYBIT(0x5CDB90, 0x6F2204), 1);
     }
 
     // Sun Z-Test disabled (to match PS2 logic, same in reverse on PS2)
