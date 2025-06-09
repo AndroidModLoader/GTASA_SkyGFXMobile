@@ -7,3 +7,6 @@ As a bonus, it's improving the game visuals.
 
 Rain splashes on the vehicles:
 ![1000358883](https://github.com/user-attachments/assets/2af32649-6c3e-4ce6-bdd2-9dbd12dd0bd3)
+
+Better fog:
+![1000358884](https://github.com/user-attachments/assets/a8292b8e-b8ba-4760-b56c-28cc3d343203)
