@@ -8,6 +8,7 @@ bool g_bPS2Sun = true;
 bool g_bFixSandstorm = true;
 bool g_bFixFog = true;
 bool g_bExtendRainSplashes = true;
+bool g_bMissingEffects = true;
 
 /* Configs */
 ConfigEntry* pCFGPS2SunZTest;
@@ -27,6 +28,14 @@ DECL_HOOKv(PostFX_Render)
     PostFX_Render();
 
     SpeedFX( FindPlayerSpeed(-1)->Magnitude() );
+}
+DECL_HOOKv(RenderWaterCannons)
+{
+    RenderWaterCannons();
+
+    RenderWaterFog();
+    RenderMovingFog();
+    RenderVolumetricClouds();
 }
 
 /* Functions */
@@ -57,7 +66,8 @@ void StartMiscStuff()
     g_bFixSandstorm = cfg->GetBool("FixSandstormIntensity", g_bFixSandstorm, "Visual");
     g_bFixFog = cfg->GetBool("FixFogIntensity", g_bFixFog, "Visual");
     g_bExtendRainSplashes = cfg->GetBool("ExtendedRainSplashes", g_bExtendRainSplashes, "Visual");
-
+    g_bMissingEffects = cfg->GetBool("MissingPCEffects", g_bMissingEffects, "Visual");
+    
     if(g_bRemoveDumbWaterColorCalculations)
     {
       #ifdef AML32
@@ -100,6 +110,11 @@ void StartMiscStuff()
       #else
         aml->Write32(pGTASA + 0x6F2070, 0x52800024);
       #endif
+    }
+
+    if(g_bMissingEffects)
+    {
+        HOOK(RenderWaterCannons, aml->GetSym(hGTASA, "_ZN13CWaterCannons6RenderEv"));
     }
 
     // Sun Z-Test disabled (to match PS2 logic, same in reverse on PS2)
