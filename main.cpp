@@ -18,6 +18,7 @@ void StartShading();
 void StartVehiclePipeline();
 void StartMiscStuff();
 void StartEnvMapStuff();
+void StartEffectsStuff();
 void StartRenderQueue();
 
 /* Main */
@@ -55,8 +56,9 @@ extern "C" void OnAllModsLoaded()
     StartShading();
     StartEnvMapStuff();
     StartShaders();
-    StartRenderQueue();
     StartBuildingPipeline();
+    StartEffectsStuff();
+    StartRenderQueue();
 }
 
 static Config cfgLocal("SkyGFXMobile");
