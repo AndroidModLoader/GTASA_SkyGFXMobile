@@ -29,9 +29,9 @@ DECL_HOOKv(PostFX_Render)
 
     SpeedFX( FindPlayerSpeed(-1)->Magnitude() );
 }
-DECL_HOOKv(RenderWaterCannons)
+DECL_HOOKv(WaterCannons_Render)
 {
-    RenderWaterCannons();
+    WaterCannons_Render();
 
     RenderWaterFog();
     RenderMovingFog();
@@ -114,7 +114,7 @@ void StartMiscStuff()
 
     if(g_bMissingEffects)
     {
-        HOOK(RenderWaterCannons, aml->GetSym(hGTASA, "_ZN13CWaterCannons6RenderEv"));
+        HOOK(WaterCannons_Render, aml->GetSym(hGTASA, "_ZN13CWaterCannons6RenderEv"));
     }
 
     // Sun Z-Test disabled (to match PS2 logic, same in reverse on PS2)
