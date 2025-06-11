@@ -39,6 +39,10 @@ struct BasicEvent
 typedef void (*SimpleVoidFn)();
 extern BasicEvent<SimpleVoidFn> shadercreation;
 
+// Effects
+#define GRAIN_NIGHTVISION_STRENGTH    48
+#define GRAIN_INFRAREDVISION_STRENGTH 64
+
 // Shaders
 #define FLAG_ALPHA_TEST           0x01
 #define FLAG_LIGHTING             0x02
@@ -381,10 +385,25 @@ extern void                (*RsCameraBeginUpdate)(RwCamera*);
 extern void                (*SpeedFX)(float);
 extern CVector*            (*FindPlayerSpeed)(int);
 extern CPlayerPed*         (*FindPlayerPed)(int);
+extern bool8               (*RwRasterDestroy)(RwRaster*);
 
 // Main
 void ResolveExternals();
 void ForceCustomShader(ES2Shader* shader = NULL);
+
+// PS2 Randomizer (thanks aap)
+extern uint32_t PS2_R;
+inline void vrinit(uint32_t x) { PS2_R = 0x3F800000 | (x & 0x007FFFFF); }
+inline void vradvance(void)
+{
+    int x = (PS2_R >> 4) & 1;
+    int y = (PS2_R >> 22) & 1;
+    PS2_R <<= 1;
+    PS2_R ^= x ^ y;
+    PS2_R = (PS2_R & 0x7FFFFF) | 0x3F800000;
+}
+inline uint32_t vrget(void) { return PS2_R; }
+inline uint32_t vrnext(void) { vradvance(); return PS2_R; }
 
 // Other
 static const char* aYesNo[2] = 

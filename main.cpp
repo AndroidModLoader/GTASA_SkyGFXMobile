@@ -9,6 +9,7 @@ END_DEPLIST()
 /* Saves */
 void* hGTASA;
 uintptr_t pGTASA;
+uint32_t PS2_R; // PS2 Randomizer (thanks aap)
 
 /* SkyGFX Externs */
 void StartShaders();
