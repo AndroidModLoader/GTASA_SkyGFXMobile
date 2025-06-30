@@ -16,6 +16,14 @@ DECL_HOOKv(MoonMask_RenderSprite, float ScreenX, float ScreenY, float ScreenZ, f
     ERQ_BlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_SRC_ALPHA, GL_ZERO);
     MoonMask_RenderSprite(ScreenX, ScreenY, ScreenZ, SizeX, SizeY, R, G, B, Intensity16, RecipZ, Alpha, FlipU, FlipV, uvPad1, uvPad2);
 }
+DECL_HOOKv(RenderBufferedOneXLUSprite2D, float ScreenX, float ScreenY, float SizeX, float SizeY, const RwRGBA *rgbaColor, int16 Intensity16, char Alpha)
+{
+    float SizeX_Scaled = (float)RsGlobal->maximumWidth  / 640.0f;
+    float SizeY_Scaled = (float)RsGlobal->maximumHeight / 448.0f;
+
+    // Yes, i scale X with scaleY too.
+    RenderBufferedOneXLUSprite2D(ScreenX, ScreenY, SizeX * SizeY_Scaled, SizeY * SizeY_Scaled, rgbaColor, Intensity16, Alpha);
+}
 
 /* Functions */
 void PS2SunZTestSettingChanged(int oldVal, int newVal, void* data)
@@ -82,5 +90,13 @@ void StartMiscStuff()
   #else
     aml->Write32(pGTASA + 0x23FDE0, 0x52800022); // RwRasterCreate -> _rwOpenGLRasterCreate
     aml->Write32(pGTASA + 0x24ECC4, 0x52800022); // emu_SetAltRenderTarget -> backTarget
+  #endif
+
+    // Flare rendering like it was on PS2
+    HOOKPLT(RenderBufferedOneXLUSprite2D, pGTASA + BYBIT(0x674E98, 0x8483A0));
+  #ifdef AML32
+    aml->Write32(pGTASA + 0x5A293A, 0xBF002000); // A weirdo useless check if flare-part is visible..?
+  #else
+    aml->Write32(pGTASA + 0x6C62B4, 0x52800000); // A weirdo useless check if flare-part is visible..?
   #endif
 }
