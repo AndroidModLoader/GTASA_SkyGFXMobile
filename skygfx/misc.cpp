@@ -17,6 +17,7 @@ DECL_HOOKv(MoonMask_RenderSprite, float ScreenX, float ScreenY, float ScreenZ, f
 {
     ERQ_BlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_SRC_ALPHA, GL_ZERO);
     MoonMask_RenderSprite(ScreenX, ScreenY, ScreenZ, SizeX, SizeY, R, G, B, Intensity16, RecipZ, Alpha, FlipU, FlipV, uvPad1, uvPad2);
+    ERQ_BlendFuncSeparate(GL_ONE, GL_ZERO, GL_ONE, GL_ZERO); // initial values
 }
 DECL_HOOKv(RenderBufferedOneXLUSprite2D, float ScreenX, float ScreenY, float SizeX, float SizeY, const RwRGBA *rgbaColor, int16 Intensity16, char Alpha)
 {
@@ -96,6 +97,46 @@ void PS2FlareSettingChanged(int oldVal, int newVal, void* data)
     cfg->Save();
 }
 
+uintptr_t BrightnessRGBGrade_BackTo;
+extern "C" uintptr_t BrightnessRGBGrade_Patch(float calculatedValue, RQVector* rGrade, RQVector* gGrade, RQVector* bGrade)
+{
+    rGrade->r += calculatedValue;
+    rGrade->g += calculatedValue;
+    rGrade->b += calculatedValue;
+    rGrade->a += calculatedValue;
+
+    gGrade->r += calculatedValue;
+    gGrade->g += calculatedValue;
+    gGrade->b += calculatedValue;
+    gGrade->a += calculatedValue;
+
+    bGrade->r += calculatedValue;
+    bGrade->g += calculatedValue;
+    bGrade->b += calculatedValue;
+    bGrade->a += calculatedValue;
+
+    return BrightnessRGBGrade_BackTo;
+}
+
+/* Patches */
+__attribute__((optnone)) __attribute__((naked)) void BrightnessRGBGrade_Inject(void)
+{
+#ifdef AML32
+    asm("VMOV R0, S0");
+    asm("ADD R1, SP, #0x30");
+    asm("ADD R2, SP, #0x20");
+    asm("ADD R3, SP, #0x10");
+    asm("BL BrightnessRGBGrade_Patch");
+    asm("BX R0");
+#else
+    asm("ADD X0, SP, #0x30");
+    asm("ADD X1, SP, #0x20");
+    asm("ADD X2, SP, #0x10");
+    asm("BL BrightnessRGBGrade_Patch");
+    asm("BR X0");
+#endif
+}
+
 /* Main */
 void StartMiscStuff()
 {
@@ -127,6 +168,13 @@ void StartMiscStuff()
     if(g_bMoonPhases)
     {
         HOOKBL(MoonMask_RenderSprite, pGTASA + BYBIT(0x59EE32, 0x6C2DE4));
+      #ifdef AML32
+        BrightnessRGBGrade_BackTo = pGTASA + 0x5B6818 + 0x1;
+        aml->Redirect(pGTASA + 0x5B67F4 + 0x1, (uintptr_t)BrightnessRGBGrade_Inject);
+      #else
+        BrightnessRGBGrade_BackTo = pGTASA + 0x6DAAE4;
+        aml->Redirect(pGTASA + 0x6DAACC, (uintptr_t)BrightnessRGBGrade_Inject);
+      #endif
     }
 
     // Sun Z-Test disabled (to match PS2 logic, same in reverse of PS2 game)
