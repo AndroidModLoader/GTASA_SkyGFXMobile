@@ -208,6 +208,7 @@ void                (*SpeedFX)(float);
 CVector*            (*FindPlayerSpeed)(int);
 CPlayerPed*         (*FindPlayerPed)(int);
 bool8               (*RwRasterDestroy)(RwRaster*);
+void                (*InitSpriteBuffer2D)();
 
 // Main
 void ResolveExternals()
@@ -365,6 +366,7 @@ void ResolveExternals()
     SET_TO(FindPlayerSpeed,                 aml->GetSym(hGTASA, "_Z15FindPlayerSpeedi"));
     SET_TO(FindPlayerPed,                   aml->GetSym(hGTASA, "_Z13FindPlayerPedi"));
     SET_TO(RwRasterDestroy,                 aml->GetSym(hGTASA, "_Z15RwRasterDestroyP8RwRaster"));
+    SET_TO(InitSpriteBuffer2D,              aml->GetSym(hGTASA, "_ZN7CSprite18InitSpriteBuffer2DEv"));
 
     SET_TO(CamDistComp,                     aml->GetSym(hGTASA, "_ZN22CRealTimeShadowManager11CamDistCompEPKvS1_"));
     SET_TO(StoreRealTimeShadow,             aml->GetSym(hGTASA, "_ZN8CShadows19StoreRealTimeShadowEP9CPhysicalffffff"));

@@ -386,6 +386,7 @@ extern void                (*SpeedFX)(float);
 extern CVector*            (*FindPlayerSpeed)(int);
 extern CPlayerPed*         (*FindPlayerPed)(int);
 extern bool8               (*RwRasterDestroy)(RwRaster*);
+extern void                (*InitSpriteBuffer2D)();
 
 // Main
 void ResolveExternals();
