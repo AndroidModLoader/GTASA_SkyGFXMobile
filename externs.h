@@ -251,6 +251,7 @@ extern GLenum *currentAlphaFunc;
 extern float *currentAlphaFuncVal;
 extern uint32_t *curShaderStateFlags;
 extern rwOGlRenderState *RenderState;
+extern float *Foggyness;
 
 // Functions
 extern RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);

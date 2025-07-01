@@ -73,6 +73,7 @@ GLenum *currentAlphaFunc;
 float *currentAlphaFuncVal;
 uint32_t *curShaderStateFlags;
 rwOGlRenderState *RenderState;
+float *Foggyness;
 
 // Functions
 RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);
@@ -420,4 +421,5 @@ void ResolveExternals()
     SET_TO(currentAlphaFuncVal,             pGTASA + BYVER(0x67A270, 0x852334));
     SET_TO(curShaderStateFlags,             aml->GetSym(hGTASA, "curShaderStateFlags"));
     SET_TO(RenderState,                     pGTASA + BYBIT(0x6B3208, 0x890120));
+    SET_TO(Foggyness,                       aml->GetSym(hGTASA, "_ZN8CWeather9FoggynessE"));
 }

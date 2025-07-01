@@ -36,6 +36,27 @@ DECL_HOOKv(RenderCoronasPLT)
     InitSpriteBuffer2D();
     RenderCoronasPLT();
 }
+DECL_HOOKv(CoronasRender_RenderSingleCorona, float ScreenX, float ScreenY, float ScreenZ, float SizeX, float SizeY, UInt8 R, UInt8 G, UInt8 B, Int16 Intensity16, float RecipZ, float Rotation, uintptr_t coronaValue)
+{
+    CoronasRender_RenderSingleCorona(ScreenX, ScreenY, ScreenZ, SizeX, SizeY, R, G, B, Intensity16, RecipZ, Rotation, 255);
+
+  #ifdef AML32
+    CRegisteredCorona* corona = (CRegisteredCorona*)( ( *(uintptr_t*)(pGTASA + 0x676C44) + 4 * coronaValue ) );
+  #else
+    CRegisteredCorona* corona = (CRegisteredCorona*)coronaValue;
+  #endif
+
+    // Seems to be PS2-exclusive stuff. Why the heck is it removed?
+    if(corona->m_bDrawWithWhiteCore)
+    {
+        float coreIntensity = *Foggyness * fminf(ScreenZ, 40.0f) / 40.0f + 1.0f;
+        float coreIntensity_Inv = 1.0f / coreIntensity;
+        uint8_t R_WhiteCore = 100.0f * coreIntensity_Inv;
+
+        // On PS2 it's Vector(100.0,100.0,100.0) and has 3 calculations for 3 variables. But they are the same. Using a single R_WhiteCore here.
+        CoronasRender_RenderSingleCorona(ScreenX, ScreenY, ScreenZ, 0.1f * SizeX, 0.1f * SizeY, R_WhiteCore, R_WhiteCore, R_WhiteCore, Intensity16, RecipZ, Rotation, 255);
+    }
+}
 
 /* Functions */
 void PS2SunZTestSettingChanged(int oldVal, int newVal, void* data)
@@ -130,4 +151,12 @@ void StartMiscStuff()
 
     // Fixing uninitialized variable (Jesus Christ, wtf Rockstar)
     HOOKPLT(RenderCoronasPLT, pGTASA + BYBIT(0x670490, 0x840B58));
+
+    // White Core in coronas (exists on PS2 only?)
+  #ifdef AML32
+    aml->Write16(pGTASA + 0x5A27DC, 0x465E);
+  #else
+    aml->Write32(pGTASA + 0x6C6150, 0xAA0803E4);
+  #endif
+    HOOKBLX(CoronasRender_RenderSingleCorona, pGTASA + BYBIT(0x5A2816, 0x6C6158));
 }
