@@ -54,7 +54,7 @@ DECL_HOOKv(CoronasRender_RenderSingleCorona, float ScreenX, float ScreenY, float
         uint8_t R_WhiteCore = 100.0f * coreIntensity_Inv;
 
         // On PS2 it's Vector(100.0,100.0,100.0) and has 3 calculations for 3 variables. But they are the same. Using a single R_WhiteCore here.
-        CoronasRender_RenderSingleCorona(ScreenX, ScreenY, ScreenZ, 0.1f * SizeX, 0.1f * SizeY, R_WhiteCore, R_WhiteCore, R_WhiteCore, Intensity16, RecipZ, Rotation, 255);
+        CoronasRender_RenderSingleCorona(ScreenX, ScreenY, ScreenZ, 0.1f * SizeX, 0.1f * SizeY, R_WhiteCore, R_WhiteCore, R_WhiteCore, Intensity16, RecipZ * 1.5f, Rotation * 1.5f, 255);
     }
 }
 
