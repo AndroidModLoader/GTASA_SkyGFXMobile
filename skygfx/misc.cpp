@@ -7,6 +7,7 @@ bool g_bFixMirrorIssue = true;
 bool g_bPS2Sun = true;
 bool g_bMoonPhases = true;
 bool g_bPS2Flare = true;
+bool g_bTransparentLockOn = true;
 
 /* Configs */
 ConfigEntry* pCFGPS2SunZTest;
@@ -145,6 +146,7 @@ void StartMiscStuff()
     g_bRemoveDumbWaterColorCalculations = cfg->GetBool("RemoveDumbWaterColorCalc", g_bRemoveDumbWaterColorCalculations, "Visual");
     g_bFixMirrorIssue = cfg->GetBool("FixMirrorIssue", g_bFixMirrorIssue, "Visual"); // SkyGFX 4.0b: fixed mirror issue
     g_bMoonPhases = cfg->GetBool("MoonPhases", g_bMoonPhases, "Visual");
+    g_bTransparentLockOn = cfg->GetBool("TransparentLockOn", g_bTransparentLockOn, "Visual");
     
     if(g_bRemoveDumbWaterColorCalculations)
     {
@@ -211,4 +213,20 @@ void StartMiscStuff()
     BrightnessRGBGrade_BackTo = pGTASA + 0x6DAAE4;
     aml->Redirect(pGTASA + 0x6DAACC, (uintptr_t)BrightnessRGBGrade_Inject);
   #endif
+
+    // Remove black background of lockon siphon
+    if(g_bTransparentLockOn)
+    {
+      #ifdef AML32
+        aml->PlaceNOP4(pGTASA + 0x5E3602, 1);
+        aml->PlaceNOP4(pGTASA + 0x5E364C, 1);
+        aml->PlaceNOP4(pGTASA + 0x5E378C, 1);
+        aml->PlaceNOP4(pGTASA + 0x5E37F4, 1);
+      #else
+        aml->PlaceNOP4(pGTASA + 0x70907C, 1);
+        aml->PlaceNOP4(pGTASA + 0x7090C4, 1);
+        aml->PlaceNOP4(pGTASA + 0x7091C8, 1);
+        aml->PlaceNOP4(pGTASA + 0x70921C, 1);
+      #endif
+    }
 }
