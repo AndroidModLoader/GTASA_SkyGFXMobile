@@ -229,4 +229,7 @@ void StartMiscStuff()
         aml->PlaceNOP4(pGTASA + 0x70921C, 1);
       #endif
     }
+
+    // Amazing WarDrum stuff (darker world when looking at the sun)
+    WRITEADDR(pGTASA + BYBIT(0x6786A8, 0x84ED78), pGTASA + BYBIT(0x6B15EC, 0x88DFF0));
 }
