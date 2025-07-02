@@ -103,17 +103,17 @@ extern "C" uintptr_t BrightnessRGBGrade_Patch(float calculatedValue, RQVector* r
     rGrade->r += calculatedValue;
     rGrade->g += calculatedValue;
     rGrade->b += calculatedValue;
-    rGrade->a += calculatedValue;
-
+    //rGrade->a += calculatedValue;
+    
     gGrade->r += calculatedValue;
     gGrade->g += calculatedValue;
     gGrade->b += calculatedValue;
-    gGrade->a += calculatedValue;
-
+    //gGrade->a += calculatedValue;
+    
     bGrade->r += calculatedValue;
     bGrade->g += calculatedValue;
     bGrade->b += calculatedValue;
-    bGrade->a += calculatedValue;
+    //bGrade->a += calculatedValue;
 
     return BrightnessRGBGrade_BackTo;
 }
@@ -126,7 +126,9 @@ __attribute__((optnone)) __attribute__((naked)) void BrightnessRGBGrade_Inject(v
     asm("ADD R1, SP, #0x30");
     asm("ADD R2, SP, #0x20");
     asm("ADD R3, SP, #0x10");
+    //asm("VPUSH {D16-D19}");
     asm("BL BrightnessRGBGrade_Patch");
+    //asm("VPOP {D16-D19}");
     asm("BX R0");
 #else
     asm("ADD X0, SP, #0x30");
@@ -168,13 +170,6 @@ void StartMiscStuff()
     if(g_bMoonPhases)
     {
         HOOKBL(MoonMask_RenderSprite, pGTASA + BYBIT(0x59EE32, 0x6C2DE4));
-      #ifdef AML32
-        BrightnessRGBGrade_BackTo = pGTASA + 0x5B6818 + 0x1;
-        aml->Redirect(pGTASA + 0x5B67F4 + 0x1, (uintptr_t)BrightnessRGBGrade_Inject);
-      #else
-        BrightnessRGBGrade_BackTo = pGTASA + 0x6DAAE4;
-        aml->Redirect(pGTASA + 0x6DAACC, (uintptr_t)BrightnessRGBGrade_Inject);
-      #endif
     }
 
     // Sun Z-Test disabled (to match PS2 logic, same in reverse of PS2 game)
@@ -207,4 +202,13 @@ void StartMiscStuff()
     aml->Write32(pGTASA + 0x6C6150, 0xAA0803E4);
   #endif
     HOOKBLX(CoronasRender_RenderSingleCorona, pGTASA + BYBIT(0x5A2816, 0x6C6158));
+
+    // Fixing colorcycle grades with brightness 60+
+  #ifdef AML32
+    BrightnessRGBGrade_BackTo = pGTASA + 0x5B6818 + 0x1;
+    aml->Redirect(pGTASA + 0x5B67F4 + 0x1, (uintptr_t)BrightnessRGBGrade_Inject);
+  #else
+    BrightnessRGBGrade_BackTo = pGTASA + 0x6DAAE4;
+    aml->Redirect(pGTASA + 0x6DAACC, (uintptr_t)BrightnessRGBGrade_Inject);
+  #endif
 }
