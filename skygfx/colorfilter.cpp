@@ -74,9 +74,10 @@ extern "C" uintptr_t ColorFilter_Patch(char* sp)
             green->green = ( postfx1->green + a * postfx2->green ) * 0.0078125f;
             blue->blue   = ( postfx1->blue  + a * postfx2->blue  ) * 0.0078125f;
 
-            red->green = red->blue   = red->alpha   = 0.0f;
+            /*red->green = red->blue   = red->alpha   = 0.0f;
             green->red = green->blue = green->alpha = 0.0f;
-            blue->red  = blue->green = blue->alpha  = 0.0f;
+            blue->red  = blue->green = blue->alpha  = 0.0f;*/
+            red->alpha = green->alpha = blue->alpha = 0.0f;
 
             break;
         }
@@ -89,9 +90,10 @@ extern "C" uintptr_t ColorFilter_Patch(char* sp)
             green->green = 1.0f + ( a1 * postfx1->green + a2 * postfx2->green ) * 0.00390625f;
             blue->blue   = 1.0f + ( a1 * postfx1->blue  + a2 * postfx2->blue  ) * 0.00390625f;
 
-            red->green = red->blue   = red->alpha   = 0.0f;
+            /*red->green = red->blue   = red->alpha   = 0.0f;
             green->red = green->blue = green->alpha = 0.0f;
-            blue->red  = blue->green = blue->alpha  = 0.0f;
+            blue->red  = blue->green = blue->alpha  = 0.0f;*/
+            red->alpha = green->alpha = blue->alpha = 0.0f;
 
             break;
         }
@@ -120,9 +122,10 @@ extern "C" uintptr_t ColorFilter_Patch(char* sp)
             green->green *= (1.5f + g * 1.732f) * 0.4f;
             blue->blue   *= (1.5f + b * 1.732f) * 0.4f;
 
-            red->green = red->blue   = red->alpha   = 0.0f;
+            /*red->green = red->blue   = red->alpha   = 0.0f;
             green->red = green->blue = green->alpha = 0.0f;
-            blue->red  = blue->green = blue->alpha  = 0.0f;
+            blue->red  = blue->green = blue->alpha  = 0.0f;*/
+            red->alpha = green->alpha = blue->alpha = 0.0f;
 
             break;
         }

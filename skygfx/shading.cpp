@@ -18,9 +18,11 @@ const char* aShadingSwitch[SHADING_MAX] =
     "PC/PS2 Algorithm",
     "Simplified Algorithm",
 };
+bool g_bAmbLightNoMultiplier = true;
 
 /* Configs */
 ConfigEntry* pCFGShading;
+ConfigEntry* pCFGAmbLightNoMultiplier;
 
 /* Functions */
 void ShadingSettingChanged(int oldVal, int newVal, void* data)
@@ -30,6 +32,15 @@ void ShadingSettingChanged(int oldVal, int newVal, void* data)
     pCFGShading->SetInt(newVal);
     pCFGShading->Clamp(0, SHADING_MAX - 1);
     g_nShading = pCFGShading->GetInt();
+
+    cfg->Save();
+}
+void AmbLightNoMultiplierSettingChanged(int oldVal, int newVal, void* data)
+{
+    if(oldVal == newVal) return;
+
+    pCFGAmbLightNoMultiplier->SetBool(newVal != 0);
+    g_bAmbLightNoMultiplier = pCFGAmbLightNoMultiplier->GetBool();
 
     cfg->Save();
 }
@@ -237,6 +248,8 @@ void SetLightsWithTimeOfDayColour_Simple(RpWorld* world)
 }
 DECL_HOOKv(emuPatch_glLightModelfv, GLenum en, float* v)
 {
+    if(!g_bAmbLightNoMultiplier) return emuPatch_glLightModelfv(en, v);
+
     if(en == GL_LIGHT_MODEL_AMBIENT)
     {
         if(memcmp(AmbientLightColor, v, 4*sizeof(float)) != 0)
@@ -262,8 +275,11 @@ void StartShading()
     pCFGShading = cfg->Bind("Shading", SHADING_MOBILE, "Shading");
     ShadingSettingChanged(SHADING_MOBILE, pCFGShading->GetInt(), NULL);
     AddSetting("Shading Style", g_nShading, 0, sizeofA(aShadingSwitch)-1, aShadingSwitch, ShadingSettingChanged, NULL);
+
+    pCFGAmbLightNoMultiplier = cfg->Bind("AmbLightNoMultiplier", g_bAmbLightNoMultiplier, "Shading");
+    AddSetting("No Brighter Ambient", g_bAmbLightNoMultiplier, 0, sizeofA(aYesNo)-1, aYesNo, AmbLightNoMultiplierSettingChanged, NULL);
     
     //HOOKPLT(_rwOpenGLLightsSetMaterialProperties, pGTASA + BYBIT(0x67381C, 0x845F18)); // useless?
-    //HOOKPLT(emuPatch_glLightModelfv, pGTASA + BYBIT(0x66F828, 0x83F740)); // Makes every possible thing alive dark as hell
+    HOOKPLT(emuPatch_glLightModelfv, pGTASA + BYBIT(0x66F828, 0x83F740)); // Makes every possible thing alive dark as hell
     HOOKPLT(SetLightsWithTimeOfDayColour, pGTASA + BYBIT(0x674048, 0x846C88));
 }
