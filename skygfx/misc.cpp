@@ -232,4 +232,12 @@ void StartMiscStuff()
 
     // Amazing WarDrum stuff (darker world when looking at the sun)
     aml->WriteAddr(pGTASA + BYBIT(0x6786A8, 0x84ED78), pGTASA + BYBIT(0x6B15EC, 0x88DFF0));
+    
+    // SunSizeHack
+  #ifdef AML32
+    aml->WriteFloat(pGTASA + 0x5A3FF4, 0.665f);
+  #else
+    aml->Write32(pGTASA + 0x6C7624, 0xB000044A);
+    aml->Write32(pGTASA + 0x6C7628, 0xBD42C141);
+  #endif
 }
