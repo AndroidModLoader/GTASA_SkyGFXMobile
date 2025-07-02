@@ -231,5 +231,5 @@ void StartMiscStuff()
     }
 
     // Amazing WarDrum stuff (darker world when looking at the sun)
-    WRITEADDR(pGTASA + BYBIT(0x6786A8, 0x84ED78), pGTASA + BYBIT(0x6B15EC, 0x88DFF0));
+    aml->WriteAddr(pGTASA + BYBIT(0x6786A8, 0x84ED78), pGTASA + BYBIT(0x6B15EC, 0x88DFF0));
 }
