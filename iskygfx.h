@@ -1,0 +1,35 @@
+#pragma once
+
+enum eSkyGFXFeature : unsigned char
+{
+    GFX_GETMAXFEATURES = 0,
+
+    GFX_DUALPASS,
+    GFX_DUALPASS_THRESHOLD,
+    GFX_COLORFILTER,
+    GFX_USINGPCTIMECYC,
+    GFX_FIXSANDSTORM,
+    GFX_FIXFOG,
+    GFX_EXTENDRAINSPLASHES,
+    GFX_MISSINGEFFECTS,
+    GFX_MISSINGPOSTFX,
+    GFX_GRAIN,
+    GFX_ENVMAPTYPE,
+    GFX_WATERCOLORFIX,
+    GFX_FIXMIRRORISSUE,
+    GFX_PS2SUNZ,
+    GFX_MOONPHASES,
+    GFX_PS2FLARE,
+    GFX_SHADING,
+    GFX_NOAMBLIGHTMULT,
+    GFX_VEHICLEPARTSPIPELINE,
+
+    GFX_MAX_FEATURES
+};
+
+struct ISkyGFX
+{
+    int (*GetFeatureLevel)(eSkyGFXFeature feature);
+    void (*PreMoonMaskRender)();
+    void (*PostMoonMaskRender)();
+};

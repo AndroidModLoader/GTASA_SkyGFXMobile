@@ -12,6 +12,7 @@ uintptr_t pGTASA;
 uint32_t PS2_R; // PS2 Randomizer (thanks aap)
 
 /* SkyGFX Externs */
+void StartInterface();
 void StartShaders();
 void StartColorfilter();
 void StartBuildingPipeline();
@@ -23,6 +24,10 @@ void StartEffectsStuff();
 void StartRenderQueue();
 
 /* Main */
+extern "C" void OnModPreLoad()
+{
+    StartInterface();
+}
 extern "C" void OnAllModsLoaded()
 {
     /* Logging */
