@@ -24,6 +24,8 @@ extern int g_nShading;
 extern bool g_bAmbLightNoMultiplier;
 extern bool g_bVehicleAtomicsPipeline;
 extern bool g_bTransparentLockOn;
+extern bool g_bDarkerModelsAtSun;
+extern bool g_bFixCarLightsIntensity;
 
 static int Global_GetFeatureLevel(eSkyGFXFeature f)
 {
@@ -53,6 +55,8 @@ static int Global_GetFeatureLevel(eSkyGFXFeature f)
         case GFX_NOAMBLIGHTMULT: return g_bAmbLightNoMultiplier;
         case GFX_VEHICLEPARTSPIPELINE: return g_bVehicleAtomicsPipeline;
         case GFX_TRANSPARENTLOCKON: return g_bTransparentLockOn;
+        case GFX_DARKERMODELSATSUN: return g_bDarkerModelsAtSun;
+        case GFX_CARLIGHTSINTENSITY: return g_bFixCarLightsIntensity;
     }
 }
 

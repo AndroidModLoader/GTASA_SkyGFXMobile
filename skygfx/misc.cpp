@@ -8,6 +8,8 @@ bool g_bPS2Sun = true;
 bool g_bMoonPhases = true;
 bool g_bPS2Flare = true;
 bool g_bTransparentLockOn = true;
+bool g_bDarkerModelsAtSun = true;
+bool g_bFixCarLightsIntensity = true;
 
 /* Configs */
 ConfigEntry* pCFGPS2SunZTest;
@@ -147,6 +149,8 @@ void StartMiscStuff()
     g_bFixMirrorIssue = cfg->GetBool("FixMirrorIssue", g_bFixMirrorIssue, "Visual"); // SkyGFX 4.0b: fixed mirror issue
     g_bMoonPhases = cfg->GetBool("MoonPhases", g_bMoonPhases, "Visual");
     g_bTransparentLockOn = cfg->GetBool("TransparentLockOn", g_bTransparentLockOn, "Visual");
+    g_bDarkerModelsAtSun = cfg->GetBool("DarkerModelsAtSun", g_bDarkerModelsAtSun, "Visual");
+    g_bFixCarLightsIntensity = cfg->GetBool("FixCarLightsIntensity", g_bFixCarLightsIntensity, "Visual");
     
     if(g_bRemoveDumbWaterColorCalculations)
     {
@@ -231,7 +235,10 @@ void StartMiscStuff()
     }
 
     // Amazing WarDrum stuff (darker world when looking at the sun)
-    aml->WriteAddr(pGTASA + BYBIT(0x6786A8, 0x84ED78), pGTASA + BYBIT(0x6B15EC, 0x88DFF0));
+    if(g_bDarkerModelsAtSun)
+    {
+        aml->WriteAddr(pGTASA + BYBIT(0x6786A8, 0x84ED78), pGTASA + BYBIT(0x6B15EC, 0x88DFF0));
+    }
     
     // SunSizeHack
   #ifdef AML32
@@ -240,4 +247,45 @@ void StartMiscStuff()
     aml->Write32(pGTASA + 0x6C7624, 0xB000044A);
     aml->Write32(pGTASA + 0x6C7628, 0xBD42C141);
   #endif
+
+    // More like on PS2? Not accurate tho
+    if(g_bFixCarLightsIntensity)
+    {
+        // gLightSurfProps
+        aml->WriteFloat(pGTASA + BYBIT(0x6869A4, 0x85FBA4), 16.0f);
+        aml->WriteFloat(pGTASA + BYBIT(0x6869A4, 0x85FBA4) + 8, 0.0f);
+
+        // Small corona in the center
+        aml->WriteFloat(pGTASA + BYBIT(0x59069C, 0x7623D0), 0.6f);
+        aml->WriteFloat(pGTASA + BYBIT(0x5906A0, 0x7623D4), 0.15f);
+      #ifdef AML32
+        aml->Write8(pGTASA + 0x590558, 0xC8);
+        aml->WriteFloat(pGTASA + 0x590698, 0.15f);
+      #else
+        aml->Write32(pGTASA + 0x6B45E8, 0x52801905); // intensity
+        aml->Write32(pGTASA + 0x6B45C4, 0xD0000428);
+        aml->Write32(pGTASA + 0x6B45C8, 0xBD4BA900);
+      #endif
+
+        // Bigger outer corona
+      #ifdef AML32
+        aml->WriteFloat(pGTASA + 0x5906B0, 1.6f);
+      #else
+        aml->Write32(pGTASA + 0x6B462C, 0xD000044A);
+        aml->Write32(pGTASA + 0x6B4638, 0xBD4B0142);
+      #endif
+
+        // Small corona in the center, visible AT angle
+      #ifdef AML32
+        aml->WriteFloat(pGTASA + 0x590688, 0.7f);
+        aml->WriteFloat(pGTASA + 0x59068C, 0.65f);
+        aml->WriteFloat(pGTASA + 0x590690, 0.7f);
+      #else
+        
+      #endif
+    }
+
+    // Fix illumination value (1.28 on mobile, 1.00 on PS2)
+    aml->Write32(pGTASA + BYBIT(0x470E46, 0x55D4CC), BYBIT(0x0100F240, 0x52800008));
+    aml->Write32(pGTASA + BYBIT(0x470E4A, 0x55D4D4), BYBIT(0x7180F6C3, 0x72A7F008));
 }
