@@ -281,7 +281,10 @@ void StartMiscStuff()
         aml->WriteFloat(pGTASA + 0x59068C, 0.65f);
         aml->WriteFloat(pGTASA + 0x590690, 0.7f);
       #else
-        
+        aml->WriteFloat(pGTASA + 0x7623C8, 0.65f);
+        aml->WriteFloat(pGTASA + 0x7623CC, 0.7f);
+        aml->Write32(pGTASA + 0x6B4550, 0xF000042A);
+        aml->Write32(pGTASA + 0x6B4554, 0xBD440540);
       #endif
     }
 
