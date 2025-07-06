@@ -87,6 +87,8 @@ DECL_HOOKv(PostFX_Init)
     {
         CreateGrainTexture();
     }
+
+    *pbFog = false;
 }
 DECL_HOOKv(PostFX_Render)
 {
