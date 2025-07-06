@@ -75,6 +75,19 @@ DECL_HOOKv(RenderSingleHiPolyWaterTriangle, int X1, int Y1, CRenPar_fake P1, int
         RenderSingleHiPolyWaterTriangle(X1, Y1, P1, X2, Y2, P2, X3, Y3, P3, 1, polys, verts, size);
     }
 }
+DECL_HOOKv(CalcWavesForCoord, int x, int y, float bigWaves, float smallWaves, float* height, float* shading, float *highlight, CVector* norm)
+{
+    float hClamp = 2.2f * bigWaves;
+    float hInit = *height;
+    CalcWavesForCoord(x, y, bigWaves, smallWaves, height, shading, highlight, norm);
+
+    float hDiff = (*height - hInit) / hClamp;
+    if(hDiff > 0)
+    {
+        hDiff += 0.6f;
+        if(hDiff < 1) *shading *= hDiff;
+    }
+}
 
 /* Functions */
 void PS2SunZTestSettingChanged(int oldVal, int newVal, void* data)
@@ -308,4 +321,7 @@ void StartMiscStuff()
 
     // An additional water layer (exists on PC only, maybe also on PS2)
     HOOK(RenderSingleHiPolyWaterTriangle, aml->GetSym(hGTASA, "_ZN11CWaterLevel38RenderHighDetailWaterTriangle_OneLayerEii7CRenPariiS0_iiS0_iiii"));
+
+    // An imitation of water effect from PS2 (on PS2 it's Vector Units 0 & 1, can't replicate the code)
+    HOOK(CalcWavesForCoord, aml->GetSym(hGTASA, "_ZN11CWaterLevel27CalculateWavesForCoordinateEiiffPfS0_S0_P7CVector"));
 }
