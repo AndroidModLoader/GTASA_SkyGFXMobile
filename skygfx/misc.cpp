@@ -1,6 +1,12 @@
 #include <externs.h>
 #include "include/renderqueue.h"
 
+/* Structs */
+struct CRenPar_fake
+{
+  char pad[0x10];
+};
+
 /* Variables */
 bool g_bRemoveDumbWaterColorCalculations = true;
 bool g_bFixMirrorIssue = true;
@@ -59,6 +65,14 @@ DECL_HOOKv(CoronasRender_RenderSingleCorona, float ScreenX, float ScreenY, float
 
         // On PS2 it's Vector(100.0,100.0,100.0) and has 3 calculations for 3 variables. But they are the same. Using a single R_WhiteCore here.
         CoronasRender_RenderSingleCorona(ScreenX, ScreenY, ScreenZ, 0.1f * SizeX, 0.1f * SizeY, R_WhiteCore, R_WhiteCore, R_WhiteCore, Intensity16, RecipZ * 1.5f, Rotation * 1.5f, 255);
+    }
+}
+DECL_HOOKv(RenderSingleHiPolyWaterTriangle, int X1, int Y1, CRenPar_fake P1, int X2, int Y2, CRenPar_fake P2, int X3, int Y3, CRenPar_fake P3, int layer, int polys, int verts, int size)
+{
+    RenderSingleHiPolyWaterTriangle(X1, Y1, P1, X2, Y2, P2, X3, Y3, P3, layer, polys, verts, size);
+    if(layer == 0)
+    {
+        RenderSingleHiPolyWaterTriangle(X1, Y1, P1, X2, Y2, P2, X3, Y3, P3, 1, polys, verts, size);
     }
 }
 
@@ -291,4 +305,7 @@ void StartMiscStuff()
     // Fix illumination value (1.28 on mobile, 1.00 on PS2)
     aml->Write32(pGTASA + BYBIT(0x470E46, 0x55D4CC), BYBIT(0x0100F240, 0x52800008));
     aml->Write32(pGTASA + BYBIT(0x470E4A, 0x55D4D4), BYBIT(0x7180F6C3, 0x72A7F008));
+
+    // An additional water layer (exists on PC only, maybe also on PS2)
+    HOOK(RenderSingleHiPolyWaterTriangle, aml->GetSym(hGTASA, "_ZN11CWaterLevel38RenderHighDetailWaterTriangle_OneLayerEii7CRenPariiS0_iiS0_iiii"));
 }
