@@ -77,15 +77,14 @@ DECL_HOOKv(RenderSingleHiPolyWaterTriangle, int X1, int Y1, CRenPar_fake P1, int
 }
 DECL_HOOKv(CalcWavesForCoord, int x, int y, float bigWaves, float smallWaves, float* height, float* shading, float *highlight, CVector* norm)
 {
-    float hClamp = 2.2f * bigWaves;
+    float hClamp = 2.0f * bigWaves;
     float hInit = *height;
     CalcWavesForCoord(x, y, bigWaves, smallWaves, height, shading, highlight, norm);
 
     float hDiff = (*height - hInit) / hClamp;
     if(hDiff > 0)
     {
-        hDiff += 0.6f;
-        if(hDiff < 1) *shading *= hDiff;
+        *shading *= (hDiff + 1.0f);
     }
 }
 
