@@ -276,7 +276,7 @@ void StartMiscStuff()
     {
         // gLightSurfProps
         aml->WriteFloat(pGTASA + BYBIT(0x6869A4, 0x85FBA4), 16.0f);
-        aml->WriteFloat(pGTASA + BYBIT(0x6869A4, 0x85FBA4) + 8, 0.0f);
+        //aml->WriteFloat(pGTASA + BYBIT(0x6869A4, 0x85FBA4) + 8, 0.0f);
 
         // Small corona in the center
         aml->WriteFloat(pGTASA + BYBIT(0x59069C, 0x7623D0), 0.6f);
