@@ -147,20 +147,20 @@ void GFX_SpeedFX(float speed)
     int DirectionWasLooking = TheCamera->Cams[TheCamera->ActiveCam].DirectionWasLooking;
 #endif
 
-    RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)(rwBLENDSRCCOLOR));
-    RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)(rwBLENDINVSRCCOLOR));
-
     ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
+
+    RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)(rwBLENDSRCCOLOR));
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)(rwBLENDINVSRCCOLOR));
 
     for(int i = 0; i < fx->nLoops; ++i)
     {
         float uOffset = 4.0f * ((float)rand() / (float)RAND_MAX) / (float)RsGlobal->maximumWidth;
         float vOffset = 4.0f * ((float)rand() / (float)RAND_MAX) / (float)RsGlobal->maximumHeight;
         float umin = -uOffset;
-        float vmin = -vOffset;
+        float vmin = 0.0f;
         float umax = 1.0f + uOffset;
-        float vmax = 1.0f + vOffset;
+        float vmax = 1.0f;
         
         DrawQuadSetUVs(umin, -vmin, umax, -vmin, umax, -vmax, umin, -vmax);
         PostEffectsDrawQuad(0.0, 0.0, RsGlobal->maximumWidth, RsGlobal->maximumHeight, 255, 255, 255, 36, pSkyGFXPostFXRaster);
