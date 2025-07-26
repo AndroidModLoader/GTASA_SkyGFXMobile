@@ -252,6 +252,11 @@ extern float *currentAlphaFuncVal;
 extern uint32_t *curShaderStateFlags;
 extern rwOGlRenderState *RenderState;
 extern float *Foggyness;
+extern float *gradeBlur;
+extern int *renderWidth, *renderHeight;
+extern ES2RenderTarget **backTarget;
+extern ES2RenderTarget **currentTarget;
+extern fxSpeedSettings *FX_SPEED_VARS;
 
 // Functions
 extern RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);
@@ -388,6 +393,11 @@ extern CVector*            (*FindPlayerSpeed)(int);
 extern CPlayerPed*         (*FindPlayerPed)(int);
 extern bool8               (*RwRasterDestroy)(RwRaster*);
 extern void                (*InitSpriteBuffer2D)();
+extern void                (*emu_glBegin)(int);
+extern void                (*emu_glVertex3f)(float,float,float);
+extern void                (*emu_glTexCoord2f)(float,float);
+extern void                (*emu_glEnd)();
+extern RwBool              (*RwTextureDestroy)(RwTexture*);
 
 // Main
 void ResolveExternals();
@@ -414,5 +424,7 @@ static const char* aYesNo[2] =
     "FEM_ON",
 };
 inline int OS_SystemChip() { return *deviceChip; }
+
+//#define GPU_GRABBER // not working :(
 
 #endif // __EXTERNS

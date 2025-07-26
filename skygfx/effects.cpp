@@ -13,6 +13,9 @@ int g_nGrainRainStrength = 0;
 int g_nInitialGrain = 0;
 RwRaster* pGrainRaster = NULL;
 
+int postfxX = 0, postfxY = 0;
+RwRaster* pSkyGFXPostFXRaster = NULL;
+
 /* Configs */
 ConfigEntry *pCFGRenderGrain;
 
@@ -53,6 +56,7 @@ void RenderGrainEffect(uint8_t strength)
     float uOffset = (float)rand() / (float)RAND_MAX;
     float vOffset = (float)rand() / (float)RAND_MAX;
 
+    // Optimised algorithm. We dont need to create it every frame.
     float umin = uOffset;
     float vmin = vOffset;
     float umax = (1.5f * RsGlobal->maximumWidth) / 640.0f + uOffset;
@@ -63,6 +67,106 @@ void RenderGrainEffect(uint8_t strength)
     PostEffectsDrawQuad(0.0, 0.0, RsGlobal->maximumWidth, RsGlobal->maximumHeight, 255, 255, 255, strength, pGrainRaster);
     
     DrawQuadSetDefaultUVs();
+    ImmediateModeRenderStatesReStore();
+}
+void GFX_GrabScreen()
+{
+    if(postfxX != *renderWidth || postfxY != *renderHeight)
+    {
+        postfxX = *renderWidth;
+        postfxY = *renderHeight;
+
+        if(pSkyGFXPostFXRaster) RwRasterDestroy(pSkyGFXPostFXRaster);
+        pSkyGFXPostFXRaster = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMATDEFAULT);
+    }
+
+    if(pSkyGFXPostFXRaster)
+    {
+        ERQ_GrabFramebuffer(pSkyGFXPostFXRaster);
+    #ifdef GPU_GRABBER
+        emu_glBegin(5u);
+        emu_glVertex3f(-1.0, 1.0, *gradeBlur);
+        emu_glTexCoord2f(0.0, 1.0);
+        emu_glVertex3f(1.0, 1.0, *gradeBlur);
+        emu_glTexCoord2f(1.0, 1.0);
+        emu_glVertex3f(-1.0, -1.0, *gradeBlur);
+        emu_glTexCoord2f(0.0, 0.0);
+        emu_glVertex3f(1.0, -1.0, *gradeBlur);
+        emu_glTexCoord2f(1.0, 0.0);
+        emu_glEnd();
+    #endif
+        ERQ_GrabFramebufferPost();
+    }
+}
+void GFX_CCTV() // Completed
+{
+    RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)(true));
+    RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)(false));
+    RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)(true));
+    RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)(false));
+    RwRenderStateSet(rwRENDERSTATETEXTURERASTER, pSkyGFXPostFXRaster);
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)(true));
+    RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)(rwBLENDSRCCOLOR));
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)(rwBLENDINVSRCCOLOR));
+    ImmediateModeRenderStatesStore();
+    ImmediateModeRenderStatesSet();
+
+    uint32 lineHeight  = (uint32)(2.0f * ((float)RsGlobal->maximumHeight) / 448.0f);
+    uint32 linePadding = 2 * lineHeight;
+    uint32 numLines    = RsGlobal->maximumHeight / linePadding;
+    for (auto i = 0u, y = 0u; i < numLines; i++, y += linePadding)
+    {
+        float umin = 0;
+        float vmin = y / (float)RsGlobal->maximumHeight;
+        float umax = 1.0f;
+        float vmax = (y + lineHeight) / (float)RsGlobal->maximumHeight;
+        
+        DrawQuadSetUVs(umin, -vmin, umax, -vmin, umax, -vmax, umin, -vmax);
+
+        PostEffectsDrawQuad(0.0f, y, RsGlobal->maximumWidth, lineHeight, 0x40, 0x40, 0x40, 255, pSkyGFXPostFXRaster);
+    }
+
+    ImmediateModeRenderStatesReStore();
+}
+void GFX_SpeedFX(float speed)
+{
+    fxSpeedSettings* fx = NULL;
+    for(int i = 5; i >= 0; --i)
+    {
+        if(speed >= FX_SPEED_VARS[i].fSpeedThreshHold)
+        {
+            fx = &FX_SPEED_VARS[i];
+            break;
+        }
+    }
+    if(!fx) return;
+
+#ifdef AML32
+    int DirectionWasLooking = TheCamera->m_apCams[TheCamera->m_nCurrentActiveCam].DirectionWasLooking;
+#else
+    int DirectionWasLooking = TheCamera->Cams[TheCamera->ActiveCam].DirectionWasLooking;
+#endif
+
+    RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)(rwBLENDSRCCOLOR));
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)(rwBLENDINVSRCCOLOR));
+
+    ImmediateModeRenderStatesStore();
+    ImmediateModeRenderStatesSet();
+
+    for(int i = 0; i < fx->nLoops; ++i)
+    {
+        float uOffset = ((float)rand() / (float)RAND_MAX) / (float)RsGlobal->maximumWidth;
+        float vOffset = ((float)rand() / (float)RAND_MAX) / (float)RsGlobal->maximumHeight;
+        float umin = uOffset;
+        float vmin = vOffset;
+        float umax = 1.0f + uOffset;
+        float vmax = 1.0f + vOffset;
+        
+        DrawQuadSetUVs(umin, vmin, umax, vmin, umax, -vmax, umin, -vmax);
+        PostEffectsDrawQuad(0.0, 0.0, RsGlobal->maximumWidth, -RsGlobal->maximumHeight, 255, 255, 255, 36, pSkyGFXPostFXRaster);
+    }
+    DrawQuadSetDefaultUVs();
+
     ImmediateModeRenderStatesReStore();
 }
 
@@ -83,18 +187,20 @@ DECL_HOOKv(PostFX_Init)
         pGrainRaster = NULL;
     }
     pGrainRaster = RwRasterCreate(64, 64, 32, rwRASTERTYPETEXTURE | rwRASTERFORMAT8888);
-    if(pGrainRaster)
-    {
-        CreateGrainTexture();
-    }
+    if(pGrainRaster) CreateGrainTexture();
 
     *pbFog = false;
 }
 DECL_HOOKv(PostFX_Render)
 {
+    GFX_GrabScreen();
+
     if(*pbFog) RenderScreenFogPostEffect();
 
     PostFX_Render();
+
+    //GFX_CCTV();
+    GFX_SpeedFX(FindPlayerSpeed(-1)->Magnitude());
 
     if(g_bRenderGrain && pGrainRaster)
     {
@@ -117,6 +223,11 @@ DECL_HOOKv(PostFX_Render)
         }
         if(*pbGrainEnable) RenderGrainEffect(*pnGrainStrength);
     }
+}
+DECL_HOOKv(ShowGameBuffer)
+{
+    ShowGameBuffer();
+    GFX_GrabScreen();
 }
 
 /* Main */
@@ -163,8 +274,8 @@ void StartEffectsStuff()
 
     if(g_bMissingPostEffects)
     {
-        // Cannot add PostEffects buffer, yet.
         HOOK(PostFX_Init,   aml->GetSym(hGTASA, "_ZN12CPostEffects21SetupBackBufferVertexEv"));
         HOOK(PostFX_Render, aml->GetSym(hGTASA, "_ZN12CPostEffects12MobileRenderEv"));
+        //HOOKBLX(ShowGameBuffer, pGTASA + BYBIT(0x1BC5D4 + 0x1, 0x24F994));
     }
 }

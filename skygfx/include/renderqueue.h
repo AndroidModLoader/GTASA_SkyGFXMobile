@@ -83,6 +83,8 @@ enum ExtendedRQCommand : __int32
     erqViewport,
     erqRenderFast,
     erqAlphaBlendStatus,
+    erqGrabFramebuffer,
+    erqGrabFramebufferPost,
 
     EXRQC_END
 };
@@ -95,6 +97,7 @@ struct ExtendedRQ
     bool m_bAlphaBlending;
 
     GLint m_aViewportBackup[4];
+    GLint m_nPrevTex, m_nPrevActiveTex, m_nPrevBuffer;
 };
 extern ExtendedRQ extRQ;
 
@@ -139,5 +142,18 @@ inline void RQ_SetAlphaTest(GLenum func, GLclampf ref)
     RQUEUE_QUEUE(rqSetAlphaTest);
     RQUEUE_WRITEINT(func - GL_NEVER);
     RQUEUE_WRITEFLOAT(ref);
+    RQUEUE_CLOSE();
+}
+inline void ERQ_GrabFramebuffer(RwRaster* raster)
+{
+    RQUEUE_QUEUE(rqDebugMarker);
+    RQUEUE_WRITEINT(erqGrabFramebuffer);
+    RQUEUE_WRITEPTR( *(ES2Texture**)((char*)&raster->parent + *RasterExtOffset) );
+    RQUEUE_CLOSE();
+}
+inline void ERQ_GrabFramebufferPost()
+{
+    RQUEUE_QUEUE(rqDebugMarker);
+    RQUEUE_WRITEINT(erqGrabFramebufferPost);
     RQUEUE_CLOSE();
 }

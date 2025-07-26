@@ -1,6 +1,6 @@
 #include <externs.h>
 
-MYMOD(net.rusjj.skygfxmobile, SkyGFX Mobile Beta, 0.4, aap & TheOfficialFloW & RusJJ)
+MYMOD(net.rusjj.skygfxmobile, SkyGFX Mobile Beta, 0.5, aap & TheOfficialFloW & RusJJ)
 NEEDGAME(com.rockstargames.gtasa)
 BEGIN_DEPLIST()
     ADD_DEPENDENCY_VER(net.rusjj.aml, 1.3)

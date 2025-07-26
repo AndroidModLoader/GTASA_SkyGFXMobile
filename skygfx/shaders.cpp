@@ -58,6 +58,17 @@ void StartShaders()
     //aml->Write32(pGTASA + 0x6C6F24, 0x52800161); // dst
   #endif
 
+    // Fixing a sh*tty greenish reflections for Mali
+    // 28 max including terminator
+    const char* sOutSpecPart1 = "varying lowp vec3 I;";
+    aml->Write(pGTASA + BYBIT(0x5EAA4C, 0x711098), sOutSpecPart1, strlen(sOutSpecPart1)+1);
+    // 43 max including terminator
+    const char* sOutSpecPart2 = "I = specAmt * DirLightDiffuseColor;";
+    aml->Write(pGTASA + BYBIT(0x5EBF72, 0x712630), sOutSpecPart2, strlen(sOutSpecPart2)+1);
+    // 24 max including terminator
+    const char* sOutSpecPart3 = "fcolor.xyz+=min(I,1.0);";
+    aml->Write(pGTASA + BYBIT(0x5EAEBC, 0x711508), sOutSpecPart3, strlen(sOutSpecPart3)+1);
+
     HOOKPLT(InitialiseGame, pGTASA + BYBIT(0x6740A4, 0x846D20));
     HOOKPLT(AssignEmuShader, pGTASA + BYBIT(0x674170, 0x846E68));
 }

@@ -74,6 +74,11 @@ float *currentAlphaFuncVal;
 uint32_t *curShaderStateFlags;
 rwOGlRenderState *RenderState;
 float *Foggyness;
+float *gradeBlur;
+int *renderWidth, *renderHeight;
+ES2RenderTarget **backTarget;
+ES2RenderTarget **currentTarget;
+fxSpeedSettings *FX_SPEED_VARS;
 
 // Functions
 RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);
@@ -210,6 +215,11 @@ CVector*            (*FindPlayerSpeed)(int);
 CPlayerPed*         (*FindPlayerPed)(int);
 bool8               (*RwRasterDestroy)(RwRaster*);
 void                (*InitSpriteBuffer2D)();
+void                (*emu_glBegin)(int);
+void                (*emu_glVertex3f)(float,float,float);
+void                (*emu_glTexCoord2f)(float,float);
+void                (*emu_glEnd)();
+RwBool              (*RwTextureDestroy)(RwTexture*);
 
 // Main
 void ResolveExternals()
@@ -368,6 +378,11 @@ void ResolveExternals()
     SET_TO(FindPlayerPed,                   aml->GetSym(hGTASA, "_Z13FindPlayerPedi"));
     SET_TO(RwRasterDestroy,                 aml->GetSym(hGTASA, "_Z15RwRasterDestroyP8RwRaster"));
     SET_TO(InitSpriteBuffer2D,              aml->GetSym(hGTASA, "_ZN7CSprite18InitSpriteBuffer2DEv"));
+    SET_TO(emu_glBegin,                     aml->GetSym(hGTASA, "_Z11emu_glBeginj"));
+    SET_TO(emu_glVertex3f,                  aml->GetSym(hGTASA, "_Z14emu_glVertex3ffff"));
+    SET_TO(emu_glTexCoord2f,                aml->GetSym(hGTASA, "_Z16emu_glTexCoord2fff"));
+    SET_TO(emu_glEnd,                       aml->GetSym(hGTASA, "_Z9emu_glEndv"));
+    SET_TO(RwTextureDestroy,                aml->GetSym(hGTASA, "_Z16RwTextureDestroyP9RwTexture"));
 
     SET_TO(CamDistComp,                     aml->GetSym(hGTASA, "_ZN22CRealTimeShadowManager11CamDistCompEPKvS1_"));
     SET_TO(StoreRealTimeShadow,             aml->GetSym(hGTASA, "_ZN8CShadows19StoreRealTimeShadowEP9CPhysicalffffff"));
@@ -422,4 +437,10 @@ void ResolveExternals()
     SET_TO(curShaderStateFlags,             aml->GetSym(hGTASA, "curShaderStateFlags"));
     SET_TO(RenderState,                     pGTASA + BYBIT(0x6B3208, 0x890120));
     SET_TO(Foggyness,                       aml->GetSym(hGTASA, "_ZN8CWeather9FoggynessE"));
+    SET_TO(gradeBlur,                       aml->GetSym(hGTASA, "gradeBlur"));
+    SET_TO(renderWidth,                     aml->GetSym(hGTASA, "renderWidth"));
+    SET_TO(renderHeight,                    aml->GetSym(hGTASA, "renderHeight"));
+    SET_TO(backTarget,                      aml->GetSym(hGTASA, "backTarget"));
+    SET_TO(currentTarget,                   pGTASA + BYVER(0x6BCC24, 0x89A1F0));
+    SET_TO(FX_SPEED_VARS,                   aml->GetSym(hGTASA, "FX_SPEED_VARS"));
 }
