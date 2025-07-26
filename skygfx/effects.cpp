@@ -131,7 +131,7 @@ void GFX_CCTV() // Completed
 void GFX_SpeedFX(float speed)
 {
     fxSpeedSettings* fx = NULL;
-    for(int i = 5; i >= 0; --i)
+    for(int i = 6; i >= 0; --i)
     {
         if(speed >= FX_SPEED_VARS[i].fSpeedThreshHold)
         {
@@ -155,14 +155,14 @@ void GFX_SpeedFX(float speed)
 
     for(int i = 0; i < fx->nLoops; ++i)
     {
-        float uOffset = ((float)rand() / (float)RAND_MAX) / (float)RsGlobal->maximumWidth;
-        float vOffset = ((float)rand() / (float)RAND_MAX) / (float)RsGlobal->maximumHeight;
+        float uOffset = 4.0f * ((float)rand() / (float)RAND_MAX) / (float)RsGlobal->maximumWidth;
+        float vOffset = 4.0f * ((float)rand() / (float)RAND_MAX) / (float)RsGlobal->maximumHeight;
         float umin = -uOffset;
         float vmin = -vOffset;
         float umax = 1.0f + uOffset;
         float vmax = 1.0f + vOffset;
         
-        DrawQuadSetUVs(umin, vmin, umax, vmin, umax, -vmax, umin, -vmax);
+        DrawQuadSetUVs(umin, -vmin, umax, -vmin, umax, -vmax, umin, -vmax);
         PostEffectsDrawQuad(0.0, 0.0, RsGlobal->maximumWidth, RsGlobal->maximumHeight, 255, 255, 255, 36, pSkyGFXPostFXRaster);
     }
     DrawQuadSetDefaultUVs();
