@@ -122,8 +122,7 @@ void GFX_CCTV() // Completed
         float vmax = (y + lineHeight) / (float)RsGlobal->maximumHeight;
         
         DrawQuadSetUVs(umin, -vmin, umax, -vmin, umax, -vmax, umin, -vmax);
-
-        PostEffectsDrawQuad(0.0f, y, RsGlobal->maximumWidth, lineHeight, 0x40, 0x40, 0x40, 255, pSkyGFXPostFXRaster);
+        PostEffectsDrawQuad(0.0f, y, RsGlobal->maximumWidth, lineHeight, 0, 64, 0, 255, pSkyGFXPostFXRaster);
     }
 
     ImmediateModeRenderStatesReStore();
@@ -155,7 +154,7 @@ void GFX_SpeedFX(float speed)
 
     for(int i = 0; i < fx->nLoops; ++i)
     {
-        float uOffset = 4.0f * ((float)rand() / (float)RAND_MAX) / (float)RsGlobal->maximumWidth;
+        float uOffset = 0.0f;//4.0f * ((float)rand() / (float)RAND_MAX) / (float)RsGlobal->maximumWidth;
         float vOffset = 4.0f * ((float)rand() / (float)RAND_MAX) / (float)RsGlobal->maximumHeight;
         float umin = -uOffset;
         float vmin = 0.0f;
