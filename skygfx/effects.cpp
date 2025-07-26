@@ -159,7 +159,7 @@ void GFX_SpeedFX(float speed)
         float umin = -uOffset;
         float vmin = -vOffset;
         float umax = 1.0f + uOffset;
-        float vmax = 1.0f + vOffset
+        float vmax = 1.0f + vOffset;
         
         DrawQuadSetUVs(umin, vmax, umax, vmax, umax, vmin, umin, vmin);
         PostEffectsDrawQuad(0.0, 0.0, RsGlobal->maximumWidth, RsGlobal->maximumHeight, 255, 255, 255, 36, pSkyGFXPostFXRaster);
