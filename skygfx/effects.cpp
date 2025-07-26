@@ -157,13 +157,13 @@ void GFX_SpeedFX(float speed)
     {
         float uOffset = ((float)rand() / (float)RAND_MAX) / (float)RsGlobal->maximumWidth;
         float vOffset = ((float)rand() / (float)RAND_MAX) / (float)RsGlobal->maximumHeight;
-        float umin = uOffset;
-        float vmin = vOffset;
+        float umin = -uOffset;
+        float vmin = -vOffset;
         float umax = 1.0f + uOffset;
         float vmax = 1.0f + vOffset;
         
         DrawQuadSetUVs(umin, vmin, umax, vmin, umax, -vmax, umin, -vmax);
-        PostEffectsDrawQuad(0.0, 0.0, RsGlobal->maximumWidth, -RsGlobal->maximumHeight, 255, 255, 255, 36, pSkyGFXPostFXRaster);
+        PostEffectsDrawQuad(0.0, 0.0, RsGlobal->maximumWidth, RsGlobal->maximumHeight, 255, 255, 255, 36, pSkyGFXPostFXRaster);
     }
     DrawQuadSetDefaultUVs();
 
