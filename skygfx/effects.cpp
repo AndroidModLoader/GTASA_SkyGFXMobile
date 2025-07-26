@@ -149,13 +149,13 @@ void GFX_SpeedFX(float speed)
     ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
 
-    RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)(rwBLENDSRCCOLOR));
-    RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)(rwBLENDINVSRCCOLOR));
+    //RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)(rwBLENDSRCCOLOR));
+    //RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)(rwBLENDINVSRCCOLOR));
 
     for(int i = 0; i < fx->nLoops; ++i)
     {
-        float uOffset = 4.0f * ((float)rand() / (float)RAND_MAX) / (float)RsGlobal->maximumWidth;
-        float vOffset = 4.0f * ((float)rand() / (float)RAND_MAX) / (float)RsGlobal->maximumHeight;
+        float uOffset = 0.005f * ((float)rand() / (float)RAND_MAX);
+        float vOffset = 0.005f * ((float)rand() / (float)RAND_MAX);
         float umin = -uOffset;
         float vmin = -vOffset;
         float umax = 1.0f + uOffset;
