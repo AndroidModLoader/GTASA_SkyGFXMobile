@@ -154,8 +154,8 @@ void GFX_SpeedFX(float speed)
 
     for(int i = 0; i < fx->nLoops; ++i)
     {
-        float uOffset = 0.005f * ((float)rand() / (float)RAND_MAX);
-        float vOffset = 0.005f * ((float)rand() / (float)RAND_MAX);
+        float uOffset = 0.02f * ((float)rand() / (float)RAND_MAX);
+        float vOffset = 0.02f * ((float)rand() / (float)RAND_MAX);
         float umin = -uOffset;
         float vmin = -vOffset;
         float umax = 1.0f + uOffset;
