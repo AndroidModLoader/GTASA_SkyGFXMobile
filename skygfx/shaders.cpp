@@ -77,6 +77,8 @@ void StartShaders()
   #else
     aml->Write32(pGTASA + 0x264314, 0xF9451842);
     aml->WriteAddr(pGTASA + 0x711A30, (uintptr_t)sMainVertex);
+    aml->Write(pGTASA + 0x711A2A, "{", 2); // a part in pxl shader
+    aml->Write32(pGTASA + 0x263904, 0x9128A842);
   #endif
 
     // Additional code for pixel shader
