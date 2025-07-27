@@ -85,7 +85,7 @@ void StartShaders()
   #ifdef AML32
     aml->WriteAddr(pGTASA + 0x1CE8FC, (uintptr_t)sMainPixel - pGTASA - 0x1CE3B0);
   #else
-    aml->Write32(pGTASA + 0x2638DC, 0x91054042);
+    aml->Write32(pGTASA + 0x2638DC, 0xF940A842);
     aml->WriteAddr(pGTASA + 0x711150, (uintptr_t)sMainPixel);
   #endif
 
