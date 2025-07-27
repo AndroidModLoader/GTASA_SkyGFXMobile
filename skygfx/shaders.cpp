@@ -71,7 +71,7 @@ void StartShaders()
 
     // Additional code for vertex shader
     const char* sMainVertex = ""
-        "\n\nvoid main() {"; // max is 511
+        "void main() {"; // max is 511
   #ifdef AML32
     aml->WriteAddr(pGTASA + 0x1CF8A0, (uintptr_t)sMainVertex - pGTASA - 0x1CEF56);
   #else
@@ -81,7 +81,7 @@ void StartShaders()
 
     // Additional code for pixel shader
     const char* sMainPixel = ""
-        "\n\nvoid main()"; // max is 511
+        "void main()"; // max is 511
   #ifdef AML32
     aml->WriteAddr(pGTASA + 0x1CE8FC, (uintptr_t)sMainPixel - pGTASA - 0x1CE3B0);
   #else
