@@ -180,7 +180,7 @@ void GFX_SpeedFX(float speed)
         float vmax = 1.0f - vOffset - (DirectionWasLooking > 2) ? 0.0f : fLoopShiftY2;
         DrawQuadSetUVs(umin, vmax, umax, vmax, umax, vmin, umin, vmin);
 
-        logger->Info("%f %f %f %f", umin, umax, vmin, vmax);
+        logger->Info("%f %f %f %f | %f %f | %f %f %f %f", umin, umax, vmin, vmax, uOffset, vOffset, fLoopShiftX1, fLoopShiftX2, fLoopShiftY1, fLoopShiftY2);
         
         PostEffectsDrawQuad(0.0, 0.0, RsGlobal->maximumWidth, RsGlobal->maximumHeight, 255, 255, 255, 36, pSkyGFXPostFXRaster);
 
