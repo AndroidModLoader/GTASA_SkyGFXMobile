@@ -192,6 +192,29 @@ void GFX_SpeedFX(float speed) // Completed ???
     }
     ImmediateModeRenderStatesReStore();
 }
+void GFX_Radiosity(int intensityLimit, int filterPasses, int renderPasses, int intensity)
+{
+    
+}
+void GFX_HeatHaze(float intensity, bool alphaMaskMode)
+{
+    
+}
+void GFX_UnderWaterRipple(CRGBA col, float xo, float yo, int strength, float speed, float freq)
+{
+    
+}
+void GFX_DarknessFilter(int alpha) // Completed
+{
+    ImmediateModeRenderStatesStore();
+    ImmediateModeRenderStatesSet();
+
+    float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
+    DrawQuadSetUVs(umin, vmax, umax, vmax, umax, vmin, umin, vmin);
+    PostEffectsDrawQuad(0.0, 0.0, RsGlobal->maximumWidth, RsGlobal->maximumHeight, 255, 255, 255, alpha, NULL);
+    
+    ImmediateModeRenderStatesReStore();
+}
 
 /* Hooks */
 DECL_HOOKv(WaterCannons_Render)
