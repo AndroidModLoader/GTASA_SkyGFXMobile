@@ -223,14 +223,19 @@ DECL_HOOKv(PostFX_Render)
     PostFX_Render();
 
     //GFX_CCTV();
-    CAutomobile* veh = FindPlayerVehicle(-1, false)
+    CAutomobile* veh = (CAutomobile*)FindPlayerVehicle(-1, false);
     if(veh && (veh->m_nVehicleType < VEHICLE_TYPE_HELI || veh->m_nVehicleType > VEHICLE_TYPE_TRAIN) )
     {
+        float dirDot = DotProduct(veh->m_vecMoveSpeed, veh->m_matrix.m_forward);
     #ifdef AML32
-        if(veh->m_nVehicleType != VEHICLE_TYPE_AUTOMOBILE || ((veh->m_nLocalFlags & 0x80000 != 0) && *(float*)( ((char*)veh) + 2232) < 0.0f ))
+        if(veh->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE && dirDot < 0.2f && ((veh->m_nLocalFlags & 0x80000 != 0) && *(float*)( ((char*)veh) + 2232) < 0.0f ))
     #else
-        if(veh->m_nVehicleType != VEHICLE_TYPE_AUTOMOBILE || ((veh->hFlagsLocal & 0x80000 != 0) && veh->m_fTyreTemp < 0.0f))
+        if(veh->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE && dirDot < 0.2f && ((veh->hFlagsLocal & 0x80000 != 0) && veh->m_fTyreTemp < 0.0f ))
     #endif
+        {
+            GFX_SpeedFX(2.0f * dir * (veh->m_fGasPedal + 1.0f));
+        }
+        else
         {
             GFX_SpeedFX(FindPlayerSpeed(-1)->Magnitude());
         }
