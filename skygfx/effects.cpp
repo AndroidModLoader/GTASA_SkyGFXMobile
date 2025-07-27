@@ -150,6 +150,10 @@ void GFX_SpeedFX(float speed) // Completed ???
     ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
 
+    const float ar43 = 4.0f / 3.0f;
+    float ar = (float)RsGlobal->maximumWidth / (float)RsGlobal->maximumHeight;
+    float arM = ar43 / ar;
+
     int targetShift = fx->nShift;
     int targetShake = fx->nShake;
     int nLoops = fx->nLoops;
@@ -174,9 +178,9 @@ void GFX_SpeedFX(float speed) // Completed ???
           fLoopShiftY1 = fShiftOffset, fLoopShiftY2 = fShiftOffset;
     for(int i = 0; i < nLoops; ++i)
     {
-        float umin = ( (DirectionWasLooking > 2) ? 0.0f : uOffset ) + ( (DirectionWasLooking == 2) ? 0.0f : fLoopShiftX1 );
+        float umin = arM * ( ( (DirectionWasLooking > 2) ? 0.0f : uOffset ) + ( (DirectionWasLooking == 2) ? 0.0f : fLoopShiftX1 ) );
         float vmin = ( (DirectionWasLooking <= 2) ? 0.0f : vOffset ) + ( (DirectionWasLooking > 2) ? 0.0f : fLoopShiftY1 );
-        float umax = 1.0f - ( (DirectionWasLooking > 2) ? 0.0f : uOffset ) - ( (DirectionWasLooking == 1) ? 0.0f : fLoopShiftX2 );
+        float umax = 1.0f - arM * ( ( (DirectionWasLooking > 2) ? 0.0f : uOffset ) - ( (DirectionWasLooking == 1) ? 0.0f : fLoopShiftX2 ) );
         float vmax = 1.0f - ( (DirectionWasLooking > 2) ? 0.0f : fLoopShiftY2 );
         DrawQuadSetUVs(umin, vmax - ( (DirectionWasLooking > 2) ? 0.0f : vOffset ), umax, vmax - ( (DirectionWasLooking > 2) ? 0.0f : uOffset ), umax, vmin, umin, vmin);
 
@@ -251,9 +255,9 @@ DECL_HOOKv(PostFX_Render)
     {
         float dirDot = DotProduct(veh->m_vecMoveSpeed, veh->m_matrix->m_forward);
     #ifdef AML32
-        if(veh->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE && dirDot < 0.2f && (veh->m_nLocalFlags & 0x80000) != 0 && *(float*)( ((char*)veh) + 2232) < 0.0f )
+        if(veh->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE && dirDot > 0.2f && (veh->m_nLocalFlags & 0x80000) != 0 && *(float*)( ((char*)veh) + 2232) < 0.0f )
     #else
-        if(veh->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE && dirDot < 0.2f && (veh->hFlagsLocal & 0x80000) != 0 && veh->m_fTyreTemp < 0.0f )
+        if(veh->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE && dirDot > 0.2f && (veh->hFlagsLocal & 0x80000) != 0 && veh->m_fTyreTemp < 0.0f )
     #endif
         {
             GFX_SpeedFX(2.0f * dirDot * (veh->m_fGasPedal + 1.0f));
