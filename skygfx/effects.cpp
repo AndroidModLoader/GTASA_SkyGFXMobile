@@ -152,6 +152,7 @@ void GFX_SpeedFX(float speed)
 
     int targetShift = fx->nShift;
     int targetShake = fx->nShake;
+    int nLoops = fx->nLoops;
     if(DirectionWasLooking <= 2)
     {
         if(targetShift < 1) targetShift = 1;
@@ -168,9 +169,10 @@ void GFX_SpeedFX(float speed)
         vOffset = ((float)targetShake / 250.0f) * ((float)rand() / (float)RAND_MAX);
     }
 
+    // Unique per loop (gets bigger every loop)
     float fLoopShiftX1 = fShiftOffset, fLoopShiftX2 = fShiftOffset,
           fLoopShiftY1 = fShiftOffset, fLoopShiftY2 = fShiftOffset;
-    for(int i = 0; i < fx->nLoops; ++i)
+    for(int i = 0; i < nLoops; ++i)
     {
         float umin = uOffset + (DirectionWasLooking == 2) ? 0.0f : fLoopShiftX1;
         float vmin = vOffset + (DirectionWasLooking > 2) ? 0.0f : fLoopShiftY1;
@@ -180,10 +182,13 @@ void GFX_SpeedFX(float speed)
         
         PostEffectsDrawQuad(0.0, 0.0, RsGlobal->maximumWidth, RsGlobal->maximumHeight, 255, 255, 255, 36, pSkyGFXPostFXRaster);
 
-        fLoopShiftX1 = fShiftOffset + (DirectionWasLooking == 2) ? 0.0f : fLoopShiftX1;
-        fLoopShiftY1 = fShiftOffset + (DirectionWasLooking > 2) ? 0.0f : fLoopShiftY1;
-        fLoopShiftX2 = fShiftOffset + (DirectionWasLooking == 1) ? 0.0f : fLoopShiftX2;
-        fLoopShiftY2 = fShiftOffset + (DirectionWasLooking > 2) ? 0.0f : fLoopShiftY2;
+        if(i > 0)
+        {
+            fLoopShiftX1 = fShiftOffset + (DirectionWasLooking == 2) ? 0.0f : fLoopShiftX1;
+            fLoopShiftY1 = fShiftOffset + (DirectionWasLooking > 2) ? 0.0f : fLoopShiftY1;
+            fLoopShiftX2 = fShiftOffset + (DirectionWasLooking == 1) ? 0.0f : fLoopShiftX2;
+            fLoopShiftY2 = fShiftOffset + (DirectionWasLooking > 2) ? 0.0f : fLoopShiftY2;
+        }
     }
     ImmediateModeRenderStatesReStore();
 }
