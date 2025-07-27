@@ -398,6 +398,7 @@ extern void                (*emu_glVertex3f)(float,float,float);
 extern void                (*emu_glTexCoord2f)(float,float);
 extern void                (*emu_glEnd)();
 extern RwBool              (*RwTextureDestroy)(RwTexture*);
+extern CVehicle*           (*FindPlayerVehicle)(int,bool);
 
 // Main
 void ResolveExternals();
