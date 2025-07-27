@@ -128,7 +128,7 @@ void GFX_CCTV() // Completed
 
     ImmediateModeRenderStatesReStore();
 }
-void GFX_SpeedFX(float speed)
+void GFX_SpeedFX(float speed) // Completed ???
 {
     fxSpeedSettings* fx = NULL;
     for(int i = 6; i >= 0; --i)
@@ -177,8 +177,8 @@ void GFX_SpeedFX(float speed)
         float umin = ( (DirectionWasLooking > 2) ? 0.0f : uOffset ) + ( (DirectionWasLooking == 2) ? 0.0f : fLoopShiftX1 );
         float vmin = ( (DirectionWasLooking <= 2) ? 0.0f : vOffset ) + ( (DirectionWasLooking > 2) ? 0.0f : fLoopShiftY1 );
         float umax = 1.0f - ( (DirectionWasLooking > 2) ? 0.0f : uOffset ) - ( (DirectionWasLooking == 1) ? 0.0f : fLoopShiftX2 );
-        float vmax = 1.0f - ( (DirectionWasLooking > 2) ? 0.0f : (vOffset + fLoopShiftY2) );
-        DrawQuadSetUVs(umin, vmax, umax, vmax, umax, vmin, umin, vmin);
+        float vmax = 1.0f - ( (DirectionWasLooking > 2) ? 0.0f : fLoopShiftY2 );
+        DrawQuadSetUVs(umin, vmax - ( (DirectionWasLooking > 2) ? 0.0f : vOffset ), umax, vmax - ( (DirectionWasLooking > 2) ? 0.0f : uOffset ), umax, vmin, umin, vmin);
 
         PostEffectsDrawQuad(0.0, 0.0, RsGlobal->maximumWidth, RsGlobal->maximumHeight, 255, 255, 255, 36, pSkyGFXPostFXRaster);
 
@@ -223,7 +223,18 @@ DECL_HOOKv(PostFX_Render)
     PostFX_Render();
 
     //GFX_CCTV();
-    GFX_SpeedFX(FindPlayerSpeed(-1)->Magnitude());
+    CAutomobile* veh = FindPlayerVehicle(-1, false)
+    if(veh && (veh->m_nVehicleType < VEHICLE_TYPE_HELI || veh->m_nVehicleType > VEHICLE_TYPE_TRAIN) )
+    {
+    #ifdef AML32
+        if(veh->m_nVehicleType != VEHICLE_TYPE_AUTOMOBILE || ((veh->m_nLocalFlags & 0x80000 != 0) && *(float*)( ((char*)veh) + 2232) < 0.0f ))
+    #else
+        if(veh->m_nVehicleType != VEHICLE_TYPE_AUTOMOBILE || ((veh->hFlagsLocal & 0x80000 != 0) && veh->m_fTyreTemp < 0.0f))
+    #endif
+        {
+            GFX_SpeedFX(FindPlayerSpeed(-1)->Magnitude());
+        }
+    }
 
     if(g_bRenderGrain && pGrainRaster)
     {
