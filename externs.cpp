@@ -220,6 +220,7 @@ void                (*emu_glVertex3f)(float,float,float);
 void                (*emu_glTexCoord2f)(float,float);
 void                (*emu_glEnd)();
 RwBool              (*RwTextureDestroy)(RwTexture*);
+CVehicle*           (*FindPlayerVehicle)(int,bool);
 
 // Main
 void ResolveExternals()
@@ -383,6 +384,7 @@ void ResolveExternals()
     SET_TO(emu_glTexCoord2f,                aml->GetSym(hGTASA, "_Z16emu_glTexCoord2fff"));
     SET_TO(emu_glEnd,                       aml->GetSym(hGTASA, "_Z9emu_glEndv"));
     SET_TO(RwTextureDestroy,                aml->GetSym(hGTASA, "_Z16RwTextureDestroyP9RwTexture"));
+    SET_TO(FindPlayerVehicle,               aml->GetSym(hGTASA, "_Z17FindPlayerVehicleib"));
 
     SET_TO(CamDistComp,                     aml->GetSym(hGTASA, "_ZN22CRealTimeShadowManager11CamDistCompEPKvS1_"));
     SET_TO(StoreRealTimeShadow,             aml->GetSym(hGTASA, "_ZN8CShadows19StoreRealTimeShadowEP9CPhysicalffffff"));
