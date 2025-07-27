@@ -46,7 +46,7 @@ void StartShaders()
 
     // Specular light on vehicles
     // 99 max including terminator
-    const char* sSpecPart = "float specAmt=max(pow(dot(reflVector,DirLightDirection),64.0),0.0)*EnvMapCoefficient*1.5;";
+    const char* sSpecPart = "float specAmt=max(pow(dot(reflVector,DirLightDirection),64.0),0.0)*EnvMapCoefficient*1.4;";
     aml->Write(pGTASA + BYBIT(0x5EBF0F, 0x7125CD), sSpecPart, strlen(sSpecPart)+1);
 
     // Water Sun Reflections are now affected by the fog (TODO: breaking it)
@@ -66,9 +66,30 @@ void StartShaders()
     const char* sOutSpecPart2 = "I = specAmt * DirLightDiffuseColor;";
     aml->Write(pGTASA + BYBIT(0x5EBF72, 0x712630), sOutSpecPart2, strlen(sOutSpecPart2)+1);
     // 24 max including terminator
-    const char* sOutSpecPart3 = "fcolor.xyz+=min(I,1.0);";
+    const char* sOutSpecPart3 = "fcolor.xyz+=min(I,0.8);";
     aml->Write(pGTASA + BYBIT(0x5EAEBC, 0x711508), sOutSpecPart3, strlen(sOutSpecPart3)+1);
 
+    // Additional code for vertex shader
+    const char* sMainVertex = ""
+        "\n\nvoid main() {"; // max is 511
+  #ifdef AML32
+    aml->WriteAddr(pGTASA + 0x1CF8A0, (uintptr_t)sMainVertex - pGTASA - 0x1CEF56);
+  #else
+    aml->Write32(pGTASA + 0x264314, 0xF9451842);
+    aml->WriteAddr(pGTASA + 0x711A30, (uintptr_t)sMainVertex);
+  #endif
+
+    // Additional code for pixel shader
+    const char* sMainPixel = ""
+        "\n\nvoid main()"; // max is 511
+  #ifdef AML32
+    aml->WriteAddr(pGTASA + 0x1CE8FC, (uintptr_t)sMainPixel - pGTASA - 0x1CE3B0);
+  #else
+    aml->Write32(pGTASA + 0x2638DC, 0x91054042);
+    aml->WriteAddr(pGTASA + 0x711150, (uintptr_t)sMainPixel);
+  #endif
+
+    // Just a few important hooks
     HOOKPLT(InitialiseGame, pGTASA + BYBIT(0x6740A4, 0x846D20));
     HOOKPLT(AssignEmuShader, pGTASA + BYBIT(0x674170, 0x846E68));
 }
