@@ -116,13 +116,14 @@ void GFX_CCTV() // Completed
     uint32 numLines    = RsGlobal->maximumHeight / linePadding;
     for (auto i = 0u, y = 0u; i < numLines; i++, y += linePadding)
     {
-        float umin = 0;
+        // Pure black lines. We dont need to waste CPU by fixing this:
+        /*float umin = 0;
         float vmin = y / (float)RsGlobal->maximumHeight;
         float umax = 1.0f;
         float vmax = (y + lineHeight) / (float)RsGlobal->maximumHeight;
         
-        DrawQuadSetUVs(umin, -vmin, umax, -vmin, umax, -vmax, umin, -vmax);
-        PostEffectsDrawQuad(0.0f, y, RsGlobal->maximumWidth, lineHeight, 0, 64, 0, 255, pSkyGFXPostFXRaster);
+        DrawQuadSetUVs(umin, -vmin, umax, -vmin, umax, -vmax, umin, -vmax);*/
+        PostEffectsDrawQuad(0.0f, y, RsGlobal->maximumWidth, lineHeight, 0, 0, 0, 255, pSkyGFXPostFXRaster);
     }
 
     ImmediateModeRenderStatesReStore();
@@ -149,20 +150,40 @@ void GFX_SpeedFX(float speed)
     ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
 
-    //RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)(rwBLENDSRCCOLOR));
-    //RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)(rwBLENDINVSRCCOLOR));
+    int targetShift = fx->nShift;
+    int targetShake = fx->nShake;
+    if(DirectionWasLooking <= 2)
+    {
+        if(targetShift < 1) targetShift = 1;
+        targetShift *= 2;
 
+        targetShake = 0;
+    }
+
+    // Calculated once per frame
+    float uOffset = 0.0f, vOffset = 0.0f, fShiftOffset = (float)targetShift / 400.0f;
+    if(targetShake > 0)
+    {
+        uOffset = ((float)targetShake / 250.0f) * ((float)rand() / (float)RAND_MAX);
+        vOffset = ((float)targetShake / 250.0f) * ((float)rand() / (float)RAND_MAX);
+    }
+
+    float fLoopShiftX1 = fShiftOffset, fLoopShiftX2 = fShiftOffset,
+          fLoopShiftY1 = fShiftOffset, fLoopShiftY2 = fShiftOffset;
     for(int i = 0; i < fx->nLoops; ++i)
     {
-        float uOffset = 0.02f * ((float)rand() / (float)RAND_MAX);
-        float vOffset = 0.02f * ((float)rand() / (float)RAND_MAX);
-        float umin = -uOffset;
-        float vmin = -vOffset;
-        float umax = 1.0f + uOffset;
-        float vmax = 1.0f + vOffset;
-        
+        float umin = uOffset + (DirectionWasLooking == 2) ? 0.0f : fLoopShiftX1;
+        float vmin = vOffset + (DirectionWasLooking > 2) ? 0.0f : fLoopShiftY1;
+        float umax = 1.0f - uOffset - (DirectionWasLooking == 1) ? 0.0f : fLoopShiftX2;
+        float vmax = 1.0f - vOffset - (DirectionWasLooking > 2) ? 0.0f : fLoopShiftY2;
         DrawQuadSetUVs(umin, vmax, umax, vmax, umax, vmin, umin, vmin);
+        
         PostEffectsDrawQuad(0.0, 0.0, RsGlobal->maximumWidth, RsGlobal->maximumHeight, 255, 255, 255, 36, pSkyGFXPostFXRaster);
+
+        fLoopShiftX1 = fShiftOffset + (DirectionWasLooking == 2) ? 0.0f : fLoopShiftX1;
+        fLoopShiftY1 = fShiftOffset + (DirectionWasLooking > 2) ? 0.0f : fLoopShiftY1;
+        fLoopShiftX2 = fShiftOffset + (DirectionWasLooking == 1) ? 0.0f : fLoopShiftX2;
+        fLoopShiftY2 = fShiftOffset + (DirectionWasLooking > 2) ? 0.0f : fLoopShiftY2;
     }
     ImmediateModeRenderStatesReStore();
 }
