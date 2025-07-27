@@ -169,27 +169,28 @@ void GFX_SpeedFX(float speed)
         vOffset = ((float)targetShake / 250.0f) * ((float)rand() / (float)RAND_MAX);
     }
 
-    // Unique per loop (gets bigger every loop)
+    // Unique per loop (gets bigger every iteration)
     float fLoopShiftX1 = fShiftOffset, fLoopShiftX2 = fShiftOffset,
           fLoopShiftY1 = fShiftOffset, fLoopShiftY2 = fShiftOffset;
     for(int i = 0; i < nLoops; ++i)
     {
-        float umin = uOffset + (DirectionWasLooking == 2) ? 0.0f : fLoopShiftX1;
-        float vmin = vOffset + (DirectionWasLooking > 2) ? 0.0f : fLoopShiftY1;
-        float umax = 1.0f - uOffset - (DirectionWasLooking == 1) ? 0.0f : fLoopShiftX2;
-        float vmax = 1.0f - vOffset - (DirectionWasLooking > 2) ? 0.0f : fLoopShiftY2;
+        float umin = uOffset + ( (DirectionWasLooking == 2) ? 0.0f : fLoopShiftX1 );
+        float vmin = vOffset + ( (DirectionWasLooking > 2) ? 0.0f : fLoopShiftY1 );
+        float umax = 1.0f - uOffset - ( (DirectionWasLooking == 1) ? 0.0f : fLoopShiftX2 );
+        float vmax = 1.0f - vOffset - ( (DirectionWasLooking > 2) ? 0.0f : fLoopShiftY2 );
         DrawQuadSetUVs(umin, vmax, umax, vmax, umax, vmin, umin, vmin);
 
-        logger->Info("%f %f %f %f | %f %f | %f %f %f %f", umin, umax, vmin, vmax, uOffset, vOffset, fLoopShiftX1, fLoopShiftX2, fLoopShiftY1, fLoopShiftY2);
+        // 0.010000 0.000000 0.000000 0.010000 | 0.000000 0.000000 | 0.010000 0.010000 0.010000 0.010000
+        //logger->Info("%f %f %f %f | %f %f | %f %f %f %f", umin, umax, vmin, vmax, uOffset, vOffset, fLoopShiftX1, fLoopShiftX2, fLoopShiftY1, fLoopShiftY2);
         
         PostEffectsDrawQuad(0.0, 0.0, RsGlobal->maximumWidth, RsGlobal->maximumHeight, 255, 255, 255, 36, pSkyGFXPostFXRaster);
 
         if(i > 0)
         {
-            fLoopShiftX1 = fShiftOffset + (DirectionWasLooking == 2) ? 0.0f : fLoopShiftX1;
-            fLoopShiftY1 = fShiftOffset + (DirectionWasLooking > 2) ? 0.0f : fLoopShiftY1;
-            fLoopShiftX2 = fShiftOffset + (DirectionWasLooking == 1) ? 0.0f : fLoopShiftX2;
-            fLoopShiftY2 = fShiftOffset + (DirectionWasLooking > 2) ? 0.0f : fLoopShiftY2;
+            fLoopShiftX1 = fShiftOffset + ( (DirectionWasLooking == 2) ? 0.0f : fLoopShiftX1 );
+            fLoopShiftY1 = fShiftOffset + ( (DirectionWasLooking > 2) ? 0.0f : fLoopShiftY1 );
+            fLoopShiftX2 = fShiftOffset + ( (DirectionWasLooking == 1) ? 0.0f : fLoopShiftX2 );
+            fLoopShiftY2 = fShiftOffset + ( (DirectionWasLooking > 2) ? 0.0f : fLoopShiftY2 );
         }
     }
     ImmediateModeRenderStatesReStore();
