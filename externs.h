@@ -34,6 +34,7 @@ struct BasicEvent
         for(auto it = listeners.begin(); it != end; ++it) (*it)();
     }
     inline void operator+=(T fn) { listeners.push_back(fn); }
+    inline void operator-=(T fn) { listeners.remove_if([fn](T ptr){ return ptr == fn; }); }
 };
 
 typedef void (*SimpleVoidFn)();
