@@ -29,6 +29,7 @@ bool g_bMissingPostEffects = true;
 bool g_bRenderGrain = true;
 int g_nSpeedFX = SPFX_LIKE_ON_PC;
 int g_nCrAb = CRAB_INACTIVE;
+int g_nVignette = 0;
 
 int g_nGrainRainStrength = 0;
 int g_nInitialGrain = 0;
@@ -37,8 +38,11 @@ RwRaster* pGrainRaster = NULL;
 int postfxX = 0, postfxY = 0;
 RwRaster *pSkyGFXPostFXRaster1 = NULL, *pSkyGFXPostFXRaster2 = NULL;
 
+RwRaster* pDarkRaster = NULL;
+
 ES2Shader* g_pChromaticAberrationShader = NULL;
 ES2Shader* g_pChromaticAberrationShader_Intensive = NULL;
+ES2Shader* g_pVignetteShader = NULL;
 
 /* Other */
 static const char* aSpeedFXSettings[SPEEDFX_SETTINGS] = 
@@ -59,10 +63,12 @@ static const char* aCrAbFXSettings[CRAB_SETTINGS] =
 ConfigEntry *pCFGRenderGrain;
 ConfigEntry *pCFGSpeedFX;
 ConfigEntry *pCFGCrAbFX;
+ConfigEntry *pCFGVignette;
 
 /* Functions */
 void CreateEffectsShaders()
 {
+    // https://lettier.github.io/3d-game-shaders-for-beginners/chromatic-aberration.html
     char sChromaPxl[] = "precision mediump float;\n"
                         "uniform sampler2D Diffuse;\n"
                         "varying mediump vec2 Out_Tex0;\n"
@@ -98,8 +104,31 @@ void CreateEffectsShaders()
                          "  Out_Tex0 = TexCoord0;\n"
                          "}";
     g_pChromaticAberrationShader_Intensive = CreateCustomShaderAlloc(0, sChromaPxl, sChromaVtx2, sizeof(sChromaPxl), sizeof(sChromaVtx2));
+
+    // https://github.com/TyLindberg/glsl-vignette
+    char sVignettePxl[] = "precision mediump float;\n"
+                          "uniform sampler2D Diffuse;\n"
+                          "varying mediump vec2 Out_Tex0;\n"
+                          "varying mediump vec2 vPos;\n"
+                          "float vignette(vec2 uv, float radius, float smoothness) {\n"
+                          "  float diff = radius - distance(uv, vec2(0.5, 0.5));\n"
+                          "  return smoothstep(-smoothness, smoothness, diff);\n"
+                          "}\n"
+                          "void main() {\n"
+                          "  float vignetteValue = 1.0 - vignette(Out_Tex0, 0.5, 0.5);\n"
+                          "  gl_FragColor = texture2D(Diffuse, Out_Tex0) * vignetteValue;\n"
+                          "}";
+    char sVignetteVtx[] = "precision highp float;\n"
+                          "attribute vec3 Position;\n"
+                          "attribute vec2 TexCoord0;\n"
+                          "varying mediump vec2 Out_Tex0;\n"
+                          "void main() {\n"
+                          "  gl_Position = vec4(Position.xy - 1.0, 0.0, 1.0);\n"
+                          "  Out_Tex0 = TexCoord0;\n"
+                          "}";
+    g_pVignetteShader = CreateCustomShaderAlloc(0, sVignettePxl, sVignetteVtx, sizeof(sVignettePxl), sizeof(sVignetteVtx));
 }
-void RenderGrainSettingChanged(int oldVal, int newVal, void* data)
+void RenderGrainSettingChanged(int oldVal, int newVal, void* data = NULL)
 {
     if(oldVal == newVal) return;
 
@@ -108,7 +137,7 @@ void RenderGrainSettingChanged(int oldVal, int newVal, void* data)
 
     cfg->Save();
 }
-void SpeedFXSettingChanged(int oldVal, int newVal, void* data)
+void SpeedFXSettingChanged(int oldVal, int newVal, void* data = NULL)
 {
     if(oldVal == newVal) return;
 
@@ -118,13 +147,23 @@ void SpeedFXSettingChanged(int oldVal, int newVal, void* data)
 
     cfg->Save();
 }
-void CrAbFXSettingChanged(int oldVal, int newVal, void* data)
+void CrAbFXSettingChanged(int oldVal, int newVal, void* data = NULL)
 {
     if(oldVal == newVal) return;
 
-    pCFGCrAbFX->SetBool(newVal);
+    pCFGCrAbFX->SetInt(newVal);
     pCFGCrAbFX->Clamp(0, CRAB_SETTINGS-1);
     g_nCrAb = pCFGCrAbFX->GetInt();
+
+    cfg->Save();
+}
+void VignetteSettingChanged(int oldVal, int newVal, void* data = NULL)
+{
+    if(oldVal == newVal) return;
+
+    pCFGVignette->SetInt(newVal);
+    pCFGVignette->Clamp(0, 100);
+    g_nVignette = pCFGVignette->GetInt();
 
     cfg->Save();
 }
@@ -144,6 +183,21 @@ void CreateGrainTexture()
         x = vrnext();
     }
     RwRasterUnlock(pGrainRaster);
+}
+void CreatePlainTexture(RwRaster* target, CRGBA clr)
+{
+    if(!target) return;
+
+    RwUInt8 *pixels = RwRasterLock(target, 0, 1);
+    int pixSize = target->width * target->height;
+    for(int i = 0; i < pixSize; ++i)
+    {
+        *(pixels++) = clr.r;
+        *(pixels++) = clr.g;
+        *(pixels++) = clr.b;
+        *(pixels++) = clr.a;
+    }
+    RwRasterUnlock(target);
 }
 void RenderGrainEffect(uint8_t strength)
 {
@@ -313,7 +367,7 @@ void GFX_DarknessFilter(int alpha) // Completed
 
     float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
     DrawQuadSetUVs(umin, vmax, umax, vmax, umax, vmin, umin, vmin);
-    PostEffectsDrawQuad(0.0, 0.0, RsGlobal->maximumWidth, RsGlobal->maximumHeight, 255, 255, 255, alpha, NULL);
+    PostEffectsDrawQuad(0.0, 0.0, RsGlobal->maximumWidth, RsGlobal->maximumHeight, 0, 0, 0, alpha, NULL);
     
     ImmediateModeRenderStatesReStore();
 }
@@ -324,13 +378,26 @@ void GFX_ChromaticAberration() // Completed
     ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
 
-    //RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
-    //RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDONE);
-
     pForcedShader = ( g_nCrAb == CRAB_INTENSE ? g_pChromaticAberrationShader_Intensive : g_pChromaticAberrationShader );
     float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
     DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
     PostEffectsDrawQuad(0.0f, 0.0f, 2.0f, 2.0f, 255, 255, 255, 255, pSkyGFXPostFXRaster2);
+    pForcedShader = NULL;
+    
+    ImmediateModeRenderStatesReStore();
+}
+void GFX_Vignette(int alpha) // Completed
+{
+    if(alpha <= 0) return;
+    if(alpha > 255) alpha = 255;
+
+    ImmediateModeRenderStatesStore();
+    ImmediateModeRenderStatesSet();
+
+    pForcedShader = g_pVignetteShader;
+    float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
+    DrawQuadSetUVs(umin, vmax, umax, vmax, umax, vmin, umin, vmin);
+    PostEffectsDrawQuad(0.0f, 0.0f, 2.0f, 2.0f, 0, 0, 0, alpha, pDarkRaster);
     pForcedShader = NULL;
     
     ImmediateModeRenderStatesReStore();
@@ -354,6 +421,14 @@ DECL_HOOKv(PostFX_Init)
     }
     pGrainRaster = RwRasterCreate(64, 64, 32, rwRASTERTYPETEXTURE | rwRASTERFORMAT8888);
     if(pGrainRaster) CreateGrainTexture();
+
+    if(pDarkRaster)
+    {
+        RwRasterDestroy(pDarkRaster);
+        pDarkRaster = NULL;
+    }
+    pDarkRaster = RwRasterCreate(64, 64, 32, rwRASTERTYPETEXTURE | rwRASTERFORMAT8888);
+    CreatePlainTexture(pDarkRaster, CRGBA(0, 0, 0, 255));
 
     *pbFog = false; // uninitialised variable
 }
@@ -410,6 +485,7 @@ DECL_HOOKv(PostFX_Render)
     }
 
     if(g_nCrAb != CRAB_INACTIVE) GFX_ChromaticAberration();
+    GFX_Vignette(g_nVignette * 2.55f);
 }
 DECL_HOOKv(ShowGameBuffer)
 {
@@ -434,6 +510,10 @@ void StartEffectsStuff()
 
     pCFGCrAbFX = cfg->Bind("ChromaticAberration", g_nCrAb, "EnchancedEffects");
     AddSetting("Chromatic Aberration", g_nCrAb, 0, sizeofA(aCrAbFXSettings)-1, aCrAbFXSettings, CrAbFXSettingChanged, NULL);
+
+    pCFGVignette = cfg->Bind("VignetteIntensity", g_nVignette, "EnchancedEffects");
+    VignetteSettingChanged(0, g_nVignette);
+    AddSlider("Vignette Intensity", g_nVignette, 0, 100, VignetteSettingChanged, NULL, NULL);
 
     if(g_bFixSandstorm)
     {

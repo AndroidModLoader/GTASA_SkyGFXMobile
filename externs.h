@@ -106,6 +106,11 @@ inline void ForceCustomShader(ES2Shader* shader)
         if(!sautils) return;
         sautils->AddClickableItem(skygfxSettingsTab, name, initVal, minVal, maxVal, switchesArray, fnOnValueChange, data);
     }
+    inline void AddSlider(const char* name, int initVal, int minVal, int maxVal, OnSettingChangedFn fnOnValueChange = NULL, OnSettingDrawedFn fnOnValueDraw = NULL, void* data = NULL)
+    {
+        if(!sautils) return;
+        sautils->AddSliderItem(skygfxSettingsTab, name, initVal, minVal, maxVal, fnOnValueChange, fnOnValueDraw, data);
+    }
 #else
     inline void AddSetting(...)
     {
