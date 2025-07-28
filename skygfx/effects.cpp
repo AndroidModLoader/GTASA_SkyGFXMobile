@@ -503,16 +503,19 @@ void StartEffectsStuff()
     g_bMissingPostEffects = cfg->GetBool("MissingPCPostEffects", g_bMissingPostEffects, "Effects");
 
     pCFGRenderGrain = cfg->Bind("RenderGrainEffect", g_bRenderGrain, "Effects");
+    RenderGrainSettingChanged(g_bRenderGrain, pCFGRenderGrain->GetBool());
     AddSetting("Grain Effect", g_bRenderGrain, 0, sizeofA(aYesNo)-1, aYesNo, RenderGrainSettingChanged, NULL);
 
     pCFGSpeedFX = cfg->Bind("SpeedFXType", g_nSpeedFX, "Effects");
+    SpeedFXSettingChanged(g_nSpeedFX, pCFGSpeedFX->GetInt());
     AddSetting("Speed FX", g_nSpeedFX, 0, sizeofA(aSpeedFXSettings)-1, aSpeedFXSettings, SpeedFXSettingChanged, NULL);
 
     pCFGCrAbFX = cfg->Bind("ChromaticAberration", g_nCrAb, "EnchancedEffects");
+    CrAbFXSettingChanged(g_nCrAb, pCFGCrAbFX->GetInt());
     AddSetting("Chromatic Aberration", g_nCrAb, 0, sizeofA(aCrAbFXSettings)-1, aCrAbFXSettings, CrAbFXSettingChanged, NULL);
 
     pCFGVignette = cfg->Bind("VignetteIntensity", g_nVignette, "EnchancedEffects");
-    VignetteSettingChanged(0, g_nVignette);
+    VignetteSettingChanged(g_nVignette, pCFGVignette->GetInt());
     AddSlider("Vignette Intensity", g_nVignette, 0, 100, VignetteSettingChanged, NULL, NULL);
 
     if(g_bFixSandstorm)
