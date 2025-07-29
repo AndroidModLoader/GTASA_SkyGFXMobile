@@ -20,7 +20,7 @@ LOCAL_SRC_FILES += skygfx/colorfilter.cpp skygfx/buildingpipe.cpp 	\
 				   skygfx/shaders.cpp skygfx/shading.cpp 			\
 				   skygfx/vehiclepipe.cpp skygfx/misc.cpp 			\
 				   skygfx/envmap.cpp skygfx/renderqueue.cpp			\
-				   skygfx/effects.cpp
+				   skygfx/effects.cpp skygfx/neoWaterdrops.cpp
 
 ### Libraries
 LOCAL_LDLIBS += -llog -lGLESv2 # GLESv2 = GLESv3 library

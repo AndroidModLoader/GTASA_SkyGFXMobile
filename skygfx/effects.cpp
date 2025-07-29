@@ -38,8 +38,7 @@ RwRaster* pGrainRaster = NULL;
 
 int postfxX = 0, postfxY = 0;
 RwRaster *pSkyGFXPostFXRaster1 = NULL, *pSkyGFXPostFXRaster2 = NULL;
-
-RwRaster* pDarkRaster = NULL;
+RwRaster *pDarkRaster = NULL;
 
 ES2Shader* g_pChromaticAberrationShader = NULL;
 ES2Shader* g_pChromaticAberrationShader_Intensive = NULL;
@@ -735,7 +734,7 @@ DECL_HOOKv(PostFX_Render)
         underwaterCol.g = waterColScale * ((col > 255) ? 255 : col);
         col = m_waterCol.b + 184;
         underwaterCol.b = waterColScale * ((col > 255) ? 255 : col);
-        underwaterCol.a = 255; // originally initialised in ripple func
+        underwaterCol.a = m_waterCol.a; // replaced with 255 in ripple func
 
         float xoffset = (4.0f * gfWaterGreen / 24.0f) * (((float)RsGlobal->maximumWidth) / 640.0f);
         float yoffset = 24.0f * (((float)RsGlobal->maximumHeight) / 448.0f);
