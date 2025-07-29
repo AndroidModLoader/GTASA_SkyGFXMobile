@@ -8,13 +8,16 @@
 extern void* hGTASA;
 extern uintptr_t pGTASA;
 
+uint32_t TempBufferIndicesStored, TempBufferVerticesStored;
+VertexBuffer TempVertexBuffer;
+
 // Variables
 RpLight **p_pDirect, **p_pAmbient;
 RwRGBAReal *p_AmbientLightColourForFrame, *p_AmbientLightColourForFrame_PedsCarsAndObjects, *p_DirectionalLightColourForFrame, *p_DirectionalLightColourFromDay;
 RsGlobalType* RsGlobal;
 int *pnGrainStrength, *currArea;
 bool *pbGrainEnable, *pbRainEnable, *pbInCutscene, *pbNightVision, *pbInfraredVision;
-float *pfWeatherRain, *pfWeatherUnderwaterness;
+float *pfWeatherRain, *pfWeatherUnderwaterness, *pfWeatherHeatHaze;
 CCamera *TheCamera;
 uintptr_t pg_fx;
 bool* pbCCTV;
@@ -79,6 +82,11 @@ int *renderWidth, *renderHeight;
 ES2RenderTarget **backTarget;
 ES2RenderTarget **currentTarget;
 fxSpeedSettings *FX_SPEED_VARS;
+bool *m_bHeatHazeFX, *m_foundHeatHazeInfo, *m_bRadiosity, *m_bDarknessFilter;
+float *HeatHazeFXControl, *WaterDepth, *ms_fTimeStep;
+int *m_nHighLightMinIntensity;
+CColourSet *m_CurrentColours;
+uint32_t *m_snTimeInMilliseconds;
 
 // Functions
 RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);
@@ -221,6 +229,8 @@ void                (*emu_glTexCoord2f)(float,float);
 void                (*emu_glEnd)();
 RwBool              (*RwTextureDestroy)(RwTexture*);
 CVehicle*           (*FindPlayerVehicle)(int,bool);
+void                (*RwIm2DRenderPrimitive)(RwPrimitiveType,RwOpenGLVertex*,int);
+float               (*RwIm2DGetNearScreenZ)();
 
 // Main
 void ResolveExternals()
@@ -294,6 +304,7 @@ void ResolveExternals()
     SET_TO(pbInfraredVision,                aml->GetSym(hGTASA, "_ZN12CPostEffects17m_bInfraredVisionE"));
     SET_TO(pfWeatherRain,                   aml->GetSym(hGTASA, "_ZN8CWeather4RainE"));
     SET_TO(pfWeatherUnderwaterness,         aml->GetSym(hGTASA, "_ZN8CWeather14UnderWaternessE"));
+    SET_TO(pfWeatherHeatHaze,               aml->GetSym(hGTASA, "_ZN8CWeather8HeatHazeE"));
     SET_TO(TheCamera,                       aml->GetSym(hGTASA, "TheCamera"));
     SET_TO(pbCCTV,                          aml->GetSym(hGTASA, "_ZN12CPostEffects7m_bCCTVE"));
     SET_TO(RenderCCTVPostEffect,            aml->GetSym(hGTASA, "_ZN12CPostEffects4CCTVEv"));
@@ -367,7 +378,7 @@ void ResolveExternals()
     SET_TO(RenderCoronas,                   aml->GetSym(hGTASA, "_ZN8CCoronas6RenderEv"));
     SET_TO(RenderSkyPolys,                  aml->GetSym(hGTASA, "_ZN7CClouds14RenderSkyPolysEv"));
     SET_TO(RenderPlants,                    *(uintptr_t*)(pGTASA + BYBIT(0x6726D0, 0x844308)));
-    SET_TO(RenderClouds,                    *(uintptr_t*)(pGTASA + BYVER(0x672FFC, 0x8451A0)));
+    SET_TO(RenderClouds,                    *(uintptr_t*)(pGTASA + BYBIT(0x672FFC, 0x8451A0)));
     SET_TO(OS_MutexObtain,                  aml->GetSym(hGTASA, "_Z14OS_MutexObtainPv"));
     SET_TO(OS_MutexRelease,                 aml->GetSym(hGTASA, "_Z15OS_MutexReleasePv"));
     SET_TO(RQ_Process,                      aml->GetSym(hGTASA, "_ZN11RenderQueue7ProcessEv"));
@@ -385,6 +396,8 @@ void ResolveExternals()
     SET_TO(emu_glEnd,                       aml->GetSym(hGTASA, "_Z9emu_glEndv"));
     SET_TO(RwTextureDestroy,                aml->GetSym(hGTASA, "_Z16RwTextureDestroyP9RwTexture"));
     SET_TO(FindPlayerVehicle,               aml->GetSym(hGTASA, "_Z17FindPlayerVehicleib"));
+    SET_TO(RwIm2DRenderPrimitive,           aml->GetSym(hGTASA, "_Z28RwIm2DRenderPrimitive_BUGFIX15RwPrimitiveTypeP14RwOpenGLVertexi"));
+    SET_TO(RwIm2DGetNearScreenZ,            aml->GetSym(hGTASA, "_Z20RwIm2DGetNearScreenZv"));
 
     SET_TO(CamDistComp,                     aml->GetSym(hGTASA, "_ZN22CRealTimeShadowManager11CamDistCompEPKvS1_"));
     SET_TO(StoreRealTimeShadow,             aml->GetSym(hGTASA, "_ZN8CShadows19StoreRealTimeShadowEP9CPhysicalffffff"));
@@ -435,7 +448,7 @@ void ResolveExternals()
     SET_TO(boundTextures,                   aml->GetSym(hGTASA, "_ZN10ES2Texture13boundTexturesE"));
     SET_TO(Scene,                           aml->GetSym(hGTASA, "Scene"));
     SET_TO(currentAlphaFunc,                pGTASA + BYBIT(0x67A26C, 0x852330));
-    SET_TO(currentAlphaFuncVal,             pGTASA + BYVER(0x67A270, 0x852334));
+    SET_TO(currentAlphaFuncVal,             pGTASA + BYBIT(0x67A270, 0x852334));
     SET_TO(curShaderStateFlags,             aml->GetSym(hGTASA, "curShaderStateFlags"));
     SET_TO(RenderState,                     pGTASA + BYBIT(0x6B3208, 0x890120));
     SET_TO(Foggyness,                       aml->GetSym(hGTASA, "_ZN8CWeather9FoggynessE"));
@@ -443,6 +456,15 @@ void ResolveExternals()
     SET_TO(renderWidth,                     aml->GetSym(hGTASA, "renderWidth"));
     SET_TO(renderHeight,                    aml->GetSym(hGTASA, "renderHeight"));
     SET_TO(backTarget,                      aml->GetSym(hGTASA, "backTarget"));
-    SET_TO(currentTarget,                   pGTASA + BYVER(0x6BCC24, 0x89A1F0));
+    SET_TO(currentTarget,                   pGTASA + BYBIT(0x6BCC24, 0x89A1F0));
     SET_TO(FX_SPEED_VARS,                   aml->GetSym(hGTASA, "FX_SPEED_VARS"));
+    SET_TO(m_bHeatHazeFX,                   aml->GetSym(hGTASA, "_ZN12CPostEffects13m_bHeatHazeFXE"));
+    SET_TO(m_foundHeatHazeInfo,             aml->GetSym(hGTASA, "g_fxMan") + BYBIT(0xB8, 0x110));
+    SET_TO(m_bRadiosity,                    aml->GetSym(hGTASA, "_ZN12CPostEffects12m_bRadiosityE"));
+    SET_TO(m_bDarknessFilter,               aml->GetSym(hGTASA, "_ZN12CPostEffects17m_bDarknessFilterE"));
+    SET_TO(HeatHazeFXControl,               aml->GetSym(hGTASA, "_ZN8CWeather17HeatHazeFXControlE"));
+    SET_TO(WaterDepth,                      aml->GetSym(hGTASA, "_ZN8CWeather10WaterDepthE"));
+    SET_TO(ms_fTimeStep,                    aml->GetSym(hGTASA, "_ZN6CTimer12ms_fTimeStepE"));
+    SET_TO(m_CurrentColours,                aml->GetSym(hGTASA, "_ZN10CTimeCycle16m_CurrentColoursE"));
+    SET_TO(m_snTimeInMilliseconds,          aml->GetSym(hGTASA, "_ZN6CTimer22m_snTimeInMillisecondsE"));
 }

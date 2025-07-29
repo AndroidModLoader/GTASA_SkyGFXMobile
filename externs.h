@@ -11,10 +11,8 @@
 
 #ifdef AML32
     #include "GTASA_STRUCTS.h"
-    #define BYVER(__for32, __for64) (__for32)
 #else
     #include "GTASA_STRUCTS_210.h"
-    #define BYVER(__for32, __for64) (__for64)
 #endif
 #define sizeofA(__aVar)  ((int)(sizeof(__aVar)/sizeof(__aVar[0])))
 
@@ -22,6 +20,9 @@
 
 extern uintptr_t pGTASA;
 extern void* hGTASA;
+
+extern uint32_t TempBufferIndicesStored, TempBufferVerticesStored;
+extern VertexBuffer TempVertexBuffer;
 
 template <typename T>
 struct BasicEvent
@@ -198,7 +199,7 @@ extern RwRGBAReal *p_AmbientLightColourForFrame, *p_AmbientLightColourForFrame_P
 extern RsGlobalType* RsGlobal;
 extern int *pnGrainStrength, *currArea;
 extern bool *pbGrainEnable, *pbRainEnable, *pbInCutscene, *pbNightVision, *pbInfraredVision;
-extern float *pfWeatherRain, *pfWeatherUnderwaterness;
+extern float *pfWeatherRain, *pfWeatherUnderwaterness, *pfWeatherHeatHaze;
 extern CCamera *TheCamera;
 extern uintptr_t pg_fx;
 extern bool* pbCCTV;
@@ -263,6 +264,10 @@ extern int *renderWidth, *renderHeight;
 extern ES2RenderTarget **backTarget;
 extern ES2RenderTarget **currentTarget;
 extern fxSpeedSettings *FX_SPEED_VARS;
+extern bool *m_bHeatHazeFX, *m_foundHeatHazeInfo, *m_bRadiosity, *m_bDarknessFilter;
+extern float *HeatHazeFXControl, *WaterDepth, *ms_fTimeStep;
+extern CColourSet *m_CurrentColours;
+extern uint32_t *m_snTimeInMilliseconds;
 
 // Functions
 extern RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);
@@ -405,6 +410,8 @@ extern void                (*emu_glTexCoord2f)(float,float);
 extern void                (*emu_glEnd)();
 extern RwBool              (*RwTextureDestroy)(RwTexture*);
 extern CVehicle*           (*FindPlayerVehicle)(int,bool);
+extern void                (*RwIm2DRenderPrimitive)(RwPrimitiveType,RwOpenGLVertex*,int);
+extern float               (*RwIm2DGetNearScreenZ)();
 
 // Main
 void ResolveExternals();

@@ -356,9 +356,62 @@ void GFX_HeatHaze(float intensity, bool alphaMaskMode)
 {
     
 }
-void GFX_UnderWaterRipple(CRGBA col, float xo, float yo, int strength, float speed, float freq)
+// https://github.com/gta-reversed/gta-reversed/blob/7dc7e9696214e17594e8a9061be9dd808d8ae9c5/source/game_sa/PostEffects.cpp#L428
+void GFX_UnderWaterRipple(CRGBA col, float xo, float yo, int strength, float speed, float freq) // Completed
 {
+    ImmediateModeRenderStatesStore();
+    ImmediateModeRenderStatesSet();
+
+    col.a = 255;
+    TempBufferVerticesStored = 0;
+    TempBufferIndicesStored = 0;
+
+    float fRasterWidth = pSkyGFXPostFXRaster1->width;
+    float fRasterHeight = pSkyGFXPostFXRaster1->height;
+    const int nRasterHeight = (int)fRasterHeight;
+    const int nYO = (int)yo;
+    const float recipNearClip = 1.0f / (Scene->camera->nearClip);
+    const float nearScreen = RwIm2DGetNearScreenZ();
+
+    const auto EmitVertex = [&](float wave, int32 y)
+    {
+        const auto i = TempBufferVerticesStored;
+
+        TempVertexBuffer.m_2d[i].pos.x               = 0.0f;
+        TempVertexBuffer.m_2d[i].pos.y               = float(y);
+        TempVertexBuffer.m_2d[i].pos.z               = nearScreen;
+        TempVertexBuffer.m_2d[i].rhw                 = recipNearClip;
+        TempVertexBuffer.m_2d[i].texCoord.u          = (wave + xo) / fRasterWidth;
+        TempVertexBuffer.m_2d[i].texCoord.v          = 1.0f - float(y) / fRasterHeight;
+        *(CRGBA*)&TempVertexBuffer.m_2d[i].color     = col;
+
+        TempVertexBuffer.m_2d[i + 1].pos.x           = float(int32(2.0f * xo) + fRasterWidth);
+        TempVertexBuffer.m_2d[i + 1].pos.y           = float(y);
+        TempVertexBuffer.m_2d[i + 1].pos.z           = nearScreen;
+        TempVertexBuffer.m_2d[i + 1].rhw             = recipNearClip;
+        TempVertexBuffer.m_2d[i + 1].texCoord.u      = (fRasterWidth + wave - xo) / fRasterWidth;
+        TempVertexBuffer.m_2d[i + 1].texCoord.v      = 1.0f - float(y) / fRasterHeight;
+        *(CRGBA*)&TempVertexBuffer.m_2d[i + 1].color = col;
+
+        TempBufferVerticesStored += 2;
+    };
+
+    int y = 0;
+    for(; y < nRasterHeight; y += nYO)
+    {
+        EmitVertex(sinf(freq * y + speed * *m_snTimeInMilliseconds) * xo, y);
+    }
+    EmitVertex(sinf(freq * y + speed * *m_snTimeInMilliseconds) * xo, y);
+
+    if(TempBufferVerticesStored > 2) 
+    {
+        RwRenderStateSet(rwRENDERSTATETEXTURERASTER, pSkyGFXPostFXRaster1);
+        RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
+        RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
+        RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, TempVertexBuffer.m_2d, TempBufferVerticesStored);
+    }
     
+    ImmediateModeRenderStatesReStore();
 }
 void GFX_DarknessFilter(int alpha) // Completed
 {
@@ -432,6 +485,8 @@ DECL_HOOKv(PostFX_Init)
 
     *pbFog = false; // uninitialised variable
 }
+float gfWaterGreen = 0.0f;
+CRGBA m_waterCol(64, 64, 64, 64);
 DECL_HOOKv(PostFX_Render)
 {
     GFX_GrabScreen();
@@ -440,7 +495,6 @@ DECL_HOOKv(PostFX_Render)
 
     PostFX_Render();
 
-    //GFX_CCTV();
     if(!*pbInCutscene && g_nSpeedFX != SPFX_INACTIVE)
     {
         CAutomobile* veh = (CAutomobile*)FindPlayerVehicle(-1, false);
@@ -460,6 +514,11 @@ DECL_HOOKv(PostFX_Render)
                 GFX_SpeedFX(FindPlayerSpeed(-1)->Magnitude());
             }
         }
+    }
+
+    if(*m_bRadiosity && !*m_bDarknessFilter)
+    {
+        GFX_Radiosity(m_CurrentColours->intensityLimit, 2, 1, 35);
     }
 
     if(g_bRenderGrain && pGrainRaster)
@@ -484,8 +543,52 @@ DECL_HOOKv(PostFX_Render)
         if(*pbGrainEnable) RenderGrainEffect(*pnGrainStrength);
     }
 
+    if(*pfWeatherHeatHaze > 0.0f || (*m_bHeatHazeFX && *m_foundHeatHazeInfo) || *pfWeatherUnderwaterness >= 0.535f)
+    {
+        if(*m_bHeatHazeFX || *pfWeatherUnderwaterness >= 0.535f)
+        {
+            GFX_HeatHaze(1.0f, false);
+        }
+        else if(*pfWeatherHeatHaze > 0.0f)
+        {
+            if(*m_foundHeatHazeInfo) GFX_HeatHaze(1.0f, true);
+        }
+        else
+        {
+            GFX_HeatHaze(*HeatHazeFXControl, false);
+        }
+    }
+
+    if(*pfWeatherUnderwaterness >= 0.535f)
+    {
+        CRGBA underwaterCol;
+        float waterColScale = 1.0f - fminf(*WaterDepth, 90.0f) / 90.0f;
+
+        int col = m_waterCol.r + 184;
+        underwaterCol.r = waterColScale * ((col > 255) ? 255 : col);
+        col = m_waterCol.g + 184 + (int)gfWaterGreen;
+        underwaterCol.g = waterColScale * ((col > 255) ? 255 : col);
+        col = m_waterCol.b + 184;
+        underwaterCol.b = waterColScale * ((col > 255) ? 255 : col);
+        underwaterCol.a = 255; // originally initialised in ripple func
+
+        float xoffset = (4.0f * gfWaterGreen / 24.0f) * (((float)RsGlobal->maximumWidth) / 640.0f);
+        float yoffset = 24.0f * (((float)RsGlobal->maximumHeight) / 448.0f);
+        GFX_UnderWaterRipple(underwaterCol, xoffset, yoffset, 64, 0.0015f, 0.04f);
+
+        gfWaterGreen = fminf(gfWaterGreen + *ms_fTimeStep, 24.0f);
+    }
+    else
+    {
+        gfWaterGreen = 0.0f;
+    }
+
     if(g_nCrAb != CRAB_INACTIVE) GFX_ChromaticAberration();
     GFX_Vignette(g_nVignette * 2.55f);
+}
+DECL_HOOKv(PostFX_CCTV)
+{
+    GFX_CCTV();
 }
 DECL_HOOKv(ShowGameBuffer)
 {
@@ -552,6 +655,7 @@ void StartEffectsStuff()
     {
         HOOK(PostFX_Init,   aml->GetSym(hGTASA, "_ZN12CPostEffects21SetupBackBufferVertexEv"));
         HOOK(PostFX_Render, aml->GetSym(hGTASA, "_ZN12CPostEffects12MobileRenderEv"));
+        HOOK(PostFX_CCTV,   aml->GetSym(hGTASA, "_ZN12CPostEffects4CCTVEv"));
         shadercreation += CreateEffectsShaders;
         //HOOKBLX(ShowGameBuffer, pGTASA + BYBIT(0x1BC5D4 + 0x1, 0x24F994));
     }
