@@ -141,7 +141,7 @@ void SpeedFXSettingChanged(int oldVal, int newVal, void* data = NULL)
 {
     if(oldVal == newVal) return;
 
-    pCFGSpeedFX->SetBool(newVal);
+    pCFGSpeedFX->SetInt(newVal);
     pCFGSpeedFX->Clamp(0, SPEEDFX_SETTINGS-1);
     g_nSpeedFX = pCFGSpeedFX->GetInt();
 
