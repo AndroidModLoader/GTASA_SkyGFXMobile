@@ -646,7 +646,7 @@ DECL_HOOKv(PostFX_Init)
         pDarkRaster = NULL;
     }
     pDarkRaster = RwRasterCreate(64, 64, 32, rwRASTERTYPETEXTURE | rwRASTERFORMAT8888);
-    CreatePlainTexture(pDarkRaster, CRGBA(0, 0, 0, 255));
+    CreatePlainTexture(pDarkRaster, CRGBA(0, 0, 0));
 
     *pbFog = false; // uninitialised variable
 }
@@ -775,26 +775,6 @@ void StartEffectsStuff()
     g_bMissingEffects = cfg->GetBool("MissingPCEffects", g_bMissingEffects, "Effects");
     g_bMissingPostEffects = cfg->GetBool("MissingPCPostEffects", g_bMissingPostEffects, "Effects");
 
-    pCFGRenderGrain = cfg->Bind("RenderGrainEffect", g_bRenderGrain, "Effects");
-    RenderGrainSettingChanged(g_bRenderGrain, pCFGRenderGrain->GetBool());
-    AddSetting("Grain Effect", g_bRenderGrain, 0, sizeofA(aYesNo)-1, aYesNo, RenderGrainSettingChanged, NULL);
-
-    pCFGSpeedFX = cfg->Bind("SpeedFXType", g_nSpeedFX, "Effects");
-    SpeedFXSettingChanged(g_nSpeedFX, pCFGSpeedFX->GetInt());
-    AddSetting("Speed FX", g_nSpeedFX, 0, sizeofA(aSpeedFXSettings)-1, aSpeedFXSettings, SpeedFXSettingChanged, NULL);
-
-    pCFGCrAbFX = cfg->Bind("ChromaticAberration", g_nCrAb, "EnchancedEffects");
-    CrAbFXSettingChanged(g_nCrAb, pCFGCrAbFX->GetInt());
-    AddSetting("Chromatic Aberration", g_nCrAb, 0, sizeofA(aCrAbFXSettings)-1, aCrAbFXSettings, CrAbFXSettingChanged, NULL);
-
-    pCFGVignette = cfg->Bind("VignetteIntensity", g_nVignette, "EnchancedEffects");
-    VignetteSettingChanged(g_nVignette, pCFGVignette->GetInt());
-    AddSlider("Vignette Intensity", g_nVignette, 0, 100, VignetteSettingChanged, NULL, NULL);
-
-    pCFGRadiosity = cfg->Bind("Radiosity", g_bRadiosity, "Effects");
-    RadiositySettingChanged(g_bRadiosity, pCFGRadiosity->GetBool());
-    AddSetting("Radiosity", g_bRadiosity, 0, sizeofA(aYesNo)-1, aYesNo, RadiositySettingChanged, NULL);
-
     if(g_bFixSandstorm)
     {
       #ifdef AML32
@@ -834,5 +814,25 @@ void StartEffectsStuff()
 
         HOOKBLX(HeatHazeFX_GrabBuffer, pGTASA + BYBIT(0x5B51E6, 0x6D94EC));
         //HOOKBLX(ShowGameBuffer, pGTASA + BYBIT(0x1BC5D4 + 0x1, 0x24F994));
+
+        pCFGRenderGrain = cfg->Bind("RenderGrainEffect", g_bRenderGrain, "Effects");
+        RenderGrainSettingChanged(g_bRenderGrain, pCFGRenderGrain->GetBool());
+        AddSetting("Grain Effect", g_bRenderGrain, 0, sizeofA(aYesNo)-1, aYesNo, RenderGrainSettingChanged, NULL);
+
+        pCFGSpeedFX = cfg->Bind("SpeedFXType", g_nSpeedFX, "Effects");
+        SpeedFXSettingChanged(g_nSpeedFX, pCFGSpeedFX->GetInt());
+        AddSetting("Speed FX", g_nSpeedFX, 0, sizeofA(aSpeedFXSettings)-1, aSpeedFXSettings, SpeedFXSettingChanged, NULL);
+
+        pCFGCrAbFX = cfg->Bind("ChromaticAberration", g_nCrAb, "EnchancedEffects");
+        CrAbFXSettingChanged(g_nCrAb, pCFGCrAbFX->GetInt());
+        AddSetting("Chromatic Aberration", g_nCrAb, 0, sizeofA(aCrAbFXSettings)-1, aCrAbFXSettings, CrAbFXSettingChanged, NULL);
+
+        pCFGVignette = cfg->Bind("VignetteIntensity", g_nVignette, "EnchancedEffects");
+        VignetteSettingChanged(g_nVignette, pCFGVignette->GetInt());
+        AddSlider("Vignette Intensity", g_nVignette, 0, 100, VignetteSettingChanged, NULL, NULL);
+
+        //pCFGRadiosity = cfg->Bind("Radiosity", g_bRadiosity, "Effects");
+        //RadiositySettingChanged(g_bRadiosity, pCFGRadiosity->GetBool());
+        //AddSetting("Radiosity", g_bRadiosity, 0, sizeofA(aYesNo)-1, aYesNo, RadiositySettingChanged, NULL);
     }
 }
