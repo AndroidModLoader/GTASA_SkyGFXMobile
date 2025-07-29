@@ -527,38 +527,42 @@ void GFX_UnderWaterRipple(CRGBA col, float xo, float yo, int strength, float spe
     TempBufferVerticesStored = 0;
     TempBufferIndicesStored = 0;
 
-    float fRasterWidth = pSkyGFXPostFXRaster1->width;
-    float fRasterHeight = pSkyGFXPostFXRaster1->height;
-    const int nRasterHeight = (int)fRasterHeight;
     const int nYO = (int)yo;
     const float recipNearClip = 1.0f / (Scene->camera->nearClip);
     const float nearScreen = RwIm2DGetNearScreenZ();
+
+    const float nScreenX = RsGlobal->maximumWidth;
+    const float nScreenY = RsGlobal->maximumHeight;
+    const float fScreenX = (float)nScreenX;
+    const float fScreenY = (float)nScreenY;
+    const float fInvScreenX = 1.0f / (float)RsGlobal->maximumWidth;
+    const float fInvScreenY = 1.0f / (float)RsGlobal->maximumHeight;
 
     const auto EmitVertex = [&](float wave, int32 y)
     {
         const auto i = TempBufferVerticesStored;
 
-        TempVertexBuffer.m_2d[i].pos.x               = 0.0f;
-        TempVertexBuffer.m_2d[i].pos.y               = float(y);
-        TempVertexBuffer.m_2d[i].pos.z               = nearScreen;
-        TempVertexBuffer.m_2d[i].rhw                 = recipNearClip;
-        TempVertexBuffer.m_2d[i].texCoord.u          = (wave + xo) / fRasterWidth;
-        TempVertexBuffer.m_2d[i].texCoord.v          = 1.0f - float(y) / fRasterHeight;
-        *(CRGBA*)&TempVertexBuffer.m_2d[i].color     = col;
+        TempVertexBuffer.m_2d[i].pos.x          = 0.0f;
+        TempVertexBuffer.m_2d[i].pos.y          = float(y);
+        TempVertexBuffer.m_2d[i].pos.z          = nearScreen;
+        TempVertexBuffer.m_2d[i].rhw            = recipNearClip;
+        TempVertexBuffer.m_2d[i].texCoord.u     = (wave + xo) * fInvScreenX;
+        TempVertexBuffer.m_2d[i].texCoord.v     = 1.0f - float(y) * fInvScreenY;
+        TempVertexBuffer.m_2d[i].rgba           = *(RwRGBA*)&col;
 
-        TempVertexBuffer.m_2d[i + 1].pos.x           = float(int32(2.0f * xo) + fRasterWidth);
-        TempVertexBuffer.m_2d[i + 1].pos.y           = float(y);
-        TempVertexBuffer.m_2d[i + 1].pos.z           = nearScreen;
-        TempVertexBuffer.m_2d[i + 1].rhw             = recipNearClip;
-        TempVertexBuffer.m_2d[i + 1].texCoord.u      = (fRasterWidth + wave - xo) / fRasterWidth;
-        TempVertexBuffer.m_2d[i + 1].texCoord.v      = 1.0f - float(y) / fRasterHeight;
-        *(CRGBA*)&TempVertexBuffer.m_2d[i + 1].color = col;
+        TempVertexBuffer.m_2d[i + 1].pos.x      = float(int32(2.0f * xo) + fScreenX);
+        TempVertexBuffer.m_2d[i + 1].pos.y      = float(y);
+        TempVertexBuffer.m_2d[i + 1].pos.z      = nearScreen;
+        TempVertexBuffer.m_2d[i + 1].rhw        = recipNearClip;
+        TempVertexBuffer.m_2d[i + 1].texCoord.u = (fScreenX + wave - xo) * fInvScreenX;
+        TempVertexBuffer.m_2d[i + 1].texCoord.v = 1.0f - float(y) * fInvScreenY;
+        TempVertexBuffer.m_2d[i + 1].rgba       = *(RwRGBA*)&col;
 
         TempBufferVerticesStored += 2;
     };
 
     int y = 0;
-    for(; y < nRasterHeight; y += nYO)
+    for(; y < nScreenY; y += nYO)
     {
         EmitVertex(sinf(freq * y + speed * *m_snTimeInMilliseconds) * xo, y);
     }
