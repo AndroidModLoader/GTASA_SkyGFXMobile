@@ -21,9 +21,6 @@
 extern uintptr_t pGTASA;
 extern void* hGTASA;
 
-extern uint32_t TempBufferIndicesStored, TempBufferVerticesStored;
-extern VertexBuffer TempVertexBuffer;
-
 template <typename T>
 struct BasicEvent
 {
@@ -438,6 +435,34 @@ static const char* aYesNo[2] =
     "FEM_ON",
 };
 inline int OS_SystemChip() { return *deviceChip; }
+
+extern uint32_t TempBufferIndicesStored, TempBufferVerticesStored;
+extern VertexBuffer TempVertexBuffer;
+inline void Set2DQuadRHW(float rhw, float x1, float y1, float x2, float y2, float u1, float v1, float u2, float v2, RwRGBA color)
+{
+    TempVertexBuffer.m_2d[TempBufferVerticesStored].pos.x = x1;
+    TempVertexBuffer.m_2d[TempBufferVerticesStored].pos.y = y1;
+    TempVertexBuffer.m_2d[TempBufferVerticesStored].pos.z = 0.0f;
+    TempVertexBuffer.m_2d[TempBufferVerticesStored].texCoord.u = u1;
+    TempVertexBuffer.m_2d[TempBufferVerticesStored].texCoord.v = 1.0f - v1;
+    TempVertexBuffer.m_2d[TempBufferVerticesStored].rhw = rhw;
+    TempVertexBuffer.m_2d[TempBufferVerticesStored].rgba = color;
+    ++TempBufferVerticesStored;
+
+    TempVertexBuffer.m_2d[TempBufferVerticesStored].pos.x = x2;
+    TempVertexBuffer.m_2d[TempBufferVerticesStored].pos.y = y2;
+    TempVertexBuffer.m_2d[TempBufferVerticesStored].pos.z = 0.0f;
+    TempVertexBuffer.m_2d[TempBufferVerticesStored].texCoord.u = u2;
+    TempVertexBuffer.m_2d[TempBufferVerticesStored].texCoord.v = 1.0f - v2;
+    TempVertexBuffer.m_2d[TempBufferVerticesStored].rhw = rhw;
+    TempVertexBuffer.m_2d[TempBufferVerticesStored].rgba = color;
+    ++TempBufferVerticesStored;
+}
+inline void Set2DQuad(float x1, float y1, float x2, float y2, float u1, float v1, float u2, float v2, RwRGBA color)
+{
+    float rhw = 1.0f / Scene->camera->nearClip;
+    Set2DQuadRHW(rhw, x1, y1, x2, y2, u1, v1, u2, v2, color);
+}
 
 //#define GPU_GRABBER // not working :(
 

@@ -94,7 +94,7 @@ void RQ_Command_erqGrabFramebuffer(uint8_t** data)
     extRQ.m_nPrevTex = -1;
     extRQ.m_nPrevActiveTex = -1;
     extRQ.m_nPrevBuffer = -1;
-    if(!(*backTarget) || !(*backTarget)->targetTexture) return;
+    if(!dst || !(*backTarget) || !(*backTarget)->targetTexture) return;
 
 #ifdef GPU_GRABBER
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &extRQ.m_nPrevBuffer);

@@ -30,6 +30,7 @@ bool g_bRenderGrain = true;
 int g_nSpeedFX = SPFX_LIKE_ON_PC;
 int g_nCrAb = CRAB_INACTIVE;
 int g_nVignette = 0;
+bool g_bRadiosity = true;
 
 int g_nGrainRainStrength = 0;
 int g_nInitialGrain = 0;
@@ -64,6 +65,7 @@ ConfigEntry *pCFGRenderGrain;
 ConfigEntry *pCFGSpeedFX;
 ConfigEntry *pCFGCrAbFX;
 ConfigEntry *pCFGVignette;
+ConfigEntry *pCFGRadiosity;
 
 /* Functions */
 void CreateEffectsShaders()
@@ -167,13 +169,22 @@ void VignetteSettingChanged(int oldVal, int newVal, void* data = NULL)
 
     cfg->Save();
 }
-void CreateGrainTexture()
+void RadiositySettingChanged(int oldVal, int newVal, void* data = NULL)
 {
-    if(!pGrainRaster) return;
+    if(oldVal == newVal) return;
 
-    RwUInt8 *pixels = RwRasterLock(pGrainRaster, 0, 1);
+    pCFGRadiosity->SetBool(newVal != 0);
+    g_bRadiosity = pCFGRadiosity->GetBool();
+
+    cfg->Save();
+}
+void CreateGrainTexture(RwRaster* target)
+{
+    if(!target) return;
+
+    RwUInt8 *pixels = RwRasterLock(target, 0, 1);
     vrinit(rand());
-    int x = vrget(), pixSize = pGrainRaster->width * pGrainRaster->height;
+    int x = vrget(), pixSize = target->width * target->height;
     for(int i = 0; i < pixSize; ++i)
     {
         *(pixels++) = x;
@@ -182,7 +193,7 @@ void CreateGrainTexture()
         *(pixels++) = 80;
         x = vrnext();
     }
-    RwRasterUnlock(pGrainRaster);
+    RwRasterUnlock(target);
 }
 void CreatePlainTexture(RwRaster* target, CRGBA clr)
 {
@@ -212,10 +223,10 @@ void RenderGrainEffect(uint8_t strength)
     // Optimised algorithm. We dont need to create it every frame.
     float umin = uOffset;
     float vmin = vOffset;
-    float umax = (1.5f * RsGlobal->maximumWidth) / 640.0f + uOffset;
-    float vmax = (1.5f * RsGlobal->maximumHeight) / 640.0f + vOffset;
+    float umax = (1.5f * RsGlobal->maximumWidth) / 640.0f + umin;
+    float vmax = (1.5f * RsGlobal->maximumHeight) / 640.0f + vmin;
     
-    DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
+    DrawQuadSetUVs(umin, vmax, umax, vmax, umax, vmin, umin, vmin);
     
     PostEffectsDrawQuad(0.0, 0.0, RsGlobal->maximumWidth, RsGlobal->maximumHeight, 255, 255, 255, strength, pGrainRaster);
     
@@ -224,7 +235,7 @@ void RenderGrainEffect(uint8_t strength)
 }
 void GFX_GrabScreen(bool second = false)
 {
-    if(postfxX != *renderWidth || postfxY != *renderHeight)
+    if(!second && (postfxX != *renderWidth || postfxY != *renderHeight))
     {
         postfxX = *renderWidth;
         postfxY = *renderHeight;
@@ -348,13 +359,163 @@ void GFX_SpeedFX(float speed) // Completed
     }
     ImmediateModeRenderStatesReStore();
 }
-void GFX_Radiosity(int intensityLimit, int filterPasses, int renderPasses, int intensity)
+void GFX_Radiosity(int intensityLimit, int filterPasses, int renderPasses, int intensity) // Does not work?
 {
+    RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERNEAREST);
+    RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)false);
+    RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)true);
+    RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)false);
+    RwRenderStateSet(rwRENDERSTATETEXTURERASTER, pSkyGFXPostFXRaster1);
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)false);
+    RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
+
+    TempBufferVerticesStored = 0;
+
+    const float m_RadiosityFilterUCorrection = 2.0f, m_RadiosityFilterVCorrection = 2.0f;
+    float m_RadiosityPixelsX = RsGlobal->maximumWidth, m_RadiosityPixelsY = RsGlobal->maximumHeight;
+    const float rhw = 1.0f / Scene->camera->nearClip;
+    const float fRasterWidth = pSkyGFXPostFXRaster1->width;
+    const float fRasterHeight = pSkyGFXPostFXRaster1->height;
+
+    /*TempVertexBuffer.m_2d[0].pos.x = 0.0f;
+    TempVertexBuffer.m_2d[0].pos.y = 0.0f;
+    TempVertexBuffer.m_2d[0].pos.z = 0.0f;
+    TempVertexBuffer.m_2d[0].rhw = rhw;
+    TempVertexBuffer.m_2d[0].texCoord.u = 0.0f;
+    TempVertexBuffer.m_2d[0].texCoord.v = 0.0f;
+    TempVertexBuffer.m_2d[0].color = 0xFFFFFFFF;
     
+    TempVertexBuffer.m_2d[1].pos.x = RsGlobal->maximumWidth;
+    TempVertexBuffer.m_2d[1].pos.y = RsGlobal->maximumHeight;
+    TempVertexBuffer.m_2d[1].pos.z = 0.0f;
+    TempVertexBuffer.m_2d[1].rhw = rhw;
+    TempVertexBuffer.m_2d[1].texCoord.u = 1.0f;
+    TempVertexBuffer.m_2d[1].texCoord.v = 1.0f;
+    TempVertexBuffer.m_2d[1].color = 0xFFFFFFFF;*/
+    Set2DQuadRHW(rhw, 0.0f, 0.0f, RsGlobal->maximumWidth, RsGlobal->maximumHeight, 0.0f, 0.0f, 1.0f, 1.0f, RwRGBA(255,255,255));
+
+    TempBufferVerticesStored = 0;
+    RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)true);
+    if(filterPasses > 0)
+    {
+        RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERLINEAR);
+        for(int i = 0; i < filterPasses; ++i)
+        {
+            float secU = m_RadiosityPixelsX / fRasterWidth;
+            float secV = m_RadiosityPixelsY / fRasterHeight;
+            m_RadiosityPixelsX = ( (m_RadiosityPixelsX > 0) ? (m_RadiosityPixelsX * 0.5f) : 1.0f );
+            m_RadiosityPixelsY = ( (m_RadiosityPixelsY > 0) ? (m_RadiosityPixelsY * 0.5f) : 1.0f );
+
+            /*TempVertexBuffer.m_2d[TempBufferVerticesStored].pos.x = 0.0f;
+            TempVertexBuffer.m_2d[TempBufferVerticesStored].pos.y = 0.0f;
+            TempVertexBuffer.m_2d[TempBufferVerticesStored].pos.z = 0.0f;
+            TempVertexBuffer.m_2d[TempBufferVerticesStored].texCoord.u = m_RadiosityFilterUCorrection / fRasterWidth;
+            TempVertexBuffer.m_2d[TempBufferVerticesStored].texCoord.v = m_RadiosityFilterVCorrection / fRasterHeight;
+            TempVertexBuffer.m_2d[TempBufferVerticesStored].rhw = rhw;
+            TempVertexBuffer.m_2d[TempBufferVerticesStored].color = 0xFFFFFFFF;
+            ++TempBufferVerticesStored;
+
+            TempVertexBuffer.m_2d[TempBufferVerticesStored].pos.x = m_RadiosityPixelsX + 1.0f;
+            TempVertexBuffer.m_2d[TempBufferVerticesStored].pos.y = m_RadiosityPixelsY + 1.0f;
+            TempVertexBuffer.m_2d[TempBufferVerticesStored].pos.z = 0.0f;
+            TempVertexBuffer.m_2d[TempBufferVerticesStored].texCoord.u = secU;
+            TempVertexBuffer.m_2d[TempBufferVerticesStored].texCoord.v = secV;
+            TempVertexBuffer.m_2d[TempBufferVerticesStored].rhw = rhw;
+            TempVertexBuffer.m_2d[TempBufferVerticesStored].color = 0xFFFFFFFF;
+            ++TempBufferVerticesStored;*/
+            Set2DQuadRHW(rhw, 0.0f, 0.0f, RsGlobal->maximumWidth, RsGlobal->maximumHeight,
+                         m_RadiosityFilterUCorrection / fRasterWidth, m_RadiosityFilterVCorrection / fRasterHeight,
+                         secU, secV, RwRGBA(255,255,255));
+        }
+    }
+
+    /*TempVertexBuffer.m_2d[TempBufferVerticesStored].pos.x = 0.0f;
+    TempVertexBuffer.m_2d[TempBufferVerticesStored].pos.y = 0.0f;
+    TempVertexBuffer.m_2d[TempBufferVerticesStored].pos.z = 0.0f;
+    //TempVertexBuffer.m_2d[TempBufferVerticesStored].texCoord.u = m_RadiosityFilterUCorrection / fRasterWidth;
+    //TempVertexBuffer.m_2d[TempBufferVerticesStored].texCoord.v = m_RadiosityFilterVCorrection / fRasterHeight;
+    TempVertexBuffer.m_2d[TempBufferVerticesStored].rhw = rhw;
+    TempVertexBuffer.m_2d[TempBufferVerticesStored].rgba.red = intensityLimit;
+    TempVertexBuffer.m_2d[TempBufferVerticesStored].rgba.green = intensityLimit;
+    TempVertexBuffer.m_2d[TempBufferVerticesStored].rgba.blue = intensityLimit;
+    TempVertexBuffer.m_2d[TempBufferVerticesStored].rgba.alpha = 0x80;
+    ++TempBufferVerticesStored;
+
+    TempVertexBuffer.m_2d[TempBufferVerticesStored].pos.x = m_RadiosityPixelsX + 1.0f;
+    TempVertexBuffer.m_2d[TempBufferVerticesStored].pos.y = m_RadiosityPixelsY + 1.0f;
+    TempVertexBuffer.m_2d[TempBufferVerticesStored].pos.z = 0.0f;
+    //TempVertexBuffer.m_2d[TempBufferVerticesStored].texCoord.u = m_RadiosityFilterUCorrection / fRasterWidth;
+    //TempVertexBuffer.m_2d[TempBufferVerticesStored].texCoord.v = m_RadiosityFilterVCorrection / fRasterHeight;
+    TempVertexBuffer.m_2d[TempBufferVerticesStored].rhw = rhw;
+    TempVertexBuffer.m_2d[TempBufferVerticesStored].rgba.red = intensityLimit;
+    TempVertexBuffer.m_2d[TempBufferVerticesStored].rgba.green = intensityLimit;
+    TempVertexBuffer.m_2d[TempBufferVerticesStored].rgba.blue = intensityLimit;
+    TempVertexBuffer.m_2d[TempBufferVerticesStored].rgba.alpha = 0x80;
+    ++TempBufferVerticesStored;*/
+
+    Set2DQuadRHW(rhw, 0.0f, 0.0f, m_RadiosityPixelsX + 1.0f, m_RadiosityPixelsY + 1.0f,
+                         0.5f / fRasterWidth, 0.5f / fRasterHeight,
+                         (m_RadiosityPixelsX + 0.5f) / fRasterWidth, (m_RadiosityPixelsY + 0.5f) / fRasterHeight,
+                         RwRGBA(intensityLimit, intensityLimit, intensityLimit, 128));
+    
+    if(renderPasses > 0)
+    {
+        if(TempBufferVerticesStored > 2)
+        {
+            RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, TempVertexBuffer.m_2d, TempBufferVerticesStored);
+        }
+        TempBufferVerticesStored = 0;
+
+        RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERLINEAR);
+
+        for(int i = 0; i < renderPasses; ++i)
+        {            
+            /*TempVertexBuffer.m_2d[TempBufferVerticesStored].pos.x = 0.0f;
+            TempVertexBuffer.m_2d[TempBufferVerticesStored].pos.y = 0.0f;
+            TempVertexBuffer.m_2d[TempBufferVerticesStored].pos.z = 0.0f;
+            TempVertexBuffer.m_2d[TempBufferVerticesStored].texCoord.u = 0.0f;
+            TempVertexBuffer.m_2d[TempBufferVerticesStored].texCoord.v = 0.0f;
+            TempVertexBuffer.m_2d[TempBufferVerticesStored].rhw = rhw;
+            TempVertexBuffer.m_2d[TempBufferVerticesStored].color = 0;
+            TempVertexBuffer.m_2d[TempBufferVerticesStored].rgba.alpha = intensity;
+            ++TempBufferVerticesStored;
+
+            TempVertexBuffer.m_2d[TempBufferVerticesStored].pos.x = RsGlobal->maximumWidth;
+            TempVertexBuffer.m_2d[TempBufferVerticesStored].pos.y = RsGlobal->maximumHeight;
+            TempVertexBuffer.m_2d[TempBufferVerticesStored].pos.z = 0.0f;
+            TempVertexBuffer.m_2d[TempBufferVerticesStored].texCoord.u = m_RadiosityPixelsX / fRasterWidth;
+            TempVertexBuffer.m_2d[TempBufferVerticesStored].texCoord.v = m_RadiosityPixelsY / fRasterHeight;
+            TempVertexBuffer.m_2d[TempBufferVerticesStored].rhw = rhw;
+            TempVertexBuffer.m_2d[TempBufferVerticesStored].color = 0;
+            TempVertexBuffer.m_2d[TempBufferVerticesStored].rgba.alpha = intensity;
+            ++TempBufferVerticesStored;*/
+
+            Set2DQuadRHW(rhw, 0.0f, 0.0f, RsGlobal->maximumWidth, RsGlobal->maximumHeight, 0.0f, 0.0f,
+                         m_RadiosityPixelsX / fRasterWidth, m_RadiosityPixelsY / fRasterHeight, RwRGBA(0,0,0,intensity));
+        }
+    }
+
+    if(TempBufferVerticesStored > 2)
+    {
+        RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, TempVertexBuffer.m_2d, TempBufferVerticesStored);
+    }
+
+    TempBufferVerticesStored = 0;
+    RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)false);
+    RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)true);
+    RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)true);
+    RwRenderStateSet(rwRENDERSTATETEXTURERASTER, NULL);
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)false);
+    RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
 }
 void GFX_HeatHaze(float intensity, bool alphaMaskMode)
 {
-    
+    RwRaster* bak = *pRasterFrontBuffer;
+    *pRasterFrontBuffer = pSkyGFXPostFXRaster1;
+    HeatHazeFX(intensity, alphaMaskMode);
+    *pRasterFrontBuffer = bak;
 }
 // https://github.com/gta-reversed/gta-reversed/blob/7dc7e9696214e17594e8a9061be9dd808d8ae9c5/source/game_sa/PostEffects.cpp#L428
 void GFX_UnderWaterRipple(CRGBA col, float xo, float yo, int strength, float speed, float freq) // Completed
@@ -473,7 +634,7 @@ DECL_HOOKv(PostFX_Init)
         pGrainRaster = NULL;
     }
     pGrainRaster = RwRasterCreate(64, 64, 32, rwRASTERTYPETEXTURE | rwRASTERFORMAT8888);
-    if(pGrainRaster) CreateGrainTexture();
+    CreateGrainTexture(pGrainRaster);
 
     if(pDarkRaster)
     {
@@ -516,7 +677,7 @@ DECL_HOOKv(PostFX_Render)
         }
     }
 
-    if(*m_bRadiosity && !*m_bDarknessFilter)
+    if(g_bRadiosity && !*m_bDarknessFilter)
     {
         GFX_Radiosity(m_CurrentColours->intensityLimit, 2, 1, 35);
     }
@@ -583,6 +744,7 @@ DECL_HOOKv(PostFX_Render)
         gfWaterGreen = 0.0f;
     }
 
+    // Enchanced PostFXs
     if(g_nCrAb != CRAB_INACTIVE) GFX_ChromaticAberration();
     GFX_Vignette(g_nVignette * 2.55f);
 }
@@ -593,6 +755,10 @@ DECL_HOOKv(PostFX_CCTV)
 DECL_HOOKv(ShowGameBuffer)
 {
     ShowGameBuffer();
+    GFX_GrabScreen();
+}
+DECL_HOOKv(HeatHazeFX_GrabBuffer, void* a, int b, int c)
+{
     GFX_GrabScreen();
 }
 
@@ -620,6 +786,10 @@ void StartEffectsStuff()
     pCFGVignette = cfg->Bind("VignetteIntensity", g_nVignette, "EnchancedEffects");
     VignetteSettingChanged(g_nVignette, pCFGVignette->GetInt());
     AddSlider("Vignette Intensity", g_nVignette, 0, 100, VignetteSettingChanged, NULL, NULL);
+
+    pCFGRadiosity = cfg->Bind("Radiosity", g_bRadiosity, "Effects");
+    RadiositySettingChanged(g_bRadiosity, pCFGRadiosity->GetBool());
+    AddSetting("Radiosity", g_bRadiosity, 0, sizeofA(aYesNo)-1, aYesNo, RadiositySettingChanged, NULL);
 
     if(g_bFixSandstorm)
     {
@@ -657,6 +827,8 @@ void StartEffectsStuff()
         HOOK(PostFX_Render, aml->GetSym(hGTASA, "_ZN12CPostEffects12MobileRenderEv"));
         HOOK(PostFX_CCTV,   aml->GetSym(hGTASA, "_ZN12CPostEffects4CCTVEv"));
         shadercreation += CreateEffectsShaders;
+
+        HOOKBLX(HeatHazeFX_GrabBuffer, pGTASA + BYBIT(0x5B51E6, 0x6D94EC));
         //HOOKBLX(ShowGameBuffer, pGTASA + BYBIT(0x1BC5D4 + 0x1, 0x24F994));
     }
 }

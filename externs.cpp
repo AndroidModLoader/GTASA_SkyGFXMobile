@@ -9,7 +9,7 @@ extern void* hGTASA;
 extern uintptr_t pGTASA;
 
 uint32_t TempBufferIndicesStored, TempBufferVerticesStored;
-VertexBuffer TempVertexBuffer;
+VertexBuffer TempVertexBuffer {};
 
 // Variables
 RpLight **p_pDirect, **p_pAmbient;
