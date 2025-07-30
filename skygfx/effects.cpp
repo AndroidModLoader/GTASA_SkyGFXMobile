@@ -37,7 +37,7 @@ int g_nInitialGrain = 0;
 RwRaster* pGrainRaster = NULL;
 
 int postfxX = 0, postfxY = 0;
-RwRaster *pSkyGFXPostFXRaster1 = NULL, *pSkyGFXPostFXRaster2 = NULL;
+RwRaster *pSkyGFXPostFXRaster1 = NULL, *pSkyGFXPostFXRaster2 = NULL, *pSkyGFXDepthRaster = NULL;
 RwRaster *pDarkRaster = NULL;
 
 ES2Shader* g_pChromaticAberrationShader = NULL;
@@ -232,9 +232,9 @@ void RenderGrainEffect(uint8_t strength)
     DrawQuadSetDefaultUVs();
     ImmediateModeRenderStatesReStore();
 }
-void GFX_GrabScreen(bool second = false)
+void GFX_CheckBuffersSize()
 {
-    if(!second && (postfxX != *renderWidth || postfxY != *renderHeight))
+    if(postfxX != *renderWidth || postfxY != *renderHeight)
     {
         postfxX = *renderWidth;
         postfxY = *renderHeight;
@@ -244,11 +244,40 @@ void GFX_GrabScreen(bool second = false)
 
         if(pSkyGFXPostFXRaster2) RwRasterDestroy(pSkyGFXPostFXRaster2);
         pSkyGFXPostFXRaster2 = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMATDEFAULT);
+
+        if(pSkyGFXDepthRaster) RwRasterDestroy(pSkyGFXDepthRaster);
+        pSkyGFXDepthRaster = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMATDEFAULT);
     }
+}
+void GFX_GrabScreen(bool second = false)
+{
+    GFX_CheckBuffersSize();
 
     if((!second && pSkyGFXPostFXRaster1) || (second && pSkyGFXPostFXRaster2))
     {
         ERQ_GrabFramebuffer(second ? pSkyGFXPostFXRaster2 : pSkyGFXPostFXRaster1);
+    #ifdef GPU_GRABBER
+        emu_glBegin(5u);
+        emu_glVertex3f(-1.0, 1.0, *gradeBlur);
+        emu_glTexCoord2f(0.0, 1.0);
+        emu_glVertex3f(1.0, 1.0, *gradeBlur);
+        emu_glTexCoord2f(1.0, 1.0);
+        emu_glVertex3f(-1.0, -1.0, *gradeBlur);
+        emu_glTexCoord2f(0.0, 0.0);
+        emu_glVertex3f(1.0, -1.0, *gradeBlur);
+        emu_glTexCoord2f(1.0, 0.0);
+        emu_glEnd();
+    #endif
+        ERQ_GrabFramebufferPost();
+    }
+}
+void GFX_GrabDepth()
+{
+    GFX_CheckBuffersSize();
+
+    if(pSkyGFXDepthRaster)
+    {
+        ERQ_GrabDepthFramebuffer(pSkyGFXDepthRaster);
     #ifdef GPU_GRABBER
         emu_glBegin(5u);
         emu_glVertex3f(-1.0, 1.0, *gradeBlur);
@@ -654,6 +683,7 @@ CRGBA m_waterCol(64, 64, 64, 64);
 DECL_HOOKv(PostFX_Render)
 {
     GFX_GrabScreen();
+    //GFX_GrabDepth(); // no ;(
 
     if(*pbFog) RenderScreenFogPostEffect();
 
@@ -713,7 +743,7 @@ DECL_HOOKv(PostFX_Render)
         {
             GFX_HeatHaze(1.0f, false);
         }
-        else if(*pfWeatherHeatHaze > 0.0f)
+        else if(*pfWeatherHeatHaze <= 0.0f)
         {
             if(*m_foundHeatHazeInfo) GFX_HeatHaze(1.0f, true);
         }

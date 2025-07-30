@@ -113,6 +113,34 @@ void RQ_Command_erqGrabFramebuffer(uint8_t** data)
     glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, *renderWidth, *renderHeight);
 #endif
 }
+void RQ_Command_erqGrabDepthFramebuffer(uint8_t** data)
+{
+    ES2Texture* dst = (ES2Texture*)RQUEUE_READPTR(data);
+
+    extRQ.m_nPrevTex = -1;
+    extRQ.m_nPrevActiveTex = -1;
+    extRQ.m_nPrevBuffer = -1;
+    if(!dst || !Scene->camera || !Scene->camera->zBuffer) return;
+
+#ifdef GPU_GRABBER
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &extRQ.m_nPrevBuffer);
+    glGetIntegerv(GL_ACTIVE_TEXTURE, &extRQ.m_nPrevActiveTex);
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &extRQ.m_nPrevTex);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, dst->target->frameBuffer);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, (*backTarget)->targetTexture->texID);
+#else
+    ES2Texture* camES2 = *(ES2Texture**)((uintptr_t)Scene->camera->zBuffer + *RasterExtOffset);
+
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &extRQ.m_nPrevBuffer);
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &extRQ.m_nPrevTex);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, (*currentTarget)->depthBuffer);
+    glBindTexture(GL_TEXTURE_2D, dst->texID);
+    glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, *renderWidth, *renderHeight);
+#endif
+}
 void RQ_Command_erqGrabFramebufferPost(uint8_t** data)
 {
     if(extRQ.m_nPrevBuffer != -1) glBindFramebuffer(GL_FRAMEBUFFER, extRQ.m_nPrevBuffer);
@@ -148,6 +176,7 @@ DECL_HOOKv(RQ_Command_rqDebugMarker, uint8_t** data)
         CASE_RQ( erqRenderFast );
         CASE_RQ( erqAlphaBlendStatus );
         CASE_RQ( erqGrabFramebuffer );
+        CASE_RQ( erqGrabDepthFramebuffer );
         CASE_RQ( erqGrabFramebufferPost );
     }
 }
