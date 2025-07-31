@@ -8,6 +8,7 @@
 #include <skygfx/include/fastcat.h>
 
 #include <GLES2/gl2.h>
+#include <GLES2/gl2ext.h>
 
 #ifdef AML32
     #include "GTASA_STRUCTS.h"
@@ -16,6 +17,9 @@
 #endif
 #define sizeofA(__aVar)  ((int)(sizeof(__aVar)/sizeof(__aVar[0])))
 
+
+//#define GPU_GRABBER // not working :(
+#define TEXTURE_DEPTHBUF
 
 
 extern uintptr_t pGTASA;
@@ -88,6 +92,7 @@ extern BasicEvent<SimpleVoidFn> shadercreation;
   } while (0)
 
 extern ES2Shader* pForcedShader;
+extern bool bForcedShader_ForceUniforms;
 ES2Shader* CreateCustomShaderAlloc(uint32_t flags, const char* pxlsrc, const char* vtxsrc, size_t pxllen = 0, size_t vtxlen = 0);
 ES2Shader* CreateCustomShader(uint32_t flags, const char* pxlsrc, const char* vtxsrc);
 inline void ForceCustomShader(ES2Shader* shader)
@@ -248,8 +253,9 @@ extern bool *AmbientLightDirty;
 extern float *ms_fFarClip;
 extern RenderQueue** renderQueue;
 extern RwRaster** pRasterFrontBuffer;
-extern int *curActiveTexture;
-extern int *boundTextures;
+extern GLuint *curActiveTexture;
+extern GLuint *boundTextures;
+extern GLuint *activeTextures;
 extern GlobalSceneTag *Scene;
 extern GLenum *currentAlphaFunc;
 extern float *currentAlphaFuncVal;
@@ -265,6 +271,8 @@ extern bool *m_bHeatHazeFX, *m_foundHeatHazeInfo, *m_bRadiosity, *m_bDarknessFil
 extern float *HeatHazeFXControl, *WaterDepth, *ms_fTimeStep;
 extern CColourSet *m_CurrentColours;
 extern uint32_t *m_snTimeInMilliseconds;
+extern GLint *backBuffer;
+extern CVector *emu_fogdistances;
 
 // Functions
 extern RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);
@@ -463,7 +471,5 @@ inline void Set2DQuad(float x1, float y1, float x2, float y2, float u1, float v1
     float rhw = 1.0f / Scene->camera->nearClip;
     Set2DQuadRHW(rhw, x1, y1, x2, y2, u1, v1, u2, v2, color);
 }
-
-//#define GPU_GRABBER // not working :(
 
 #endif // __EXTERNS

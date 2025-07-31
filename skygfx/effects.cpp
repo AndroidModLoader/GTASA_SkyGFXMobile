@@ -40,6 +40,8 @@ int postfxX = 0, postfxY = 0;
 RwRaster *pSkyGFXPostFXRaster1 = NULL, *pSkyGFXPostFXRaster2 = NULL, *pSkyGFXDepthRaster = NULL;
 RwRaster *pDarkRaster = NULL;
 
+ES2Shader* g_pSimpleInverseShader = NULL;
+ES2Shader* g_pSimpleDepthShader = NULL;
 ES2Shader* g_pChromaticAberrationShader = NULL;
 ES2Shader* g_pChromaticAberrationShader_Intensive = NULL;
 ES2Shader* g_pVignetteShader = NULL;
@@ -69,6 +71,44 @@ ConfigEntry *pCFGRadiosity;
 /* Functions */
 void CreateEffectsShaders()
 {
+    char sSimpleInversePxl[] = "precision mediump float;\n"
+                               "uniform sampler2D Diffuse;\n"
+                               "varying mediump vec2 Out_Tex0;\n"
+                               "void main() {\n"
+                               "  gl_FragColor = texture2D(Diffuse, vec2(Out_Tex0.x, 1.0 - Out_Tex0.y));\n"
+                               "}";
+    char sSimpleInverseVtx[] = "precision highp float;\n"
+                               "attribute vec3 Position;\n"
+                               "attribute vec2 TexCoord0;\n"
+                               "varying mediump vec2 Out_Tex0;\n"
+                               "void main() {\n"
+                               "  gl_Position = vec4(Position.xy, 0.0, 1.0);\n"
+                               "  Out_Tex0 = TexCoord0;\n"
+                               "}";
+    g_pSimpleInverseShader = CreateCustomShaderAlloc(0, sSimpleInversePxl, sSimpleInverseVtx, sizeof(sSimpleInversePxl), sizeof(sSimpleInverseVtx));
+
+    char sSimpleDepthPxl[] = "precision mediump float;\n"
+                             "uniform sampler2D DepthTex;\n"
+                             "varying mediump vec2 Out_Tex0;\n"
+                             "uniform vec3 FogDistances;\n"
+                             "void main() {\n"
+                             "  float uNear = 0.05; //FogDistances.x;\n"
+                             "  float uFar = 800.0; //FogDistances.y;\n"
+                             "  float depth = texture2D(DepthTex, Out_Tex0).r;\n"
+                             "  float linearEyeZ = (2.0 * uNear) / (uFar + uNear - depth * (uFar - uNear));\n"
+                             "  float normalizedLinear = (linearEyeZ - uNear) / (uFar - uNear);\n"
+                             "  gl_FragColor = vec4(vec3(1.0 - normalizedLinear), 1.0);\n"
+                             "}";
+    char sSimpleDepthVtx[] = "precision highp float;\n"
+                             "attribute vec3 Position;\n"
+                             "attribute vec2 TexCoord0;\n"
+                             "varying mediump vec2 Out_Tex0;\n"
+                             "void main() {\n"
+                             "  gl_Position = vec4(Position.xy - 1.0, 0.0, 1.0);\n"
+                             "  Out_Tex0 = TexCoord0;\n"
+                             "}";
+    g_pSimpleDepthShader = CreateCustomShaderAlloc(0, sSimpleDepthPxl, sSimpleDepthVtx, sizeof(sSimpleDepthPxl), sizeof(sSimpleDepthVtx));
+
     // https://lettier.github.io/3d-game-shaders-for-beginners/chromatic-aberration.html
     char sChromaPxl[] = "precision mediump float;\n"
                         "uniform sampler2D Diffuse;\n"
@@ -277,7 +317,23 @@ void GFX_GrabDepth()
 
     if(pSkyGFXDepthRaster)
     {
-        ERQ_GrabDepthFramebuffer(pSkyGFXDepthRaster);
+        activeTextures[2] = (*backTarget)->depthBuffer;
+
+        RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
+        RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
+
+        CVector valsBak = *emu_fogdistances;
+        *emu_fogdistances = CVector{ Scene->camera->nearClip, Scene->camera->farClip, 0.0f };
+
+        pForcedShader = g_pSimpleDepthShader;
+        float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
+        DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
+        PostEffectsDrawQuad(0.0f, 0.0f, 2.0f, 2.0f, 255, 255, 255, 255, NULL);
+        pForcedShader = NULL;
+
+        *emu_fogdistances = valsBak;
+
+        ERQ_GrabFramebuffer(pSkyGFXDepthRaster);
     #ifdef GPU_GRABBER
         emu_glBegin(5u);
         emu_glVertex3f(-1.0, 1.0, *gradeBlur);
@@ -540,10 +596,12 @@ void GFX_Radiosity(int intensityLimit, int filterPasses, int renderPasses, int i
 }
 void GFX_HeatHaze(float intensity, bool alphaMaskMode)
 {
+    pForcedShader = g_pSimpleInverseShader;
     RwRaster* bak = *pRasterFrontBuffer;
     *pRasterFrontBuffer = pSkyGFXPostFXRaster1;
     HeatHazeFX(intensity, alphaMaskMode);
     *pRasterFrontBuffer = bak;
+    pForcedShader = NULL;
 }
 // https://github.com/gta-reversed/gta-reversed/blob/7dc7e9696214e17594e8a9061be9dd808d8ae9c5/source/game_sa/PostEffects.cpp#L428
 void GFX_UnderWaterRipple(CRGBA col, float xo, float yo, int strength, float speed, float freq) // Completed
@@ -624,6 +682,8 @@ void GFX_ChromaticAberration() // Completed
     ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
 
+        RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
+        RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
     pForcedShader = ( g_nCrAb == CRAB_INTENSE ? g_pChromaticAberrationShader_Intensive : g_pChromaticAberrationShader );
     float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
     DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
@@ -645,6 +705,17 @@ void GFX_Vignette(int alpha) // Completed
     DrawQuadSetUVs(umin, vmax, umax, vmax, umax, vmin, umin, vmin);
     PostEffectsDrawQuad(0.0f, 0.0f, 2.0f, 2.0f, 0, 0, 0, alpha, pDarkRaster);
     pForcedShader = NULL;
+    
+    ImmediateModeRenderStatesReStore();
+}
+void GFX_DepthBuffer()
+{
+    ImmediateModeRenderStatesStore();
+    ImmediateModeRenderStatesSet();
+
+    float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
+    DrawQuadSetUVs(umin, vmax, umax, vmax, umax, vmin, umin, vmin);
+    PostEffectsDrawQuad(0.0, 0.0, RsGlobal->maximumWidth, RsGlobal->maximumHeight, 255, 255, 255, 255, pSkyGFXDepthRaster);
     
     ImmediateModeRenderStatesReStore();
 }
@@ -683,7 +754,7 @@ CRGBA m_waterCol(64, 64, 64, 64);
 DECL_HOOKv(PostFX_Render)
 {
     GFX_GrabScreen();
-    //GFX_GrabDepth(); // no ;(
+    GFX_GrabDepth();
 
     if(*pbFog) RenderScreenFogPostEffect();
 

@@ -84,7 +84,6 @@ enum ExtendedRQCommand : __int32
     erqRenderFast,
     erqAlphaBlendStatus,
     erqGrabFramebuffer,
-    erqGrabDepthFramebuffer,
     erqGrabFramebufferPost,
 
     EXRQC_END
@@ -146,13 +145,6 @@ inline void RQ_SetAlphaTest(GLenum func, GLclampf ref)
     RQUEUE_CLOSE();
 }
 inline void ERQ_GrabFramebuffer(RwRaster* raster)
-{
-    RQUEUE_QUEUE(rqDebugMarker);
-    RQUEUE_WRITEINT(erqGrabFramebuffer);
-    RQUEUE_WRITEPTR( *(ES2Texture**)((char*)&raster->parent + *RasterExtOffset) );
-    RQUEUE_CLOSE();
-}
-inline void ERQ_GrabDepthFramebuffer(RwRaster* raster)
 {
     RQUEUE_QUEUE(rqDebugMarker);
     RQUEUE_WRITEINT(erqGrabFramebuffer);

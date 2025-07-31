@@ -3,6 +3,7 @@
 /* Variables */
 EmuShader FakeShaderContainer;
 ES2Shader* pForcedShader = NULL;
+bool bForcedShader_ForceUniforms = false;
 BasicEvent<SimpleVoidFn> shadercreation;
 
 /* Functions */
@@ -32,7 +33,16 @@ DECL_HOOKv(AssignEmuShader, bool hasNormals)
     {
         FakeShaderContainer.shader = pForcedShader;
         FakeShaderContainer.programFlags = pForcedShader->flags;
-        SelectEmuShader(&FakeShaderContainer, true); // TRUE if needs to update uniforms
+        SelectEmuShader(&FakeShaderContainer, true);
+        //if(bForcedShader_ForceUniforms)
+        //{
+        //    SelectEmuShader(&FakeShaderContainer, true);
+        //    bForcedShader_ForceUniforms = false;
+        //}
+        //else
+        //{
+        //    SelectEmuShader(&FakeShaderContainer, false);
+        //}
     }
 }
 

@@ -69,8 +69,9 @@ bool *AmbientLightDirty;
 float *ms_fFarClip;
 RenderQueue** renderQueue;
 RwRaster** pRasterFrontBuffer;
-int *curActiveTexture;
-int *boundTextures;
+GLuint *curActiveTexture;
+GLuint *boundTextures;
+GLuint *activeTextures;
 GlobalSceneTag *Scene;
 GLenum *currentAlphaFunc;
 float *currentAlphaFuncVal;
@@ -87,6 +88,8 @@ float *HeatHazeFXControl, *WaterDepth, *ms_fTimeStep;
 int *m_nHighLightMinIntensity;
 CColourSet *m_CurrentColours;
 uint32_t *m_snTimeInMilliseconds;
+GLint *backBuffer;
+CVector *emu_fogdistances;
 
 // Functions
 RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);
@@ -446,6 +449,7 @@ void ResolveExternals()
     SET_TO(pRasterFrontBuffer,              aml->GetSym(hGTASA, "_ZN12CPostEffects18pRasterFrontBufferE"));
     SET_TO(curActiveTexture,                aml->GetSym(hGTASA, "_ZN10ES2Texture16curActiveTextureE"));
     SET_TO(boundTextures,                   aml->GetSym(hGTASA, "_ZN10ES2Texture13boundTexturesE"));
+    SET_TO(activeTextures,                  aml->GetSym(hGTASA, "_ZN10ES2Texture14activeTexturesE"));
     SET_TO(Scene,                           aml->GetSym(hGTASA, "Scene"));
     SET_TO(currentAlphaFunc,                pGTASA + BYBIT(0x67A26C, 0x852330));
     SET_TO(currentAlphaFuncVal,             pGTASA + BYBIT(0x67A270, 0x852334));
@@ -467,4 +471,6 @@ void ResolveExternals()
     SET_TO(ms_fTimeStep,                    aml->GetSym(hGTASA, "_ZN6CTimer12ms_fTimeStepE"));
     SET_TO(m_CurrentColours,                aml->GetSym(hGTASA, "_ZN10CTimeCycle16m_CurrentColoursE"));
     SET_TO(m_snTimeInMilliseconds,          aml->GetSym(hGTASA, "_ZN6CTimer22m_snTimeInMillisecondsE"));
+    SET_TO(backBuffer,                      aml->GetSym(hGTASA, "_ZN15ES2RenderTarget10backBufferE"));
+    SET_TO(emu_fogdistances,                aml->GetSym(hGTASA, "emu_fogdistances"));
 }
