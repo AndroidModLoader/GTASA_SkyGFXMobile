@@ -31,6 +31,7 @@ int g_nSpeedFX = SPFX_LIKE_ON_PC;
 int g_nCrAb = CRAB_INACTIVE;
 int g_nVignette = 0;
 bool g_bRadiosity = true;
+float g_fFocalRange = 2.0f;
 
 int g_nGrainRainStrength = 0;
 int g_nInitialGrain = 0;
@@ -46,6 +47,7 @@ ES2Shader* g_pChromaticAberrationShader = NULL;
 ES2Shader* g_pChromaticAberrationShader_Intensive = NULL;
 ES2Shader* g_pVignetteShader = NULL;
 ES2Shader* g_pFakeRayShader = NULL;
+ES2Shader* g_pDOFShader = NULL;
 
 /* Other */
 static const char* aSpeedFXSettings[SPEEDFX_SETTINGS] = 
@@ -171,6 +173,7 @@ void CreateEffectsShaders()
 
     char sFakeRayPxl[] = "precision mediump float;\n"
                          "uniform sampler2D Diffuse;\n"
+                         "uniform sampler2D DepthTex;\n"
                          "varying mediump vec2 Out_Tex0;\n"
                          "varying mediump vec2 vPos;\n"
                          "void main() {\n"
@@ -178,8 +181,11 @@ void CreateEffectsShaders()
                          "  float pz = 0.0;\n"
                          "  for(float i = 0.0; i < 50.0; i++) {\n"
                          "    vec3 shiftColor = texture2D(Diffuse, (tex *= 0.99) + 0.5).rgb;\n"
-                         "    float pixelBrightness = dot(shiftColor, vec3(0.299, 0.587, 0.114));\n"
-                         "    pz += pow(max(0.0, 0.5 - length(shiftColor.rg)), 2.0) * exp(-i * 0.1);\n"
+                         "    float depth = texture2D(DepthTex, tex + 0.5).r;\n"
+                         "    if(depth < 0.01) {\n"
+                         "      float pixelBrightness = dot(shiftColor, vec3(0.299, 0.587, 0.114));\n"
+                         "      pz += pow(max(0.0, 0.5 - length(1.0 - shiftColor.rg)), 2.0) * exp(-i * 0.1);\n"
+                         "    }\n"
                          "  }\n"
                          "  gl_FragColor = vec4(texture2D(Diffuse, Out_Tex0).rgb + pz, 1.0);\n"
                          "}";
@@ -194,6 +200,41 @@ void CreateEffectsShaders()
                          "  Out_Tex0 = TexCoord0;\n"
                          "}";
     g_pFakeRayShader = CreateCustomShaderAlloc(0, sFakeRayPxl, sFakeRayVtx, sizeof(sFakeRayPxl), sizeof(sFakeRayVtx));
+
+    char sDOFPxl[] = "precision highp float;\n"
+                     "uniform sampler2D Diffuse;\n"
+                     "uniform sampler2D DepthTex;\n"
+                     "varying mediump vec2 Out_Tex0;\n"
+                     "uniform highp vec3 FogDistances;\n"
+                     "float steps = 3.0;\n"
+                     "float blurPasses = 6.0;\n"
+                     "void main() {\n"
+                     "  vec3 color = vec3(0.0);\n"
+                     "  float coc = clamp((0.9 - texture2D(DepthTex, Out_Tex0).r) * FogDistances.z, 0.0, 1.0);\n"
+                     "  if(coc <= 0.0) {\n"
+                     "    gl_FragColor = vec4(texture2D(Diffuse, Out_Tex0).rgb, 1.0);\n"
+                     "  } else {\n"
+                     "    int radius = int(blurPasses * coc);\n"
+                     "    float passes = 0.0;\n"
+                     "    for(int x = -radius; x <= radius; x++) {\n"
+                     "      for(int y = -radius; y <= radius; y++) {\n"
+                     "        color += texture2D(Diffuse, Out_Tex0 + vec2(float(x), float(y)) * FogDistances.xy).rgb;\n"
+                     "        passes += 1.0;\n"
+                     "      }\n"
+                     "    }\n"
+                     "    color /= passes;\n"
+                     "    gl_FragColor = vec4(color, 1.0);\n"
+                     "  }\n"
+                     "}";
+    char sDOFVtx[] = "precision highp float;\n"
+                     "attribute vec3 Position;\n"
+                     "attribute vec2 TexCoord0;\n"
+                     "varying mediump vec2 Out_Tex0;\n"
+                     "void main() {\n"
+                     "  gl_Position = vec4(Position.xy - 1.0, 0.0, 1.0);\n"
+                     "  Out_Tex0 = TexCoord0;\n"
+                     "}";
+    g_pDOFShader = CreateCustomShaderAlloc(0, sDOFPxl, sDOFVtx, sizeof(sDOFPxl), sizeof(sDOFVtx));
 }
 void RenderGrainSettingChanged(int oldVal, int newVal, void* data = NULL)
 {
@@ -364,7 +405,6 @@ void GFX_GrabDepth()
         RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
         RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
 
-        CVector valsBak = *emu_fogdistances;
         *emu_fogdistances = CVector{ Scene->camera->nearClip, Scene->camera->farClip, 0.0f };
         g_pSimpleDepthShader->SetVectorConstant(SVCID_FogDistances, &emu_fogdistances->x, 3); // need both ^
 
@@ -373,8 +413,6 @@ void GFX_GrabDepth()
         DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
         PostEffectsDrawQuad(0.0f, 0.0f, 2.0f, 2.0f, 255, 255, 255, 255, NULL);
         pForcedShader = NULL;
-
-        *emu_fogdistances = valsBak;
 
         ERQ_GrabFramebuffer(pSkyGFXDepthRaster);
     #ifdef GPU_GRABBER
@@ -678,7 +716,42 @@ void GFX_Vignette(int alpha) // Completed
     
     ImmediateModeRenderStatesReStore();
 }
-void GFX_FrameBuffer()
+void GFX_FakeRay()
+{
+    ImmediateModeRenderStatesStore();
+    ImmediateModeRenderStatesSet();
+
+    RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
+
+    pForcedShader = g_pFakeRayShader;
+    float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
+    DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
+    PostEffectsDrawQuad(0.0, 0.0, 2.0f, 2.0f, 255, 255, 255, 255, pSkyGFXPostFXRaster1);
+    pForcedShader = NULL;
+    
+    ImmediateModeRenderStatesReStore();
+}
+void GFX_DOF() // Completed
+{
+    ImmediateModeRenderStatesStore();
+    ImmediateModeRenderStatesSet();
+
+    RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
+
+    *emu_fogdistances = CVector{ 1.0f / (float)postfxX, 1.0f / (float)postfxY, g_fFocalRange };
+    g_pDOFShader->SetVectorConstant(SVCID_FogDistances, &emu_fogdistances->x, 3); // need both ^
+
+    pForcedShader = g_pDOFShader;
+    float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
+    DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
+    PostEffectsDrawQuad(0.0, 0.0, 2.0f, 2.0f, 255, 255, 255, 255, pSkyGFXPostFXRaster1);
+    pForcedShader = NULL;
+    
+    ImmediateModeRenderStatesReStore();
+}
+void GFX_FrameBuffer() // Completed
 {
     ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
@@ -692,7 +765,7 @@ void GFX_FrameBuffer()
     
     ImmediateModeRenderStatesReStore();
 }
-void GFX_DepthBuffer()
+void GFX_DepthBuffer() // Completed
 {
     ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
@@ -740,6 +813,8 @@ float gfWaterGreen = 0.0f;
 CRGBA m_waterCol(64, 64, 64, 64);
 DECL_HOOKv(PostFX_Render)
 {
+    CVector emu_fogdistances_backup = *emu_fogdistances;
+
     GFX_GrabScreen();
     GFX_GrabDepth();
     GFX_FrameBuffer();
@@ -838,10 +913,13 @@ DECL_HOOKv(PostFX_Render)
 
     // Enchanced PostFXs
     GFX_ActivateProcessedDepthTexture();
+    //GFX_DOF();
     if(g_nCrAb != CRAB_INACTIVE) GFX_ChromaticAberration();
+    //GFX_FakeRay(); // doesnt look cool enough
     GFX_Vignette(g_nVignette * 2.55f);
 
     GFX_DeActivateDepthTexture();
+    *emu_fogdistances = emu_fogdistances_backup;
 }
 DECL_HOOKv(PostFX_CCTV)
 {
