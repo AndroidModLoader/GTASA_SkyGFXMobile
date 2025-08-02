@@ -45,6 +45,7 @@ ES2Shader* g_pSimpleDepthShader = NULL;
 ES2Shader* g_pChromaticAberrationShader = NULL;
 ES2Shader* g_pChromaticAberrationShader_Intensive = NULL;
 ES2Shader* g_pVignetteShader = NULL;
+ES2Shader* g_pFakeRayShader = NULL;
 
 /* Other */
 static const char* aSpeedFXSettings[SPEEDFX_SETTINGS] = 
@@ -150,7 +151,6 @@ void CreateEffectsShaders()
     char sVignettePxl[] = "precision highp float;\n"
                           "uniform sampler2D Diffuse;\n"
                           "varying mediump vec2 Out_Tex0;\n"
-                          "varying mediump vec2 vPos;\n"
                           "float vignette(vec2 uv, float radius, float smoothness) {\n"
                           "  float diff = radius - distance(uv, vec2(0.5, 0.5));\n"
                           "  return smoothstep(-smoothness, smoothness, diff);\n"
@@ -168,6 +168,32 @@ void CreateEffectsShaders()
                           "  Out_Tex0 = TexCoord0;\n"
                           "}";
     g_pVignetteShader = CreateCustomShaderAlloc(0, sVignettePxl, sVignetteVtx, sizeof(sVignettePxl), sizeof(sVignetteVtx));
+
+    char sFakeRayPxl[] = "precision mediump float;\n"
+                         "uniform sampler2D Diffuse;\n"
+                         "varying mediump vec2 Out_Tex0;\n"
+                         "varying mediump vec2 vPos;\n"
+                         "void main() {\n"
+                         "  vec2 tex = Out_Tex0 - 0.5;\n"
+                         "  float pz = 0.0;\n"
+                         "  for(float i = 0.0; i < 50.0; i++) {\n"
+                         "    vec3 shiftColor = texture2D(Diffuse, (tex *= 0.99) + 0.5).rgb;\n"
+                         "    float pixelBrightness = dot(shiftColor, vec3(0.299, 0.587, 0.114));\n"
+                         "    pz += pow(max(0.0, 0.5 - length(shiftColor.rg)), 2.0) * exp(-i * 0.1);\n"
+                         "  }\n"
+                         "  gl_FragColor = vec4(texture2D(Diffuse, Out_Tex0).rgb + pz, 1.0);\n"
+                         "}";
+    char sFakeRayVtx[] = "precision highp float;\n"
+                         "attribute vec3 Position;\n"
+                         "attribute vec2 TexCoord0;\n"
+                         "varying mediump vec2 Out_Tex0;\n"
+                         "varying mediump vec2 vPos;\n"
+                         "void main() {\n"
+                         "  gl_Position = vec4(Position.xy - 1.0, 0.0, 1.0);\n"
+                         "  vPos = gl_Position.xy;\n"
+                         "  Out_Tex0 = TexCoord0;\n"
+                         "}";
+    g_pFakeRayShader = CreateCustomShaderAlloc(0, sFakeRayPxl, sFakeRayVtx, sizeof(sFakeRayPxl), sizeof(sFakeRayVtx));
 }
 void RenderGrainSettingChanged(int oldVal, int newVal, void* data = NULL)
 {
@@ -274,12 +300,16 @@ void RenderGrainEffect(uint8_t strength)
 }
 void GFX_ActivateRawDepthTexture()
 {
-    activeTextures[2] = (*backTarget)->depthBuffer;
+    ERQ_SetActiveTexture(2, (*backTarget)->depthBuffer);
 }
 void GFX_ActivateProcessedDepthTexture()
 {
     ES2Texture* depthTexture = *(ES2Texture**)( (char*)&pSkyGFXDepthRaster->parent + *RasterExtOffset );
-    activeTextures[2] = depthTexture->texID;
+    ERQ_SetActiveTexture(2, depthTexture->texID);
+}
+void GFX_DeActivateDepthTexture()
+{
+    ERQ_SetActiveTexture(2, 0);
 }
 void GFX_CheckBuffersSize()
 {
@@ -807,8 +837,11 @@ DECL_HOOKv(PostFX_Render)
     }
 
     // Enchanced PostFXs
+    GFX_ActivateProcessedDepthTexture();
     if(g_nCrAb != CRAB_INACTIVE) GFX_ChromaticAberration();
     GFX_Vignette(g_nVignette * 2.55f);
+
+    GFX_DeActivateDepthTexture();
 }
 DECL_HOOKv(PostFX_CCTV)
 {

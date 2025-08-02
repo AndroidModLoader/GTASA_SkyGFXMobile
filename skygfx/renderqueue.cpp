@@ -119,6 +119,12 @@ void RQ_Command_erqGrabFramebufferPost(uint8_t** data)
     if(extRQ.m_nPrevActiveTex != -1) glActiveTexture(extRQ.m_nPrevActiveTex);
     if(extRQ.m_nPrevTex != -1) glBindTexture(GL_TEXTURE_2D, extRQ.m_nPrevTex);
 }
+void RQ_Command_erqSetActiveTexture(uint8_t** data)
+{
+    int texNum = RQUEUE_READINT(data);
+    GLuint texId = (GLuint)RQUEUE_READINT(data);
+    activeTextures[texNum] = texId;
+}
 
 /* Hooks */
 DECL_HOOKv(RQ_Command_rqDebugMarker, uint8_t** data)
@@ -148,6 +154,7 @@ DECL_HOOKv(RQ_Command_rqDebugMarker, uint8_t** data)
         CASE_RQ( erqAlphaBlendStatus );
         CASE_RQ( erqGrabFramebuffer );
         CASE_RQ( erqGrabFramebufferPost );
+        CASE_RQ( erqSetActiveTexture );
     }
 }
 DECL_HOOKv(RQ_Command_rqTargetCreate, uint8_t** data)

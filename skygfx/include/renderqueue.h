@@ -29,7 +29,7 @@
 
 #define RQUEUE_WRITEINT(__v)                                \
 {                                                           \
-    *(int*)((*renderQueue)->mainWorkPointer) = (__v);       \
+    *(int*)((*renderQueue)->mainWorkPointer) = (int)(__v);  \
     (*renderQueue)->mainWorkPointer += sizeof(int);         \
 }
 #define RQUEUE_READINT(__data)                              \
@@ -85,6 +85,7 @@ enum ExtendedRQCommand : __int32
     erqAlphaBlendStatus,
     erqGrabFramebuffer,
     erqGrabFramebufferPost,
+    erqSetActiveTexture,
 
     EXRQC_END
 };
@@ -155,5 +156,13 @@ inline void ERQ_GrabFramebufferPost()
 {
     RQUEUE_QUEUE(rqDebugMarker);
     RQUEUE_WRITEINT(erqGrabFramebufferPost);
+    RQUEUE_CLOSE();
+}
+inline void ERQ_SetActiveTexture(int texNum, GLuint texId)
+{
+    RQUEUE_QUEUE(rqDebugMarker);
+    RQUEUE_WRITEINT(erqSetActiveTexture);
+    RQUEUE_WRITEINT(texNum);
+    RQUEUE_WRITEINT(texId);
     RQUEUE_CLOSE();
 }
