@@ -19,6 +19,14 @@ enum eChromaticAberration : uint8_t
 
     CRAB_SETTINGS
 };
+enum eDOF : uint8_t
+{
+    DOF_INACTIVE = 0,
+    DOF_CUTSCENES,
+    DOF_ALWAYS,
+
+    DOF_SETTINGS
+};
 
 /* Variables */
 bool g_bFixSandstorm = true;
@@ -31,7 +39,8 @@ int g_nSpeedFX = SPFX_LIKE_ON_PC;
 int g_nCrAb = CRAB_INACTIVE;
 int g_nVignette = 0;
 bool g_bRadiosity = true;
-float g_fFocalRange = 2.0f;
+int g_nDOF = DOF_INACTIVE;
+float g_fFocalRange = 2.2f;
 
 int g_nGrainRainStrength = 0;
 int g_nInitialGrain = 0;
@@ -48,6 +57,7 @@ ES2Shader* g_pChromaticAberrationShader_Intensive = NULL;
 ES2Shader* g_pVignetteShader = NULL;
 ES2Shader* g_pFakeRayShader = NULL;
 ES2Shader* g_pDOFShader = NULL;
+ES2Shader* g_pDOFShader_DepthAware = NULL;
 
 /* Other */
 static const char* aSpeedFXSettings[SPEEDFX_SETTINGS] = 
@@ -63,6 +73,12 @@ static const char* aCrAbFXSettings[CRAB_SETTINGS] =
     "Enabled",
     "Intensive"
 };
+static const char* aDOFSettings[DOF_SETTINGS] = 
+{
+    "Disabled",
+    "Only cutscenes",
+    "Always"
+};
 
 /* Configs */
 ConfigEntry *pCFGRenderGrain;
@@ -70,6 +86,7 @@ ConfigEntry *pCFGSpeedFX;
 ConfigEntry *pCFGCrAbFX;
 ConfigEntry *pCFGVignette;
 ConfigEntry *pCFGRadiosity;
+ConfigEntry *pCFGDOF;
 
 /* Functions */
 void CreateEffectsShaders()
@@ -210,14 +227,14 @@ void CreateEffectsShaders()
                      "float blurPasses = 6.0;\n"
                      "void main() {\n"
                      "  vec3 color = vec3(0.0);\n"
-                     "  float coc = clamp((0.9 - texture2D(DepthTex, Out_Tex0).r) * FogDistances.z, 0.0, 1.0);\n"
+                     "  float coc = clamp((0.95 - texture2D(DepthTex, Out_Tex0).r) * FogDistances.z, 0.0, 1.0);\n"
                      "  if(coc <= 0.0) {\n"
                      "    gl_FragColor = vec4(texture2D(Diffuse, Out_Tex0).rgb, 1.0);\n"
                      "  } else {\n"
                      "    int radius = int(blurPasses * coc);\n"
                      "    float passes = 0.0;\n"
-                     "    for(int x = -radius; x <= radius; x++) {\n"
-                     "      for(int y = -radius; y <= radius; y++) {\n"
+                     "    for(int x = -radius; x <= radius; x += 2) {\n"
+                     "      for(int y = -radius; y <= radius; y += 2) {\n"
                      "        color += texture2D(Diffuse, Out_Tex0 + vec2(float(x), float(y)) * FogDistances.xy).rgb;\n"
                      "        passes += 1.0;\n"
                      "      }\n"
@@ -235,6 +252,44 @@ void CreateEffectsShaders()
                      "  Out_Tex0 = TexCoord0;\n"
                      "}";
     g_pDOFShader = CreateCustomShaderAlloc(0, sDOFPxl, sDOFVtx, sizeof(sDOFPxl), sizeof(sDOFVtx));
+
+    char sDOFDAPxl[] = "precision highp float;\n"
+                       "uniform sampler2D Diffuse;\n"
+                       "uniform sampler2D DepthTex;\n"
+                       "varying mediump vec2 Out_Tex0;\n"
+                       "uniform highp vec3 FogDistances;\n"
+                       "float steps = 3.0;\n"
+                       "float blurPasses = 6.0;\n"
+                       "void main() {\n"
+                       "  vec3 color = vec3(0.0);\n"
+                       "  float pixelDepth = texture2D(DepthTex, Out_Tex0).r;\n"
+                       "  float coc = clamp((0.95 - pixelDepth) * FogDistances.z, 0.0, 1.0);\n"
+                       "  if(coc <= 0.0) {\n"
+                       "    gl_FragColor = vec4(texture2D(Diffuse, Out_Tex0).rgb, 1.0);\n"
+                       "  } else {\n"
+                       "    int radius = int(blurPasses * coc);\n"
+                       "    float passes = 0.0;\n"
+                       "    for(int x = -radius; x <= radius; x += 2) {\n"
+                       "      for(int y = -radius; y <= radius; y += 2) {\n"
+                       "        float daDiff = abs(texture2D(DepthTex, Out_Tex0 + vec2(x, y) * FogDistances.xy).r - pixelDepth);\n"
+                       "        if(daDiff > 0.3) continue;\n"
+                       "        color += texture2D(Diffuse, Out_Tex0 + vec2(x, y) * FogDistances.xy).rgb;\n"
+                       "        passes += 1.0;\n"
+                       "      }\n"
+                       "    }\n"
+                       "    color /= passes;\n"
+                       "    gl_FragColor = vec4(color, 1.0);\n"
+                       "  }\n"
+                       "}";
+    char sDOFDAVtx[] = "precision highp float;\n"
+                       "attribute vec3 Position;\n"
+                       "attribute vec2 TexCoord0;\n"
+                       "varying mediump vec2 Out_Tex0;\n"
+                       "void main() {\n"
+                       "  gl_Position = vec4(Position.xy - 1.0, 0.0, 1.0);\n"
+                       "  Out_Tex0 = TexCoord0;\n"
+                       "}";
+    g_pDOFShader_DepthAware = CreateCustomShaderAlloc(0, sDOFDAPxl, sDOFDAVtx, sizeof(sDOFDAPxl), sizeof(sDOFDAVtx));
 }
 void RenderGrainSettingChanged(int oldVal, int newVal, void* data = NULL)
 {
@@ -281,6 +336,16 @@ void RadiositySettingChanged(int oldVal, int newVal, void* data = NULL)
 
     pCFGRadiosity->SetBool(newVal != 0);
     g_bRadiosity = pCFGRadiosity->GetBool();
+
+    cfg->Save();
+}
+void DOFSettingChanged(int oldVal, int newVal, void* data = NULL)
+{
+    if(oldVal == newVal) return;
+
+    pCFGDOF->SetInt(newVal);
+    pCFGDOF->Clamp(0, DOF_SETTINGS);
+    g_nDOF = pCFGDOF->GetInt();
 
     cfg->Save();
 }
@@ -740,6 +805,8 @@ void GFX_DOF() // Completed
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
     RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
 
+    // g_pDOFShader_DepthAware
+
     *emu_fogdistances = CVector{ 1.0f / (float)postfxX, 1.0f / (float)postfxY, g_fFocalRange };
     g_pDOFShader->SetVectorConstant(SVCID_FogDistances, &emu_fogdistances->x, 3); // need both ^
 
@@ -913,7 +980,13 @@ DECL_HOOKv(PostFX_Render)
 
     // Enchanced PostFXs
     GFX_ActivateProcessedDepthTexture();
-    //GFX_DOF();
+    if(g_nDOF != DOF_INACTIVE && *currArea == 0)
+    {
+        if(g_nDOF == DOF_ALWAYS || (g_nDOF == DOF_CUTSCENES && *pbInCutscene))
+        {
+            GFX_DOF();
+        }
+    }
     if(g_nCrAb != CRAB_INACTIVE) GFX_ChromaticAberration();
     //GFX_FakeRay(); // doesnt look cool enough
     GFX_Vignette(g_nVignette * 2.55f);
@@ -1003,5 +1076,9 @@ void StartEffectsStuff()
         //pCFGRadiosity = cfg->Bind("Radiosity", g_bRadiosity, "Effects");
         //RadiositySettingChanged(g_bRadiosity, pCFGRadiosity->GetBool());
         //AddSetting("Radiosity", g_bRadiosity, 0, sizeofA(aYesNo)-1, aYesNo, RadiositySettingChanged, NULL);
+
+        pCFGDOF = cfg->Bind("DOFType", g_nDOF, "EnchancedEffects");
+        DOFSettingChanged(g_nDOF, pCFGDOF->GetInt());
+        AddSetting("Depth'o'Field", g_nDOF, 0, sizeofA(aDOFSettings)-1, aDOFSettings, DOFSettingChanged, NULL);
     }
 }

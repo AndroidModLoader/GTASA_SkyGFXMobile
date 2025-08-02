@@ -26,6 +26,10 @@ extern bool g_bVehicleAtomicsPipeline;
 extern bool g_bTransparentLockOn;
 extern bool g_bDarkerModelsAtSun;
 extern bool g_bFixCarLightsIntensity;
+extern int g_nSpeedFX;
+extern bool g_bRadiosity;
+extern int g_nDOF;
+extern int g_nVignette;
 
 static int Global_GetFeatureLevel(eSkyGFXFeature f)
 {
@@ -44,7 +48,7 @@ static int Global_GetFeatureLevel(eSkyGFXFeature f)
         case GFX_EXTENDRAINSPLASHES: return g_bExtendRainSplashes;
         case GFX_MISSINGEFFECTS: return g_bMissingEffects;
         case GFX_MISSINGPOSTFX: return g_bMissingPostEffects;
-        case GFX_GRAIN: return g_bRenderGrain;
+        case GFX_GRAIN: return g_bMissingPostEffects ? g_bRenderGrain : false;
         case GFX_ENVMAPTYPE: return g_nEnvMapType;
         case GFX_WATERCOLORFIX: return g_bRemoveDumbWaterColorCalculations;
         case GFX_FIXMIRRORISSUE: return g_bFixMirrorIssue;
@@ -57,6 +61,10 @@ static int Global_GetFeatureLevel(eSkyGFXFeature f)
         case GFX_TRANSPARENTLOCKON: return g_bTransparentLockOn;
         case GFX_DARKERMODELSATSUN: return g_bDarkerModelsAtSun;
         case GFX_CARLIGHTSINTENSITY: return g_bFixCarLightsIntensity;
+        case GFX_SPEEDFX: return g_bMissingPostEffects ? g_nSpeedFX : 0;
+        case GFX_RADIOSITY: return g_bMissingPostEffects ? g_bRadiosity : 0;
+        case GFX_DOF: return g_bMissingPostEffects ? g_nDOF : 0;
+        case GFX_VIGNETTE: return g_bMissingPostEffects ? g_nVignette : 0;
     }
 }
 
