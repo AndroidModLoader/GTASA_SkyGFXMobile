@@ -30,6 +30,7 @@ enum eSkyGFXFeature : unsigned char
     GFX_RADIOSITY,
     GFX_DOF,
     GFX_VIGNETTE,
+    GFX_UNDERWATERRIPPLE,
 
     GFX_MAX_FEATURES
 };

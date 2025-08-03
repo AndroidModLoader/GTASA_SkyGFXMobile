@@ -11,6 +11,14 @@ enum eSpeedFX : uint8_t
 
     SPEEDFX_SETTINGS
 };
+enum eUWRipple : uint8_t
+{
+    UWR_INACTIVE = 0,
+    UWR_CLASSIC,
+    UWR_SHADER,
+
+    UWR_SETTINGS
+};
 enum eChromaticAberration : uint8_t
 {
     CRAB_INACTIVE = 0,
@@ -40,7 +48,9 @@ int g_nCrAb = CRAB_INACTIVE;
 int g_nVignette = 0;
 bool g_bRadiosity = true;
 int g_nDOF = DOF_INACTIVE;
+bool g_bHeatHaze = false;
 float g_fFocalRange = 2.2f;
+int g_nUWR = UWR_CLASSIC;
 
 int g_nGrainRainStrength = 0;
 int g_nInitialGrain = 0;
@@ -58,6 +68,7 @@ ES2Shader* g_pVignetteShader = NULL;
 ES2Shader* g_pFakeRayShader = NULL;
 ES2Shader* g_pDOFShader = NULL;
 ES2Shader* g_pDOFShader_DepthAware = NULL;
+ES2Shader* g_pUnderwaterRippleShader = NULL;
 
 /* Other */
 static const char* aSpeedFXSettings[SPEEDFX_SETTINGS] = 
@@ -66,6 +77,12 @@ static const char* aSpeedFXSettings[SPEEDFX_SETTINGS] =
     "Enabled",
     "Enabled (PC 16:9 fix)",
     "Enabled (PS2 4:3 fix)"
+};
+static const char* aUWRSettings[UWR_SETTINGS] = 
+{
+    "Disabled",
+    "PC Ripple",
+    "Shader"
 };
 static const char* aCrAbFXSettings[CRAB_SETTINGS] = 
 {
@@ -87,6 +104,7 @@ ConfigEntry *pCFGCrAbFX;
 ConfigEntry *pCFGVignette;
 ConfigEntry *pCFGRadiosity;
 ConfigEntry *pCFGDOF;
+ConfigEntry *pCFGUWR;
 
 /* Functions */
 void CreateEffectsShaders()
@@ -290,6 +308,34 @@ void CreateEffectsShaders()
                        "  Out_Tex0 = TexCoord0;\n"
                        "}";
     g_pDOFShader_DepthAware = CreateCustomShaderAlloc(0, sDOFDAPxl, sDOFDAVtx, sizeof(sDOFDAPxl), sizeof(sDOFDAVtx));
+
+    char sUWRPxl[] = "precision highp float;\n"
+                     "uniform sampler2D Diffuse;\n"
+                     "uniform mediump vec3 FogDistances;\n"
+                     "varying mediump vec2 Out_Tex0;\n"
+                     "varying mediump vec2 vPos;\n"
+                     "float pi = 3.141593;\n"
+                     "float pi2 = 6.283185;\n"
+                     "float pi4 = 12.566371;\n"
+                     "void main() {\n"
+                     "  mediump vec2 tex = Out_Tex0;\n"
+                     "  float xo = 0.004 * FogDistances.x;\n"
+                     "  float yo = 77.14 * vPos.y;\n"
+                     "  float wave = sin(FogDistances.z * yo * pi2 + FogDistances.y) * xo;\n"
+                     "  tex.x += wave * min(1.0, pow(1.7 - abs(vPos.x), 4.0));\n"
+                     "  gl_FragColor = vec4(texture2D(Diffuse, tex).rgb, 1.0);\n"
+                     "}";
+    char sUWRVtx[] = "precision highp float;\n"
+                     "attribute vec3 Position;\n"
+                     "attribute vec2 TexCoord0;\n"
+                     "varying mediump vec2 Out_Tex0;\n"
+                     "varying mediump vec2 vPos;\n"
+                     "void main() {\n"
+                     "  gl_Position = vec4(Position.xy - 1.0, 0.0, 1.0);\n"
+                     "  vPos = gl_Position.xy;\n"
+                     "  Out_Tex0 = TexCoord0;\n"
+                     "}";
+    g_pUnderwaterRippleShader = CreateCustomShaderAlloc(0, sUWRPxl, sUWRVtx, sizeof(sUWRPxl), sizeof(sUWRVtx));
 }
 void RenderGrainSettingChanged(int oldVal, int newVal, void* data = NULL)
 {
@@ -346,6 +392,16 @@ void DOFSettingChanged(int oldVal, int newVal, void* data = NULL)
     pCFGDOF->SetInt(newVal);
     pCFGDOF->Clamp(0, DOF_SETTINGS);
     g_nDOF = pCFGDOF->GetInt();
+
+    cfg->Save();
+}
+void UWRSettingChanged(int oldVal, int newVal, void* data = NULL)
+{
+    if(oldVal == newVal) return;
+
+    pCFGUWR->SetInt(newVal);
+    pCFGUWR->Clamp(0, UWR_SETTINGS);
+    g_nUWR = pCFGUWR->GetInt();
 
     cfg->Save();
 }
@@ -736,6 +792,25 @@ void GFX_UnderWaterRipple(CRGBA col, float xo, float yo, int strength, float spe
     
     ImmediateModeRenderStatesReStore();
 }
+void GFX_UnderWaterRipple_Shader(CRGBA col, float xoIntensity, float speed, float freq)
+{
+    ImmediateModeRenderStatesStore();
+    ImmediateModeRenderStatesSet();
+
+    RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
+
+    *emu_fogdistances = CVector{ xoIntensity, speed * *m_snTimeInMilliseconds, freq };
+    g_pUnderwaterRippleShader->SetVectorConstant(SVCID_FogDistances, &emu_fogdistances->x, 3); // need both ^
+
+    pForcedShader = g_pUnderwaterRippleShader;
+    float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
+    DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
+    PostEffectsDrawQuad(0.0f, 0.0f, 2.0f, 2.0f, col.r, col.g, col.b, 255, pSkyGFXPostFXRaster1);
+    pForcedShader = NULL;
+
+    ImmediateModeRenderStatesReStore();
+}
 void GFX_DarknessFilter(int alpha) // Completed
 {
     ImmediateModeRenderStatesStore();
@@ -938,44 +1013,57 @@ DECL_HOOKv(PostFX_Render)
         if(*pbGrainEnable) RenderGrainEffect(*pnGrainStrength);
     }
 
-    if(*pfWeatherHeatHaze > 0.0f || (*m_bHeatHazeFX && *m_foundHeatHazeInfo) || *pfWeatherUnderwaterness >= 0.535f)
+    if(g_bHeatHaze)
     {
-        if(*m_bHeatHazeFX || *pfWeatherUnderwaterness >= 0.535f)
+        if(*pfWeatherHeatHaze > 0.0f || (*m_bHeatHazeFX && *m_foundHeatHazeInfo) || *pfWeatherUnderwaterness >= 0.535f)
         {
-            GFX_HeatHaze(1.0f, false);
+            if(*m_bHeatHazeFX || *pfWeatherUnderwaterness >= 0.535f)
+            {
+                GFX_HeatHaze(1.0f, false);
+            }
+            else if(*pfWeatherHeatHaze <= 0.0f)
+            {
+                if(*m_foundHeatHazeInfo) GFX_HeatHaze(1.0f, true);
+            }
+            else
+            {
+                GFX_HeatHaze(*HeatHazeFXControl, false);
+            }
         }
-        else if(*pfWeatherHeatHaze <= 0.0f)
+    }
+
+    if(g_nUWR != UWR_INACTIVE)
+    {
+        if(*pfWeatherUnderwaterness >= 0.535f)
         {
-            if(*m_foundHeatHazeInfo) GFX_HeatHaze(1.0f, true);
+            CRGBA underwaterCol;
+            float waterColScale = 1.0f - fminf(*WaterDepth, 90.0f) / 90.0f;
+
+            int col = m_waterCol.r + 184;
+            underwaterCol.r = waterColScale * ((col > 255) ? 255 : col);
+            col = m_waterCol.g + 184 + (int)gfWaterGreen;
+            underwaterCol.g = waterColScale * ((col > 255) ? 255 : col);
+            col = m_waterCol.b + 184;
+            underwaterCol.b = waterColScale * ((col > 255) ? 255 : col);
+            underwaterCol.a = m_waterCol.a; // replaced with 255 in ripple func
+
+            if(g_nUWR == UWR_CLASSIC)
+            {
+                float xoffset = (4.0f * gfWaterGreen / 24.0f) * (((float)RsGlobal->maximumWidth) / 640.0f);
+                float yoffset = 24.0f * (((float)RsGlobal->maximumHeight) / 448.0f);
+                GFX_UnderWaterRipple(underwaterCol, xoffset, yoffset, 64, 0.0015f, 0.04f);
+            }
+            else
+            {
+                GFX_UnderWaterRipple_Shader(underwaterCol, gfWaterGreen / 24.0f, 0.0015f, 0.04f);
+            }
+
+            gfWaterGreen = fminf(gfWaterGreen + *ms_fTimeStep, 24.0f);
         }
         else
         {
-            GFX_HeatHaze(*HeatHazeFXControl, false);
+            gfWaterGreen = 0.0f;
         }
-    }
-
-    if(*pfWeatherUnderwaterness >= 0.535f)
-    {
-        CRGBA underwaterCol;
-        float waterColScale = 1.0f - fminf(*WaterDepth, 90.0f) / 90.0f;
-
-        int col = m_waterCol.r + 184;
-        underwaterCol.r = waterColScale * ((col > 255) ? 255 : col);
-        col = m_waterCol.g + 184 + (int)gfWaterGreen;
-        underwaterCol.g = waterColScale * ((col > 255) ? 255 : col);
-        col = m_waterCol.b + 184;
-        underwaterCol.b = waterColScale * ((col > 255) ? 255 : col);
-        underwaterCol.a = m_waterCol.a; // replaced with 255 in ripple func
-
-        float xoffset = (4.0f * gfWaterGreen / 24.0f) * (((float)RsGlobal->maximumWidth) / 640.0f);
-        float yoffset = 24.0f * (((float)RsGlobal->maximumHeight) / 448.0f);
-        GFX_UnderWaterRipple(underwaterCol, xoffset, yoffset, 64, 0.0015f, 0.04f);
-
-        gfWaterGreen = fminf(gfWaterGreen + *ms_fTimeStep, 24.0f);
-    }
-    else
-    {
-        gfWaterGreen = 0.0f;
     }
 
     // Enchanced PostFXs
@@ -1054,7 +1142,6 @@ void StartEffectsStuff()
         HOOK(PostFX_CCTV,   aml->GetSym(hGTASA, "_ZN12CPostEffects4CCTVEv"));
         shadercreation += CreateEffectsShaders;
 
-        HOOKBLX(HeatHazeFX_GrabBuffer, pGTASA + BYBIT(0x5B51E6, 0x6D94EC));
         //HOOKBLX(ShowGameBuffer, pGTASA + BYBIT(0x1BC5D4 + 0x1, 0x24F994));
 
         pCFGRenderGrain = cfg->Bind("RenderGrainEffect", g_bRenderGrain, "Effects");
@@ -1064,6 +1151,10 @@ void StartEffectsStuff()
         pCFGSpeedFX = cfg->Bind("SpeedFXType", g_nSpeedFX, "Effects");
         SpeedFXSettingChanged(g_nSpeedFX, pCFGSpeedFX->GetInt());
         AddSetting("Speed FX", g_nSpeedFX, 0, sizeofA(aSpeedFXSettings)-1, aSpeedFXSettings, SpeedFXSettingChanged, NULL);
+
+        pCFGUWR = cfg->Bind("UnderwaterRippleType", g_nUWR, "Effects");
+        UWRSettingChanged(g_nUWR, pCFGUWR->GetInt());
+        AddSetting("Underwater Ripple", g_nUWR, 0, sizeofA(aUWRSettings)-1, aUWRSettings, UWRSettingChanged, NULL);
 
         pCFGCrAbFX = cfg->Bind("ChromaticAberration", g_nCrAb, "EnchancedEffects");
         CrAbFXSettingChanged(g_nCrAb, pCFGCrAbFX->GetInt());
@@ -1080,5 +1171,10 @@ void StartEffectsStuff()
         pCFGDOF = cfg->Bind("DOFType", g_nDOF, "EnchancedEffects");
         DOFSettingChanged(g_nDOF, pCFGDOF->GetInt());
         AddSetting("Depth'o'Field", g_nDOF, 0, sizeofA(aDOFSettings)-1, aDOFSettings, DOFSettingChanged, NULL);
+
+        if(g_bHeatHaze)
+        {
+            HOOKBLX(HeatHazeFX_GrabBuffer, pGTASA + BYBIT(0x5B51E6, 0x6D94EC));
+        }
     }
 }

@@ -30,6 +30,7 @@ extern int g_nSpeedFX;
 extern bool g_bRadiosity;
 extern int g_nDOF;
 extern int g_nVignette;
+extern int g_nUWR;
 
 static int Global_GetFeatureLevel(eSkyGFXFeature f)
 {
@@ -65,6 +66,7 @@ static int Global_GetFeatureLevel(eSkyGFXFeature f)
         case GFX_RADIOSITY: return g_bMissingPostEffects ? g_bRadiosity : 0;
         case GFX_DOF: return g_bMissingPostEffects ? g_nDOF : 0;
         case GFX_VIGNETTE: return g_bMissingPostEffects ? g_nVignette : 0;
+        case GFX_UNDERWATERRIPPLE: return g_bMissingPostEffects ? g_nUWR : 0;
     }
 }
 
