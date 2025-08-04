@@ -337,12 +337,19 @@ void CreateEffectsShaders()
                      "}";
     g_pUnderwaterRippleShader = CreateCustomShaderAlloc(0, sUWRPxl, sUWRVtx, sizeof(sUWRPxl), sizeof(sUWRVtx));
 
+    // https://github.com/SableRaf/Filters4Processing/blob/master/sketches/ContrastSaturationBrightness/data/ContrastSaturationBrightness.glsl
     char sCSBPxl[] = "precision mediump float;\n"
                      "uniform sampler2D Diffuse;\n"
                      "uniform mediump vec3 FogDistances;\n"
                      "varying mediump vec2 Out_Tex0;\n"
+                     "const vec3 LumCoeff = vec3(0.2125, 0.7154, 0.0721);\n"
+                     "const vec3 AvgLumin = vec3(0.5, 0.5, 0.5);\n"
                      "void main() {\n"
-                     "  gl_FragColor = vec4(texture2D(Diffuse, Out_Tex0).rgb, 1.0);\n"
+                     "  vec3 color = texture2D(Diffuse, Out_Tex0).rgb;\n"
+                     "  vec3 brtColor  = color * FogDistances.z;\n"
+	                 "  vec3 intensity = vec3(dot(brtColor, LumCoeff));\n"
+	                 "  vec3 satColor  = mix(intensity, brtColor, FogDistances.y);\n"
+                     "  gl_FragColor = vec4(mix(AvgLumin, satColor, FogDistances.x), 1.0);\n"
                      "}";
     char sCSBVtx[] = "precision highp float;\n"
                      "attribute vec3 Position;\n"
@@ -1008,6 +1015,7 @@ DECL_HOOKv(PostFX_Render)
     GFX_GrabDepth();
     if(g_bCSB)
     {
+        // I got a request for this.
         GFX_FrameBufferCSB(g_fContrast, g_fSaturation, g_fBrightness);
     }
     else
@@ -1229,6 +1237,9 @@ void StartEffectsStuff()
         pCFGCSB = cfg->Bind("CSBFilter", g_bCSB, "EnchancedEffects");
         CSBSettingChanged(g_bCSB, pCFGCSB->GetBool());
         AddSetting("CSB Image Filter", g_bCSB, 0, sizeofA(aYesNo)-1, aYesNo, CSBSettingChanged, NULL);
+        g_fContrast = cfg->GetFloat("CSBFilter_Contrast", g_fContrast, "EnchancedEffects");
+        g_fSaturation = cfg->GetFloat("CSBFilter_Saturation", g_fSaturation, "EnchancedEffects");
+        g_fBrightness = cfg->GetFloat("CSBFilter_Brightness", g_fBrightness, "EnchancedEffects");
         
 
         if(g_bHeatHaze)
