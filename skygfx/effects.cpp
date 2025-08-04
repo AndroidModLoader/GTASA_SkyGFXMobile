@@ -108,6 +108,7 @@ ConfigEntry *pCFGVignette;
 ConfigEntry *pCFGRadiosity;
 ConfigEntry *pCFGDOF;
 ConfigEntry *pCFGUWR;
+ConfigEntry* pCFGCSB;
 
 /* Functions */
 void CreateEffectsShaders()
@@ -418,6 +419,15 @@ void UWRSettingChanged(int oldVal, int newVal, void* data = NULL)
     pCFGUWR->SetInt(newVal);
     pCFGUWR->Clamp(0, UWR_SETTINGS);
     g_nUWR = pCFGUWR->GetInt();
+
+    cfg->Save();
+}
+void CSBSettingChanged(int oldVal, int newVal, void* data = NULL)
+{
+    if(oldVal == newVal) return;
+
+    pCFGCSB->SetBool(newVal != 0);
+    g_bCSB = pCFGCSB->GetBool();
 
     cfg->Save();
 }
@@ -1215,6 +1225,11 @@ void StartEffectsStuff()
         pCFGDOF = cfg->Bind("DOFType", g_nDOF, "EnchancedEffects");
         DOFSettingChanged(g_nDOF, pCFGDOF->GetInt());
         AddSetting("Depth'o'Field", g_nDOF, 0, sizeofA(aDOFSettings)-1, aDOFSettings, DOFSettingChanged, NULL);
+
+        pCFGCSB = cfg->Bind("CSBFilter", g_bCSB, "EnchancedEffects");
+        CSBSettingChanged(g_bCSB, pCFGCSB->GetBool());
+        AddSetting("CSB Image Filter", g_bCSB, 0, sizeofA(aYesNo)-1, aYesNo, CSBSettingChanged, NULL);
+        
 
         if(g_bHeatHaze)
         {
