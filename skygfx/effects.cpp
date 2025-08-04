@@ -289,8 +289,8 @@ void CreateEffectsShaders()
                        "    float passes = 0.0;\n"
                        "    for(int x = -radius; x <= radius; x += 2) {\n"
                        "      for(int y = -radius; y <= radius; y += 2) {\n"
-                       "        float daDiff = abs(texture2D(DepthTex, Out_Tex0 + vec2(x, y) * FogDistances.xy).r - pixelDepth);\n"
-                       "        if(daDiff > 0.3) continue;\n"
+                       "        float targetDepth = texture2D(DepthTex, Out_Tex0 + vec2(x, y) * FogDistances.xy).r;\n"
+                       "        if(targetDepth < pixelDepth) continue;\n"
                        "        color += texture2D(Diffuse, Out_Tex0 + vec2(x, y) * FogDistances.xy).rgb;\n"
                        "        passes += 1.0;\n"
                        "      }\n"
@@ -874,6 +874,8 @@ void GFX_FakeRay()
 }
 void GFX_DOF() // Completed
 {
+    GFX_GrabScreen(true);
+    
     ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
 
@@ -888,7 +890,7 @@ void GFX_DOF() // Completed
     pForcedShader = g_pDOFShader;
     float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
     DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
-    PostEffectsDrawQuad(0.0, 0.0, 2.0f, 2.0f, 255, 255, 255, 255, pSkyGFXPostFXRaster1);
+    PostEffectsDrawQuad(0.0, 0.0, 2.0f, 2.0f, 255, 255, 255, 255, pSkyGFXPostFXRaster2);
     pForcedShader = NULL;
     
     ImmediateModeRenderStatesReStore();
