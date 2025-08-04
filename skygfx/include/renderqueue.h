@@ -1,4 +1,5 @@
 #include <externs.h>
+#include <EGL/egl.h>
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 
@@ -26,6 +27,8 @@
 #define RQUEUE_READBYTE(__data)                             \
     *(uint8_t*)*__data;                                     \
     *__data += sizeof(int);
+#define RQUEUE_PEAKBYTE(__data)                             \
+    *(uint8_t*)*__data;
 
 #define RQUEUE_WRITEINT(__v)                                \
 {                                                           \
@@ -35,6 +38,8 @@
 #define RQUEUE_READINT(__data)                              \
     *(int*)*__data;                                         \
     *__data += sizeof(int);
+#define RQUEUE_PEAKINT(__data)                              \
+    *(int*)*__data;
 
 #define RQUEUE_WRITEFLOAT(__v)                              \
 {                                                           \
@@ -44,6 +49,8 @@
 #define RQUEUE_READFLOAT(__data)                            \
     *(float*)*__data;                                       \
     *__data += sizeof(float);
+#define RQUEUE_PEAKFLOAT(__data)                            \
+    *(float*)*__data;
 
 #define RQUEUE_WRITEPTR(__v)                                   \
 {                                                              \
@@ -53,6 +60,8 @@
 #define RQUEUE_READPTR(__data)                              \
     *(void**)*__data;                                       \
     *__data += sizeof(void*);
+#define RQUEUE_PEAKPTR(__data)                              \
+    *(void**)*__data;
 
 /* This Might Be Incorrect... */
 #define RQUEUE_CLOSE()                                                                                              \
@@ -99,6 +108,7 @@ struct ExtendedRQ
 
     GLint m_aViewportBackup[4];
     GLint m_nPrevTex, m_nPrevActiveTex, m_nPrevBuffer;
+    GLuint m_NormalMapBuffer { 0 };
 };
 extern ExtendedRQ extRQ;
 

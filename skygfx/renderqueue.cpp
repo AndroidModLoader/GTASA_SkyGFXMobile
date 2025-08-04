@@ -11,6 +11,7 @@
 
 /* Variables */
 ExtendedRQ extRQ;
+PFNGLDRAWBUFFERSEXTPROC glDrawBuffers = NULL;
 
 /* Functions */
 void RQ_Command_erqColorMask(uint8_t** data)
@@ -263,6 +264,19 @@ DECL_HOOKv(RQ_Command_rqTargetCreate, uint8_t** data)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, target->depthBuffer, 0);
+
+        // Normal Map Buffer
+        // - Create new
+        glGenTextures(1, &extRQ.m_NormalMapBuffer);
+        // - Initialise the texture!
+        glBindTexture(GL_TEXTURE_2D, extRQ.m_NormalMapBuffer);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        // - Bind the texture only
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1_EXT, GL_TEXTURE_2D, extRQ.m_NormalMapBuffer, 0);
     }
 #endif
 
@@ -306,6 +320,7 @@ DECL_HOOKv(RQ_Command_rqTargetDelete, uint8_t** data)
     if(target->depthType == TDT_HighAcc)
     {
         glDeleteTextures(1, &target->depthBuffer);
+        if(!target->sharedDepth) glDeleteTextures(1, &extRQ.m_NormalMapBuffer);
     }
     else
     {
@@ -314,6 +329,17 @@ DECL_HOOKv(RQ_Command_rqTargetDelete, uint8_t** data)
 #endif
 
     delete target;
+}
+DECL_HOOKv(RQ_Command_rqTargetSelect, uint8_t** data)
+{
+    ES2RenderTarget* target = (ES2RenderTarget*)RQUEUE_PEAKPTR(data);
+    RQ_Command_rqTargetSelect(data);
+
+    if(target == *backTarget)
+    {
+        GLenum bufs[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1_EXT };
+        glDrawBuffers(2, bufs);
+    }
 }
 DECL_HOOKv(InitializeShaderAfterCompile, ES2Shader* self)
 {
@@ -329,5 +355,9 @@ void StartRenderQueue()
     HOOKPLT(RQ_Command_rqDebugMarker, pGTASA + BYBIT(0x677850, 0x84D0C8));
     HOOKPLT(RQ_Command_rqTargetCreate, pGTASA + BYBIT(0x677024, 0x84C080));
     HOOKPLT(RQ_Command_rqTargetDelete, pGTASA + BYBIT(0x6797B0, 0x850F68));
+    HOOKPLT(RQ_Command_rqTargetSelect, pGTASA + BYBIT(0x679B6C, 0x8516F8));
     HOOK(InitializeShaderAfterCompile, aml->GetSym(hGTASA, "_ZN9ES2Shader22InitializeAfterCompileEv"));
+
+    glDrawBuffers = (PFNGLDRAWBUFFERSEXTPROC)eglGetProcAddress("glDrawBuffers");
+    if(!glDrawBuffers) glDrawBuffers = (PFNGLDRAWBUFFERSEXTPROC)eglGetProcAddress("glDrawBuffersEXT");
 }

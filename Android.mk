@@ -23,7 +23,7 @@ LOCAL_SRC_FILES += skygfx/colorfilter.cpp skygfx/buildingpipe.cpp 	\
 				   skygfx/effects.cpp skygfx/neoWaterdrops.cpp
 
 ### Libraries
-LOCAL_LDLIBS += -llog -lGLESv2 # GLESv2 = GLESv3 library
+LOCAL_LDLIBS += -llog -lGLESv2 -lEGL # GLESv2 = GLESv3 library
 
 ### Flags
 #LOCAL_CXXFLAGS += -DNEW_LIGHTING
