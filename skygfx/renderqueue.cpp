@@ -95,20 +95,19 @@ void RQ_Command_erqGrabFramebuffer(uint8_t** data)
     extRQ.m_nPrevTex = -1;
     extRQ.m_nPrevActiveTex = -1;
     extRQ.m_nPrevBuffer = -1;
+    extRQ.m_aViewportBackup[3] = -1;
     if(!dst || !(*backTarget) || !(*backTarget)->targetTexture) return;
 
-#ifdef GPU_GRABBER
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &extRQ.m_nPrevBuffer);
-    glGetIntegerv(GL_ACTIVE_TEXTURE, &extRQ.m_nPrevActiveTex);
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &extRQ.m_nPrevTex);
-
+#ifdef GPU_GRABBER
+    glGetIntegerv(GL_VIEWPORT, &extRQ.m_aViewportBackup[0]);
+    glGetIntegerv(GL_ACTIVE_TEXTURE, &extRQ.m_nPrevActiveTex);
     glBindFramebuffer(GL_FRAMEBUFFER, dst->target->frameBuffer);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, (*backTarget)->targetTexture->texID);
+    glViewport(0, 0, dst->width, dst->height);
 #else
-    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &extRQ.m_nPrevBuffer);
-    glGetIntegerv(GL_TEXTURE_BINDING_2D, &extRQ.m_nPrevTex);
-
     glBindFramebuffer(GL_FRAMEBUFFER, (*backTarget)->frameBuffer);
     glBindTexture(GL_TEXTURE_2D, dst->texID);
     glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, *renderWidth, *renderHeight);
@@ -119,6 +118,10 @@ void RQ_Command_erqGrabFramebufferPost(uint8_t** data)
     if(extRQ.m_nPrevBuffer != -1) glBindFramebuffer(GL_FRAMEBUFFER, extRQ.m_nPrevBuffer);
     if(extRQ.m_nPrevActiveTex != -1) glActiveTexture(extRQ.m_nPrevActiveTex);
     if(extRQ.m_nPrevTex != -1) glBindTexture(GL_TEXTURE_2D, extRQ.m_nPrevTex);
+    if(extRQ.m_aViewportBackup[3] != -1)
+    {
+        glViewport(extRQ.m_aViewportBackup[0], extRQ.m_aViewportBackup[1], extRQ.m_aViewportBackup[2], extRQ.m_aViewportBackup[3]);
+    }
 }
 void RQ_Command_erqSetActiveTexture(uint8_t** data)
 {
