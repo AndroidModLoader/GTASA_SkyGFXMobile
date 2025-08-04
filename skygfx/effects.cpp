@@ -244,13 +244,11 @@ void CreateEffectsShaders()
                      "float steps = 3.0;\n"
                      "float blurPasses = 6.0;\n"
                      "void main() {\n"
-                     "  vec3 color = vec3(0.0);\n"
-                     "  float coc = clamp((0.95 - texture2D(DepthTex, Out_Tex0).r) * FogDistances.z, 0.0, 1.0);\n"
-                     "  if(coc <= 0.0) {\n"
-                     "    gl_FragColor = vec4(texture2D(Diffuse, Out_Tex0).rgb, 1.0);\n"
-                     "  } else {\n"
+                     "  vec3 color = texture2D(Diffuse, Out_Tex0).rgb;\n"
+                     "  float coc = clamp((0.93 - texture2D(DepthTex, Out_Tex0).r) * FogDistances.z, 0.0, 1.0);\n"
+                     "  if(coc > 0.0) {\n"
                      "    int radius = int(blurPasses * coc);\n"
-                     "    float passes = 0.0;\n"
+                     "    float passes = 1.0;\n"
                      "    for(int x = -radius; x <= radius; x += 2) {\n"
                      "      for(int y = -radius; y <= radius; y += 2) {\n"
                      "        color += texture2D(Diffuse, Out_Tex0 + vec2(float(x), float(y)) * FogDistances.xy).rgb;\n"
@@ -258,8 +256,8 @@ void CreateEffectsShaders()
                      "      }\n"
                      "    }\n"
                      "    color /= passes;\n"
-                     "    gl_FragColor = vec4(color, 1.0);\n"
                      "  }\n"
+                     "  gl_FragColor = vec4(color, 1.0);\n"
                      "}";
     char sDOFVtx[] = "precision highp float;\n"
                      "attribute vec3 Position;\n"
@@ -279,25 +277,23 @@ void CreateEffectsShaders()
                        "float steps = 3.0;\n"
                        "float blurPasses = 6.0;\n"
                        "void main() {\n"
-                       "  vec3 color = vec3(0.0);\n"
+                       "  vec3 color = texture2D(Diffuse, Out_Tex0).rgb;\n"
                        "  float pixelDepth = texture2D(DepthTex, Out_Tex0).r;\n"
-                       "  float coc = clamp((0.95 - pixelDepth) * FogDistances.z, 0.0, 1.0);\n"
-                       "  if(coc <= 0.0) {\n"
-                       "    gl_FragColor = vec4(texture2D(Diffuse, Out_Tex0).rgb, 1.0);\n"
-                       "  } else {\n"
+                       "  float coc = clamp((0.93 - pixelDepth) * FogDistances.z, 0.0, 1.0);\n"
+                       "  if(coc > 0.0) {\n"
                        "    int radius = int(blurPasses * coc);\n"
-                       "    float passes = 0.0;\n"
+                       "    float passes = 1.0;\n"
                        "    for(int x = -radius; x <= radius; x += 2) {\n"
                        "      for(int y = -radius; y <= radius; y += 2) {\n"
                        "        float targetDepth = texture2D(DepthTex, Out_Tex0 + vec2(x, y) * FogDistances.xy).r;\n"
-                       "        if(targetDepth < pixelDepth) continue;\n"
+                       "        if(targetDepth > pixelDepth) continue;\n"
                        "        color += texture2D(Diffuse, Out_Tex0 + vec2(x, y) * FogDistances.xy).rgb;\n"
                        "        passes += 1.0;\n"
                        "      }\n"
                        "    }\n"
                        "    color /= passes;\n"
-                       "    gl_FragColor = vec4(color, 1.0);\n"
                        "  }\n"
+                       "  gl_FragColor = vec4(color, 1.0);\n"
                        "}";
     char sDOFDAVtx[] = "precision highp float;\n"
                        "attribute vec3 Position;\n"
@@ -526,10 +522,10 @@ void GFX_GrabDepth()
         RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
         RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
 
-        *emu_fogdistances = CVector{ Scene->camera->nearClip, Scene->camera->farClip, 0.0f };
-        g_pSimpleDepthShader->SetVectorConstant(SVCID_FogDistances, &emu_fogdistances->x, 3); // need both ^
-
         pForcedShader = g_pSimpleDepthShader;
+        *emu_fogdistances = CVector{ Scene->camera->nearClip, Scene->camera->farClip, 0.0f };
+        pForcedShader->SetVectorConstant(SVCID_FogDistances, &emu_fogdistances->x, 3); // need both ^
+
         float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
         DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
         PostEffectsDrawQuad(0.0f, 0.0f, 2.0f, 2.0f, 255, 255, 255, 255, NULL);
@@ -882,12 +878,10 @@ void GFX_DOF() // Completed
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
     RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
 
-    // g_pDOFShader_DepthAware
-
+    pForcedShader = g_pDOFShader; // g_pDOFShader_DepthAware (not yet little guys)
     *emu_fogdistances = CVector{ 1.0f / (float)postfxX, 1.0f / (float)postfxY, g_fFocalRange };
-    g_pDOFShader->SetVectorConstant(SVCID_FogDistances, &emu_fogdistances->x, 3); // need both ^
+    pForcedShader->SetVectorConstant(SVCID_FogDistances, &emu_fogdistances->x, 3); // need both ^
 
-    pForcedShader = g_pDOFShader;
     float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
     DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
     PostEffectsDrawQuad(0.0, 0.0, 2.0f, 2.0f, 255, 255, 255, 255, pSkyGFXPostFXRaster2);
