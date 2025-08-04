@@ -51,6 +51,8 @@ int g_nDOF = DOF_INACTIVE;
 bool g_bHeatHaze = false;
 float g_fFocalRange = 2.2f;
 int g_nUWR = UWR_CLASSIC;
+bool g_bCSB = false;
+float g_fContrast = 1.0f, g_fSaturation = 1.0f, g_fBrightness = 1.0f;
 
 int g_nGrainRainStrength = 0;
 int g_nInitialGrain = 0;
@@ -69,6 +71,7 @@ ES2Shader* g_pFakeRayShader = NULL;
 ES2Shader* g_pDOFShader = NULL;
 ES2Shader* g_pDOFShader_DepthAware = NULL;
 ES2Shader* g_pUnderwaterRippleShader = NULL;
+ES2Shader* g_pCSBShader = NULL;
 
 /* Other */
 static const char* aSpeedFXSettings[SPEEDFX_SETTINGS] = 
@@ -332,6 +335,23 @@ void CreateEffectsShaders()
                      "  Out_Tex0 = TexCoord0;\n"
                      "}";
     g_pUnderwaterRippleShader = CreateCustomShaderAlloc(0, sUWRPxl, sUWRVtx, sizeof(sUWRPxl), sizeof(sUWRVtx));
+
+    char sCSBPxl[] = "precision mediump float;\n"
+                     "uniform sampler2D Diffuse;\n"
+                     "uniform mediump vec3 FogDistances;\n"
+                     "varying mediump vec2 Out_Tex0;\n"
+                     "void main() {\n"
+                     "  gl_FragColor = vec4(texture2D(Diffuse, Out_Tex0).rgb, 1.0);\n"
+                     "}";
+    char sCSBVtx[] = "precision highp float;\n"
+                     "attribute vec3 Position;\n"
+                     "attribute vec2 TexCoord0;\n"
+                     "varying mediump vec2 Out_Tex0;\n"
+                     "void main() {\n"
+                     "  gl_Position = vec4(Position.xy - 1.0, 0.0, 1.0);\n"
+                     "  Out_Tex0 = TexCoord0;\n"
+                     "}";
+    g_pCSBShader = CreateCustomShaderAlloc(0, sCSBPxl, sCSBVtx, sizeof(sCSBPxl), sizeof(sCSBVtx));
 }
 void RenderGrainSettingChanged(int oldVal, int newVal, void* data = NULL)
 {
@@ -903,6 +923,27 @@ void GFX_FrameBuffer() // Completed
     
     ImmediateModeRenderStatesReStore();
 }
+void GFX_FrameBufferCSB(float contrast, float saturation, float brightness) // Completed
+{
+    ImmediateModeRenderStatesStore();
+    ImmediateModeRenderStatesSet();
+
+    RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
+
+    pForcedShader = g_pCSBShader;
+    *emu_fogdistances = CVector{ contrast, saturation, brightness };
+    pForcedShader->SetVectorConstant(SVCID_FogDistances, &emu_fogdistances->x, 3); // need both ^
+    
+    float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
+    DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
+    PostEffectsDrawQuad(0.0, 0.0, 2.0f, 2.0f, 255, 255, 255, 255, pSkyGFXPostFXRaster1);
+
+    pForcedShader = NULL;
+    ImmediateModeRenderStatesReStore();
+
+    GFX_GrabScreen(); // Update the framebuffer with CSB-processed image
+}
 void GFX_DepthBuffer() // Completed
 {
     ImmediateModeRenderStatesStore();
@@ -955,7 +996,14 @@ DECL_HOOKv(PostFX_Render)
 
     GFX_GrabScreen();
     GFX_GrabDepth();
-    GFX_FrameBuffer();
+    if(g_bCSB)
+    {
+        GFX_FrameBufferCSB(g_fContrast, g_fSaturation, g_fBrightness);
+    }
+    else
+    {
+        GFX_FrameBuffer();
+    }
 
     if(*pbFog) RenderScreenFogPostEffect();
 
