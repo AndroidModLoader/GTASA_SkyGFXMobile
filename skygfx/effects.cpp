@@ -54,17 +54,20 @@ bool g_bDOFUseScale = false;
 int g_nUWR = UWR_CLASSIC;
 bool g_bCSB = false;
 float g_fContrast = 1.0f, g_fSaturation = 1.0f, g_fBrightness = 1.0f, g_fGamma = 1.0f;
+bool g_bBloom = false;
 
 int g_nGrainRainStrength = 0;
 int g_nInitialGrain = 0;
 RwRaster* pGrainRaster = NULL;
 
 int postfxX = 0, postfxY = 0;
-RwRaster *pSkyGFXPostFXRaster1 = NULL, *pSkyGFXPostFXRaster2 = NULL, *pSkyGFXDepthRaster = NULL;
+RwRaster *pSkyGFXPostFXRaster1 = NULL, *pSkyGFXPostFXRaster2 = NULL,
+         *pSkyGFXDepthRaster = NULL,   *pSkyGFXBrightnessRaster = NULL;
 RwRaster *pDarkRaster = NULL;
 
 ES2Shader* g_pSimpleInverseShader = NULL;
 ES2Shader* g_pSimpleDepthShader = NULL;
+ES2Shader* g_pSimpleBrightShader = NULL;
 ES2Shader* g_pChromaticAberrationShader = NULL;
 ES2Shader* g_pChromaticAberrationShader_Intensive = NULL;
 ES2Shader* g_pVignetteShader = NULL;
@@ -73,6 +76,7 @@ ES2Shader* g_pDOFShader = NULL;
 ES2Shader* g_pDADOFShader = NULL;
 ES2Shader* g_pUnderwaterRippleShader = NULL;
 ES2Shader* g_pCSBShader = NULL;
+ES2Shader* g_pBloomShader = NULL;
 
 /* Other */
 static const char* aSpeedFXSettings[SPEEDFX_SETTINGS] = 
@@ -150,6 +154,30 @@ void CreateEffectsShaders()
                              "  Out_Tex0 = TexCoord0;\n"
                              "}";
     g_pSimpleDepthShader = CreateCustomShaderAlloc(0, sSimpleDepthPxl, sSimpleDepthVtx, sizeof(sSimpleDepthPxl), sizeof(sSimpleDepthVtx));
+
+    char sSimpleBrightPxl[] = "precision mediump float;\n"
+                              "uniform sampler2D Diffuse;\n"
+                              "varying mediump vec2 Out_Tex0;\n"
+                              "uniform mediump vec4 GFX1v;\n"
+                              "const vec3 LumCoeff = vec3(0.2126, 0.7152, 0.0722);\n"
+                              "void main() {\n"
+                              "  vec3 color = texture2D(Diffuse, Out_Tex0).rgb;\n"
+                              "  float intensity = dot(color, LumCoeff);\n"
+                              "  if(intensity >= GFX1v.x) {\n"
+                              "    gl_FragColor = vec4(color, 1.0);\n"
+                              "  } else {\n"
+                              "    gl_FragColor = vec4(vec3(0.0), 1.0);\n"
+                              "  }\n"
+                              "}";
+    char sSimpleBrightVtx[] = "precision highp float;\n"
+                              "attribute vec3 Position;\n"
+                              "attribute vec2 TexCoord0;\n"
+                              "varying mediump vec2 Out_Tex0;\n"
+                              "void main() {\n"
+                              "  gl_Position = vec4(Position.xy - 1.0, 0.0, 1.0);\n"
+                              "  Out_Tex0 = TexCoord0;\n"
+                              "}";
+    g_pSimpleBrightShader = CreateCustomShaderAlloc(0, sSimpleBrightPxl, sSimpleBrightVtx, sizeof(sSimpleBrightPxl), sizeof(sSimpleBrightVtx));
 
     // https://lettier.github.io/3d-game-shaders-for-beginners/chromatic-aberration.html
     char sChromaPxl[] = "precision mediump float;\n"
@@ -343,7 +371,7 @@ void CreateEffectsShaders()
                      "uniform sampler2D Diffuse;\n"
                      "uniform mediump vec4 GFX1v;\n"
                      "varying mediump vec2 Out_Tex0;\n"
-                     "const vec3 LumCoeff = vec3(0.2125, 0.7154, 0.0721);\n"
+                     "const vec3 LumCoeff = vec3(0.2126, 0.7152, 0.0722);\n"
                      "const vec3 AvgLumin = vec3(0.5, 0.5, 0.5);\n"
                      "void main() {\n"
                      "  vec3 color = texture2D(Diffuse, Out_Tex0).rgb;\n"
@@ -361,6 +389,61 @@ void CreateEffectsShaders()
                      "  Out_Tex0 = TexCoord0;\n"
                      "}";
     g_pCSBShader = CreateCustomShaderAlloc(0, sCSBPxl, sCSBVtx, sizeof(sCSBPxl), sizeof(sCSBVtx));
+
+    //char sBloomPxl[] = "precision mediump float;\n"
+    //                   "uniform sampler2D Diffuse;\n"
+    //                   "uniform sampler2D DepthTex;\n"
+    //                   "uniform mediump vec4 GFX1v;\n"
+    //                   "varying mediump vec2 Out_Tex0;\n"
+    //                   "const float blurPasses = 5.0;\n"
+    //                   "const float blurRadius = 16.0;\n"
+    //                   "void main() {\n"
+    //                   "  vec3 bloom = texture2D(DepthTex, Out_Tex0).rgb;\n"
+    //                   "  float currRadius = blurRadius;\n"
+    //                   "  for(float i = 0.0; i < blurPasses; ++i) {\n"
+    //                   "    vec2 currRadiusVec = vec2(-currRadius, currRadius);\n"
+    //                   "    bloom += texture2D(DepthTex, Out_Tex0 + GFX1v.xy * currRadiusVec).rgb;\n"
+    //                   "    bloom += texture2D(DepthTex, Out_Tex0 - GFX1v.xy * currRadiusVec).rgb;\n"
+    //                   "    bloom += texture2D(DepthTex, Out_Tex0 + GFX1v.xy * currRadius).rgb;\n"
+    //                   "    bloom += texture2D(DepthTex, Out_Tex0 - GFX1v.xy * currRadius).rgb;\n"
+    //                   "    currRadius *= 0.75;\n"
+    //                   "  }\n"
+    //                   "  bloom /= (1.0 + blurPasses * 4.0);\n"
+    //                   "  vec3 color = texture2D(Diffuse, Out_Tex0).rgb;\n"
+    //                   "  color = clamp(color + bloom, 0.0, 1.0);\n"
+    //                   "  gl_FragColor = vec4(color, 1.0);\n"
+    //                   "}"; // Kawase-like blur (doesnt fit!)
+    char sBloomPxl[] = "precision mediump float;\n"
+                       "uniform sampler2D Diffuse;\n"
+                       "uniform sampler2D DepthTex;\n"
+                       "uniform mediump vec4 GFX1v;\n"
+                       "varying mediump vec2 Out_Tex0;\n"
+                       "const float blurRadius = 2.0;\n"
+                       "void main() {\n"
+                       "  vec3 bloom = vec3(0.0);\n"
+                       "  float kernelSize = 0.0;\n"
+                       "  float softenEdge = 0.0;\n"
+                       "  for(float x = -blurRadius; x <= blurRadius; ++x) {\n"
+                       "    for(float y = -blurRadius; y <= blurRadius; ++y) {\n"
+                       "      softenEdge = 1.0 - abs(x + y) / (4.0 * blurRadius);\n"
+                       "      bloom += softenEdge * texture2D(DepthTex, Out_Tex0 + GFX1v.xy * 5.0 * vec2(x, y)).rgb;\n"
+                       "      kernelSize += 1.0;\n"
+                       "    }\n"
+                       "  }\n"
+                       "  bloom /= kernelSize;\n"
+                       "  vec3 color = texture2D(Diffuse, Out_Tex0).rgb;\n"
+                       "  color = clamp(color + GFX1v.z * bloom, 0.0, 1.0);\n"
+                       "  gl_FragColor = vec4(color, 1.0);\n"
+                       "}";
+    char sBloomVtx[] = "precision highp float;\n"
+                       "attribute vec3 Position;\n"
+                       "attribute vec2 TexCoord0;\n"
+                       "varying mediump vec2 Out_Tex0;\n"
+                       "void main() {\n"
+                       "  gl_Position = vec4(Position.xy - 1.0, 0.0, 1.0);\n"
+                       "  Out_Tex0 = TexCoord0;\n"
+                       "}";
+    g_pBloomShader = CreateCustomShaderAlloc(0, sBloomPxl, sBloomVtx, sizeof(sBloomPxl), sizeof(sBloomVtx));
 }
 void RenderGrainSettingChanged(int oldVal, int newVal, void* data = NULL)
 {
@@ -500,10 +583,15 @@ void GFX_ActivateRawDepthTexture()
 }
 void GFX_ActivateProcessedDepthTexture()
 {
-    ES2Texture* depthTexture = *(ES2Texture**)( (char*)&pSkyGFXDepthRaster->parent + *RasterExtOffset );
+    ES2Texture* depthTexture = GetES2Raster(pSkyGFXDepthRaster);
     ERQ_SetActiveTexture(2, depthTexture->texID);
 }
-void GFX_DeActivateDepthTexture()
+void GFX_ActivateBrightnessTexture()
+{
+    ES2Texture* brTexture = GetES2Raster(pSkyGFXBrightnessRaster);
+    ERQ_SetActiveTexture(2, brTexture->texID);
+}
+void GFX_DeActivateTexture()
 {
     ERQ_SetActiveTexture(2, 0);
 }
@@ -522,6 +610,9 @@ void GFX_CheckBuffersSize()
 
         if(pSkyGFXDepthRaster) RwRasterDestroy(pSkyGFXDepthRaster);
         pSkyGFXDepthRaster = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMATDEFAULT);
+
+        if(pSkyGFXBrightnessRaster) RwRasterDestroy(pSkyGFXBrightnessRaster);
+        pSkyGFXBrightnessRaster = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMATDEFAULT);
     }
 }
 void GFX_GrabScreen(bool second = false)
@@ -531,18 +622,6 @@ void GFX_GrabScreen(bool second = false)
     if((!second && pSkyGFXPostFXRaster1) || (second && pSkyGFXPostFXRaster2))
     {
         ERQ_GrabFramebuffer(second ? pSkyGFXPostFXRaster2 : pSkyGFXPostFXRaster1);
-    #ifdef GPU_GRABBER
-        emu_glBegin(5u);
-        emu_glVertex3f(-1.0, 1.0, *gradeBlur);
-        emu_glTexCoord2f(0.0, 1.0);
-        emu_glVertex3f(1.0, 1.0, *gradeBlur);
-        emu_glTexCoord2f(1.0, 1.0);
-        emu_glVertex3f(-1.0, -1.0, *gradeBlur);
-        emu_glTexCoord2f(0.0, 0.0);
-        emu_glVertex3f(1.0, -1.0, *gradeBlur);
-        emu_glTexCoord2f(1.0, 0.0);
-        emu_glEnd();
-    #endif
         ERQ_GrabFramebufferPost();
     }
 }
@@ -570,18 +649,33 @@ void GFX_GrabDepth()
         pForcedShader = NULL;
 
         ERQ_GrabFramebuffer(pSkyGFXDepthRaster);
-    #ifdef GPU_GRABBER
-        emu_glBegin(5u);
-        emu_glVertex3f(-1.0, 1.0, *gradeBlur);
-        emu_glTexCoord2f(0.0, 1.0);
-        emu_glVertex3f(1.0, 1.0, *gradeBlur);
-        emu_glTexCoord2f(1.0, 1.0);
-        emu_glVertex3f(-1.0, -1.0, *gradeBlur);
-        emu_glTexCoord2f(0.0, 0.0);
-        emu_glVertex3f(1.0, -1.0, *gradeBlur);
-        emu_glTexCoord2f(1.0, 0.0);
-        emu_glEnd();
-    #endif
+        ERQ_GrabFramebufferPost();
+
+        ImmediateModeRenderStatesReStore();
+    }
+}
+void GFX_GrabBrightness(float luminance)
+{
+    GFX_CheckBuffersSize();
+
+    if(pSkyGFXBrightnessRaster)
+    {
+        ImmediateModeRenderStatesStore();
+        ImmediateModeRenderStatesSet();
+
+        RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
+        RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
+
+        RQVector uniValues = RQVector{ luminance, 0.0f, 0.0f, 0.0f };
+        pForcedShader = g_pSimpleBrightShader;
+        pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
+
+        float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
+        DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
+        PostEffectsDrawQuad(0.0f, 0.0f, 2.0f, 2.0f, 255, 255, 255, 255, NULL);
+        pForcedShader = NULL;
+
+        ERQ_GrabFramebuffer(pSkyGFXBrightnessRaster);
         ERQ_GrabFramebufferPost();
 
         ImmediateModeRenderStatesReStore();
@@ -974,6 +1068,27 @@ void GFX_FrameBufferCSB(float contrast, float saturation, float brightness, floa
 
     GFX_GrabScreen(); // Update the framebuffer with CSB-processed image
 }
+void GFX_FrameBufferBloom(float intensity) // Completed
+{
+    ImmediateModeRenderStatesStore();
+    ImmediateModeRenderStatesSet();
+
+    RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
+
+    RQVector uniValues = RQVector{ 1.0f / (float)RsGlobal->maximumWidth, 1.0f / (float)RsGlobal->maximumHeight, intensity, 0.0f };
+    pForcedShader = g_pBloomShader;
+    pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
+    
+    float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
+    DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
+    PostEffectsDrawQuad(0.0, 0.0, 2.0f, 2.0f, 255, 255, 255, 255, pSkyGFXPostFXRaster1);
+
+    pForcedShader = NULL;
+    ImmediateModeRenderStatesReStore();
+
+    GFX_GrabScreen(); // Update the framebuffer with CSB-processed image
+}
 void GFX_DepthBuffer() // Completed
 {
     ImmediateModeRenderStatesStore();
@@ -1032,6 +1147,13 @@ DECL_HOOKv(PostFX_Render)
     else
     {
         GFX_FrameBuffer();
+    }
+
+    if(g_bBloom)
+    {
+        GFX_GrabBrightness(0.62f);
+        GFX_ActivateBrightnessTexture();
+        GFX_FrameBufferBloom(0.5f);
     }
 
     if(*pbFog) RenderScreenFogPostEffect();
@@ -1152,7 +1274,7 @@ DECL_HOOKv(PostFX_Render)
     //GFX_FakeRay(); // doesnt look cool enough
     GFX_Vignette(g_nVignette * 2.55f);
 
-    GFX_DeActivateDepthTexture();
+    GFX_DeActivateTexture();
 }
 DECL_HOOKv(PostFX_CCTV)
 {
@@ -1243,7 +1365,6 @@ void StartEffectsStuff()
         pCFGDOF = cfg->Bind("DOFType", g_nDOF, "EnchancedEffects");
         DOFSettingChanged(g_nDOF, pCFGDOF->GetInt());
         AddSetting("Depth'o'Field", g_nDOF, 0, sizeofA(aDOFSettings)-1, aDOFSettings, DOFSettingChanged, NULL);
-        AddSetting("CSB Image Filter", g_bCSB, 0, sizeofA(aYesNo)-1, aYesNo, CSBSettingChanged, NULL);
         g_fDOFStrength = cfg->GetFloat("DOFStrength", g_fDOFStrength, "EnchancedEffects");
         g_bDOFUseScale = cfg->GetFloat("DOFUseScaleInsteadDist", g_bDOFUseScale, "EnchancedEffects");
         g_fDOFDistance = cfg->GetFloat("DOFDistance", g_fDOFDistance, "EnchancedEffects");

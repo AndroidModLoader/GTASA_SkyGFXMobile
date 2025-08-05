@@ -54,36 +54,6 @@ void RQ_Command_erqDisable(uint8_t** data)
     GLenum cap = *(GLenum*)*data; *data += sizeof(int);
     glDisable(cap);
 }
-void RQ_Command_erqBackupViewport(uint8_t** data)
-{
-    glGetIntegerv(GL_VIEWPORT, &extRQ.m_aViewportBackup[0]);
-    extRQ.m_bViewportBackupped = true;
-}
-void RQ_Command_erqRestoreViewport(uint8_t** data)
-{
-    if(extRQ.m_bViewportBackupped)
-    {
-        glViewport(extRQ.m_aViewportBackup[0], extRQ.m_aViewportBackup[1], extRQ.m_aViewportBackup[2], extRQ.m_aViewportBackup[3]);
-        extRQ.m_bViewportBackupped = false;
-    }
-}
-void RQ_Command_erqViewport(uint8_t** data)
-{
-    int x = RQUEUE_READINT(data);
-    int y = RQUEUE_READINT(data);
-    glViewport(0, 0, x, y);
-}
-void RQ_Command_erqRenderFast(uint8_t** data)
-{
-    GLuint id = (GLuint)RQUEUE_READINT(data);
-    int x = RQUEUE_READINT(data);
-    int y = RQUEUE_READINT(data);
-
-    //glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, id);
-    glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, x, y);
-    glBindTexture(GL_TEXTURE_2D, boundTextures[*curActiveTexture]);
-}
 void RQ_Command_erqAlphaBlendStatus(uint8_t** data)
 {
     extRQ.m_bAlphaBlending = (glIsEnabled(GL_BLEND) == GL_TRUE);
@@ -92,35 +62,36 @@ void RQ_Command_erqGrabFramebuffer(uint8_t** data)
 {
     ES2Texture* dst = (ES2Texture*)RQUEUE_READPTR(data);
 
-    extRQ.m_nPrevTex = -1;
-    extRQ.m_nPrevActiveTex = -1;
-    extRQ.m_nPrevBuffer = -1;
-    extRQ.m_aViewportBackup[3] = -1;
-    if(!dst || !(*backTarget) || !(*backTarget)->targetTexture) return;
+    if(!dst || !(*backTarget)) return;
 
-    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &extRQ.m_nPrevBuffer);
-    glGetIntegerv(GL_TEXTURE_BINDING_2D, &extRQ.m_nPrevTex);
-#ifdef GPU_GRABBER
-    glGetIntegerv(GL_VIEWPORT, &extRQ.m_aViewportBackup[0]);
-    glGetIntegerv(GL_ACTIVE_TEXTURE, &extRQ.m_nPrevActiveTex);
-    glBindFramebuffer(GL_FRAMEBUFFER, dst->target->frameBuffer);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, (*backTarget)->targetTexture->texID);
-    glViewport(0, 0, dst->width, dst->height);
-#else
+    extRQ.m_nPrevBuffer = ( (*currentTarget) ? (*currentTarget)->frameBuffer : *backBuffer ); //glGetIntegerv(GL_FRAMEBUFFER_BINDING, &extRQ.m_nPrevBuffer);
+    extRQ.m_nPrevTex = boundTextures[*curActiveTexture]; //glGetIntegerv(GL_TEXTURE_BINDING_2D, &extRQ.m_nPrevTex);
+
     glBindFramebuffer(GL_FRAMEBUFFER, (*backTarget)->frameBuffer);
     glBindTexture(GL_TEXTURE_2D, dst->texID);
     glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, *renderWidth, *renderHeight);
-#endif
 }
 void RQ_Command_erqGrabFramebufferPost(uint8_t** data)
 {
-    if(extRQ.m_nPrevBuffer != -1) glBindFramebuffer(GL_FRAMEBUFFER, extRQ.m_nPrevBuffer);
-    if(extRQ.m_nPrevActiveTex != -1) glActiveTexture(extRQ.m_nPrevActiveTex);
-    if(extRQ.m_nPrevTex != -1) glBindTexture(GL_TEXTURE_2D, extRQ.m_nPrevTex);
+    if(extRQ.m_nPrevBuffer != -1)
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, extRQ.m_nPrevBuffer);
+        extRQ.m_nPrevBuffer = -1;
+    }
+    if(extRQ.m_nPrevActiveTex != -1)
+    {
+        glActiveTexture(extRQ.m_nPrevActiveTex);
+        extRQ.m_nPrevActiveTex = -1;
+    }
+    if(extRQ.m_nPrevTex != -1)
+    {
+        glBindTexture(GL_TEXTURE_2D, extRQ.m_nPrevTex);
+        extRQ.m_nPrevTex = -1;
+    }
     if(extRQ.m_aViewportBackup[3] != -1)
     {
         glViewport(extRQ.m_aViewportBackup[0], extRQ.m_aViewportBackup[1], extRQ.m_aViewportBackup[2], extRQ.m_aViewportBackup[3]);
+        extRQ.m_aViewportBackup[3] = -1;
     }
 }
 void RQ_Command_erqSetActiveTexture(uint8_t** data)
@@ -128,6 +99,11 @@ void RQ_Command_erqSetActiveTexture(uint8_t** data)
     int texNum = RQUEUE_READINT(data);
     GLuint texId = (GLuint)RQUEUE_READINT(data);
     activeTextures[texNum] = texId;
+}
+void RQ_Command_erqRenderFramebufferIntoTexture(uint8_t** data)
+{
+    ES2Texture* tex = (ES2Texture*)RQUEUE_READPTR(data);
+    
 }
 
 /* Hooks */
@@ -151,14 +127,11 @@ DECL_HOOKv(RQ_Command_rqDebugMarker, uint8_t** data)
         CASE_RQ( erqBlendFunc );
         CASE_RQ( erqEnable );
         CASE_RQ( erqDisable );
-        CASE_RQ( erqBackupViewport );
-        CASE_RQ( erqRestoreViewport );
-        CASE_RQ( erqViewport );
-        CASE_RQ( erqRenderFast );
         CASE_RQ( erqAlphaBlendStatus );
         CASE_RQ( erqGrabFramebuffer );
         CASE_RQ( erqGrabFramebufferPost );
         CASE_RQ( erqSetActiveTexture );
+        CASE_RQ( erqRenderFramebufferIntoTexture );
     }
 }
 DECL_HOOKv(RQ_Command_rqTargetCreate, uint8_t** data)

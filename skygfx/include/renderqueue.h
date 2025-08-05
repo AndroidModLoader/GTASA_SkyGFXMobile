@@ -82,19 +82,16 @@ enum ExtendedRQCommand : __int32
 {
     EXRQC_START = 0x2000, // Because i want to.
 
-    erqColorMask = 0,
+    erqColorMask,
     erqBlendFuncSeparate,
     erqBlendFunc,
     erqEnable,
     erqDisable,
-    erqBackupViewport,
-    erqRestoreViewport,
-    erqViewport,
-    erqRenderFast,
     erqAlphaBlendStatus,
     erqGrabFramebuffer,
     erqGrabFramebufferPost,
     erqSetActiveTexture,
+    erqRenderFramebufferIntoTexture,
 
     EXRQC_END
 };
@@ -106,8 +103,8 @@ struct ExtendedRQ
     bool m_bViewportBackupped;
     bool m_bAlphaBlending;
 
-    GLint m_aViewportBackup[4];
-    GLint m_nPrevTex, m_nPrevActiveTex, m_nPrevBuffer;
+    GLint m_aViewportBackup[4] { -1, -1, -1, -1 };
+    GLint m_nPrevTex = -1, m_nPrevActiveTex = -1, m_nPrevBuffer = -1;
     GLuint m_NormalMapBuffer { 0 };
 };
 extern ExtendedRQ extRQ;
@@ -121,22 +118,6 @@ inline void ERQ_BlendFuncSeparate(GLenum sfactorRGB, GLenum dfactorRGB, GLenum s
     RQUEUE_WRITEINT(dfactorRGB);
     RQUEUE_WRITEINT(sfactorAlpha);
     RQUEUE_WRITEINT(dfactorAlpha);
-
-    RQUEUE_CLOSE();
-}
-inline void ERQ_RenderFast(RwRaster* dst)
-{
-    if(!dst) return;
-
-    ES2Texture* tex = *(ES2Texture**)((char*)&dst->parent + *RasterExtOffset);
-    if(!tex) return;
-
-    RQUEUE_QUEUE(rqDebugMarker);
-    
-    RQUEUE_WRITEINT(erqRenderFast);
-    RQUEUE_WRITEINT(tex->texID);
-    RQUEUE_WRITEINT(dst->width);
-    RQUEUE_WRITEINT(dst->height);
 
     RQUEUE_CLOSE();
 }
@@ -159,7 +140,7 @@ inline void ERQ_GrabFramebuffer(RwRaster* raster)
 {
     RQUEUE_QUEUE(rqDebugMarker);
     RQUEUE_WRITEINT(erqGrabFramebuffer);
-    RQUEUE_WRITEPTR( *(ES2Texture**)((char*)&raster->parent + *RasterExtOffset) );
+    RQUEUE_WRITEPTR(GetES2Raster(raster));
     RQUEUE_CLOSE();
 }
 inline void ERQ_GrabFramebufferPost()
@@ -174,5 +155,12 @@ inline void ERQ_SetActiveTexture(int texNum, GLuint texId)
     RQUEUE_WRITEINT(erqSetActiveTexture);
     RQUEUE_WRITEINT(texNum);
     RQUEUE_WRITEINT(texId);
+    RQUEUE_CLOSE();
+}
+inline void ERQ_RenderFramebufferIntoTexture(RwRaster* raster)
+{
+    RQUEUE_QUEUE(rqDebugMarker);
+    RQUEUE_WRITEINT(erqRenderFramebufferIntoTexture);
+    RQUEUE_WRITEPTR(GetES2Raster(raster));
     RQUEUE_CLOSE();
 }

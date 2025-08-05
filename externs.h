@@ -18,7 +18,6 @@
 #define sizeofA(__aVar)  ((int)(sizeof(__aVar)/sizeof(__aVar[0])))
 
 
-//#define GPU_GRABBER // not working :(
 #define TEXTURE_DEPTHBUF
 
 
@@ -470,6 +469,10 @@ inline void Set2DQuad(float x1, float y1, float x2, float y2, float u1, float v1
 {
     float rhw = 1.0f / Scene->camera->nearClip;
     Set2DQuadRHW(rhw, x1, y1, x2, y2, u1, v1, u2, v2, color);
+}
+inline ES2Texture* GetES2Raster(RwRaster* raster)
+{
+    return *(ES2Texture**)( (char*)raster + *RasterExtOffset );
 }
 
 #endif // __EXTERNS
