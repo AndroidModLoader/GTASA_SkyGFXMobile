@@ -61,6 +61,8 @@ int g_nInitialGrain = 0;
 RwRaster* pGrainRaster = NULL;
 
 int postfxX = 0, postfxY = 0;
+float fpostfxX = 0, fpostfxY = 0;
+float fpostfxXInv = 0, fpostfxYInv = 0;
 RwRaster *pSkyGFXPostFXRaster1 = NULL, *pSkyGFXPostFXRaster2 = NULL,
          *pSkyGFXDepthRaster = NULL,   *pSkyGFXBrightnessRaster = NULL,
          *pSkyGFXBloomP1Raster = NULL, *pSkyGFXBloomP2Raster = NULL;
@@ -170,7 +172,7 @@ void CreateEffectsShaders()
                               "  vec3 color = texture2D(Diffuse, Out_Tex0).rgb;\n"
                               "  float intensity = dot(color, LumCoeff);\n"
                               "  if(depth < 0.01) {\n"
-                              "    gl_FragColor = vec4(vec3(0.7 * intensity), 1.0);\n"
+                              "    gl_FragColor = vec4(vec3(0.8 * intensity), 1.0);\n"
                               "  } else if(intensity >= GFX1v.x) {\n"
                               "    gl_FragColor = vec4(color, 1.0);\n"
                               "  } else {\n"
@@ -624,6 +626,12 @@ void GFX_CheckBuffersSize()
         postfxX = *renderWidth;
         postfxY = *renderHeight;
 
+        fpostfxX = postfxX;
+        fpostfxY = postfxY;
+
+        fpostfxXInv = 1.0f / fpostfxX;
+        fpostfxYInv = 1.0f / fpostfxY;
+
         if(pSkyGFXPostFXRaster1) RwRasterDestroy(pSkyGFXPostFXRaster1);
         pSkyGFXPostFXRaster1 = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMATDEFAULT);
 
@@ -637,10 +645,10 @@ void GFX_CheckBuffersSize()
         pSkyGFXBrightnessRaster = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMATDEFAULT);
 
         if(pSkyGFXBloomP1Raster) RwRasterDestroy(pSkyGFXBloomP1Raster);
-        pSkyGFXBloomP1Raster = RwRasterCreate(0.25f * postfxX, 0.25f * postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMATDEFAULT);
+        pSkyGFXBloomP1Raster = RwRasterCreate(0.25f * fpostfxX, 0.25f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMATDEFAULT);
 
         if(pSkyGFXBloomP2Raster) RwRasterDestroy(pSkyGFXBloomP2Raster);
-        pSkyGFXBloomP2Raster = RwRasterCreate(0.25f * postfxX, 0.25f * postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMATDEFAULT);
+        pSkyGFXBloomP2Raster = RwRasterCreate(0.25f * fpostfxX, 0.25f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMATDEFAULT);
     }
 }
 void GFX_GrabScreen(bool second = false)
@@ -701,8 +709,8 @@ void GFX_GrabTexIntoTex(RwRaster* src, RwRaster* dst, ES2Shader* shader = NULL, 
             pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues->x, 4);
         }
         PostEffectsDrawQuad(0.0f, 0.0f,
-                            2.0f * (float)dst->width / (float)(RsGlobal->maximumWidth),
-                            2.0f * (float)dst->height / (float)(RsGlobal->maximumHeight),
+                            2.0f * (float)dst->width * fpostfxXInv,
+                            2.0f * (float)dst->height * fpostfxYInv,
                             255, 255, 255, 255, src);
         pForcedShader = NULL;
     }
@@ -1087,7 +1095,7 @@ void GFX_DOF() // Completed
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
     RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
 
-    RQVector uniValues = RQVector{ 1.0f / (float)postfxX, 1.0f / (float)postfxY, 2.0f * g_fDOFStrength, calc01Dist };
+    RQVector uniValues = RQVector{ fpostfxXInv, fpostfxYInv, 2.0f * g_fDOFStrength, calc01Dist };
     pForcedShader = g_pDOFShader; // g_pDADOFShader (not yet little guys)
     pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
 
@@ -1231,7 +1239,7 @@ DECL_HOOKv(PostFX_Render)
     if(g_bBloom)
     {
         // Grabbing brightness values
-        GFX_GrabBrightness(*currArea == 0 ? 0.5f : 0.7f);
+        GFX_GrabBrightness( *currArea == 0 ? 0.55f : 0.7f );
         // Bloom pass 1 (Downscaling + horizontal blurring)
         RQVector uniValues = RQVector{ 1.0f / (float)pSkyGFXBloomP1Raster->width, 1.0f / (float)pSkyGFXBloomP1Raster->height, 1.0f, 0.0f };
         GFX_GrabTexIntoTex(pSkyGFXBrightnessRaster, pSkyGFXBloomP1Raster, g_pBloomP1Shader, &uniValues);
@@ -1239,7 +1247,7 @@ DECL_HOOKv(PostFX_Render)
         GFX_GrabTexIntoTex(pSkyGFXBloomP1Raster, pSkyGFXBloomP2Raster, g_pBloomP2Shader, &uniValues);
         // Apply bloom to the framebuffer
         GFX_ActivateBrightnessTexture();
-        GFX_FrameBufferBloom(*currArea == 0 ? 0.6f : 0.4f);
+        GFX_FrameBufferBloom( *currArea == 0 ? 0.55f : 0.4f );
     }
 
     if(*pbFog) RenderScreenFogPostEffect();
