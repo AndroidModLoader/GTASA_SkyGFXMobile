@@ -49,7 +49,8 @@ int g_nVignette = 0;
 bool g_bRadiosity = true;
 int g_nDOF = DOF_INACTIVE;
 bool g_bHeatHaze = false;
-float g_fFocalRange = 2.2f;
+float g_fDOFStrength = 1.0f, g_fDOFDistance = 60.0f;
+bool g_bDOFUseScale = false;
 int g_nUWR = UWR_CLASSIC;
 bool g_bCSB = false;
 float g_fContrast = 1.0f, g_fSaturation = 1.0f, g_fBrightness = 1.0f, g_fGamma = 1.0f;
@@ -69,7 +70,7 @@ ES2Shader* g_pChromaticAberrationShader_Intensive = NULL;
 ES2Shader* g_pVignetteShader = NULL;
 ES2Shader* g_pFakeRayShader = NULL;
 ES2Shader* g_pDOFShader = NULL;
-ES2Shader* g_pDOFShader_DepthAware = NULL;
+ES2Shader* g_pDADOFShader = NULL;
 ES2Shader* g_pUnderwaterRippleShader = NULL;
 ES2Shader* g_pCSBShader = NULL;
 
@@ -249,7 +250,7 @@ void CreateEffectsShaders()
                      "const float blurPasses = 6.0;\n"
                      "void main() {\n"
                      "  vec3 color = texture2D(Diffuse, Out_Tex0).rgb;\n"
-                     "  float coc = clamp((0.93 - texture2D(DepthTex, Out_Tex0).r) * GFX1v.z, 0.0, 1.0);\n"
+                     "  float coc = clamp((GFX1v.w - texture2D(DepthTex, Out_Tex0).r) * GFX1v.z, 0.0, 1.0);\n"
                      "  if(coc > 0.0) {\n"
                      "    int radius = int(blurPasses * coc);\n"
                      "    float passes = 1.0;\n"
@@ -283,7 +284,7 @@ void CreateEffectsShaders()
                        "void main() {\n"
                        "  vec3 color = texture2D(Diffuse, Out_Tex0).rgb;\n"
                        "  highp float pixelDepth = texture2D(DepthTex, Out_Tex0).r;\n"
-                       "  mediump float coc = clamp((0.93 - pixelDepth) * GFX1v.z, 0.0, 1.0);\n"
+                       "  mediump float coc = clamp((GFX1v.w - pixelDepth) * GFX1v.z, 0.0, 1.0);\n"
                        "  if(coc > 0.0) {\n"
                        "    int radius = int(blurPasses * coc);\n"
                        "    float passes = 1.0;\n"
@@ -307,7 +308,7 @@ void CreateEffectsShaders()
                        "  gl_Position = vec4(Position.xy - 1.0, 0.0, 1.0);\n"
                        "  Out_Tex0 = TexCoord0;\n"
                        "}";
-    g_pDOFShader_DepthAware = CreateCustomShaderAlloc(0, sDOFDAPxl, sDOFDAVtx, sizeof(sDOFDAPxl), sizeof(sDOFDAVtx));
+    g_pDADOFShader = CreateCustomShaderAlloc(0, sDOFDAPxl, sDOFDAVtx, sizeof(sDOFDAPxl), sizeof(sDOFDAVtx));
 
     char sUWRPxl[] = "precision mediump float;\n"
                      "uniform sampler2D Diffuse;\n"
@@ -907,6 +908,18 @@ void GFX_FakeRay()
 }
 void GFX_DOF() // Completed
 {
+    float calc01Dist;
+    if(g_bDOFUseScale)
+    {
+        if(g_fDOFDistance < 0.0f || g_fDOFDistance >= 0.99f) return;
+        calc01Dist = 1.0f - g_fDOFDistance;
+    }
+    else
+    {
+        if(g_fDOFDistance >= Scene->camera->farClip) return;
+        calc01Dist = 1.0f - g_fDOFDistance / (Scene->camera->farClip - Scene->camera->nearClip);
+    }
+
     GFX_GrabScreen(true);
     
     ImmediateModeRenderStatesStore();
@@ -915,8 +928,8 @@ void GFX_DOF() // Completed
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
     RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
 
-    RQVector uniValues = RQVector{ 1.0f / (float)postfxX, 1.0f / (float)postfxY, g_fFocalRange, 0.0f };
-    pForcedShader = g_pDOFShader; // g_pDOFShader_DepthAware (not yet little guys)
+    RQVector uniValues = RQVector{ 1.0f / (float)postfxX, 1.0f / (float)postfxY, 2.0f * g_fDOFStrength, calc01Dist };
+    pForcedShader = g_pDOFShader; // g_pDADOFShader (not yet little guys)
     pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
 
     float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
@@ -1230,6 +1243,10 @@ void StartEffectsStuff()
         pCFGDOF = cfg->Bind("DOFType", g_nDOF, "EnchancedEffects");
         DOFSettingChanged(g_nDOF, pCFGDOF->GetInt());
         AddSetting("Depth'o'Field", g_nDOF, 0, sizeofA(aDOFSettings)-1, aDOFSettings, DOFSettingChanged, NULL);
+        AddSetting("CSB Image Filter", g_bCSB, 0, sizeofA(aYesNo)-1, aYesNo, CSBSettingChanged, NULL);
+        g_fDOFStrength = cfg->GetFloat("DOFStrength", g_fDOFStrength, "EnchancedEffects");
+        g_bDOFUseScale = cfg->GetFloat("DOFUseScaleInsteadDist", g_bDOFUseScale, "EnchancedEffects");
+        g_fDOFDistance = cfg->GetFloat("DOFDistance", g_fDOFDistance, "EnchancedEffects");
 
         pCFGCSB = cfg->Bind("CSBFilter", g_bCSB, "EnchancedEffects");
         CSBSettingChanged(g_bCSB, pCFGCSB->GetBool());
