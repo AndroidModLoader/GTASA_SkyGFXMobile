@@ -62,9 +62,11 @@ RwRaster* pGrainRaster = NULL;
 
 int postfxX = 0, postfxY = 0;
 RwRaster *pSkyGFXPostFXRaster1 = NULL, *pSkyGFXPostFXRaster2 = NULL,
-         *pSkyGFXDepthRaster = NULL,   *pSkyGFXBrightnessRaster = NULL;
+         *pSkyGFXDepthRaster = NULL,   *pSkyGFXBrightnessRaster = NULL,
+         *pSkyGFXBloomP1Raster = NULL, *pSkyGFXBloomP2Raster = NULL;
 RwRaster *pDarkRaster = NULL;
 
+ES2Shader* g_pFramebufferRenderShader = NULL;
 ES2Shader* g_pSimpleInverseShader = NULL;
 ES2Shader* g_pSimpleDepthShader = NULL;
 ES2Shader* g_pSimpleBrightShader = NULL;
@@ -76,6 +78,8 @@ ES2Shader* g_pDOFShader = NULL;
 ES2Shader* g_pDADOFShader = NULL;
 ES2Shader* g_pUnderwaterRippleShader = NULL;
 ES2Shader* g_pCSBShader = NULL;
+ES2Shader* g_pBloomP1Shader = NULL;
+ES2Shader* g_pBloomP2Shader = NULL;
 ES2Shader* g_pBloomShader = NULL;
 
 /* Other */
@@ -114,25 +118,25 @@ ConfigEntry *pCFGRadiosity;
 ConfigEntry *pCFGDOF;
 ConfigEntry *pCFGUWR;
 ConfigEntry* pCFGCSB;
+ConfigEntry* pCFGBloom;
 
 /* Functions */
 void CreateEffectsShaders()
 {
-    char sSimpleInversePxl[] = "precision mediump float;\n"
-                               "uniform sampler2D Diffuse;\n"
-                               "varying mediump vec2 Out_Tex0;\n"
-                               "void main() {\n"
-                               "  gl_FragColor = texture2D(Diffuse, vec2(Out_Tex0.x, 1.0 - Out_Tex0.y));\n"
-                               "}";
-    char sSimpleInverseVtx[] = "precision highp float;\n"
-                               "attribute vec3 Position;\n"
-                               "attribute vec2 TexCoord0;\n"
-                               "varying mediump vec2 Out_Tex0;\n"
-                               "void main() {\n"
-                               "  gl_Position = vec4(Position.xy, 0.0, 1.0);\n"
-                               "  Out_Tex0 = TexCoord0;\n"
-                               "}";
-    g_pSimpleInverseShader = CreateCustomShaderAlloc(0, sSimpleInversePxl, sSimpleInverseVtx, sizeof(sSimpleInversePxl), sizeof(sSimpleInverseVtx));
+    char sFRPxl[] = "precision mediump float;\n"
+                    "uniform sampler2D Diffuse;\n"
+                    "varying mediump vec2 Out_Tex0;\n"
+                    "void main() {\n"
+                    "  gl_FragColor = texture2D(Diffuse, Out_Tex0);\n"
+                    "}";
+    char sFRVtx[] = "attribute vec3 Position;\n"
+                    "attribute vec2 TexCoord0;\n"
+                    "varying mediump vec2 Out_Tex0;\n"
+                    "void main() {\n"
+                    "  gl_Position = vec4(Position.xy, 0.0, 1.0);\n"
+                    "  Out_Tex0 = TexCoord0;\n"
+                    "}";
+    g_pFramebufferRenderShader = CreateCustomShaderAlloc(0, sFRPxl, sFRVtx, sizeof(sFRPxl), sizeof(sFRVtx));
 
     char sSimpleDepthPxl[] = "precision highp float;\n"
                              "uniform sampler2D DepthTex;\n"
@@ -157,13 +161,17 @@ void CreateEffectsShaders()
 
     char sSimpleBrightPxl[] = "precision mediump float;\n"
                               "uniform sampler2D Diffuse;\n"
+                              "uniform sampler2D DepthTex;\n"
                               "varying mediump vec2 Out_Tex0;\n"
                               "uniform mediump vec4 GFX1v;\n"
                               "const vec3 LumCoeff = vec3(0.2126, 0.7152, 0.0722);\n"
                               "void main() {\n"
+                              "  float depth = texture2D(DepthTex, Out_Tex0).r;\n"
                               "  vec3 color = texture2D(Diffuse, Out_Tex0).rgb;\n"
                               "  float intensity = dot(color, LumCoeff);\n"
-                              "  if(intensity >= GFX1v.x) {\n"
+                              "  if(depth < 0.01) {\n"
+                              "    gl_FragColor = vec4(vec3(0.7 * intensity), 1.0);\n"
+                              "  } else if(intensity >= GFX1v.x) {\n"
                               "    gl_FragColor = vec4(color, 1.0);\n"
                               "  } else {\n"
                               "    gl_FragColor = vec4(vec3(0.0), 1.0);\n"
@@ -390,49 +398,22 @@ void CreateEffectsShaders()
                      "}";
     g_pCSBShader = CreateCustomShaderAlloc(0, sCSBPxl, sCSBVtx, sizeof(sCSBPxl), sizeof(sCSBVtx));
 
-    //char sBloomPxl[] = "precision mediump float;\n"
-    //                   "uniform sampler2D Diffuse;\n"
-    //                   "uniform sampler2D DepthTex;\n"
-    //                   "uniform mediump vec4 GFX1v;\n"
-    //                   "varying mediump vec2 Out_Tex0;\n"
-    //                   "const float blurPasses = 5.0;\n"
-    //                   "const float blurRadius = 16.0;\n"
-    //                   "void main() {\n"
-    //                   "  vec3 bloom = texture2D(DepthTex, Out_Tex0).rgb;\n"
-    //                   "  float currRadius = blurRadius;\n"
-    //                   "  for(float i = 0.0; i < blurPasses; ++i) {\n"
-    //                   "    vec2 currRadiusVec = vec2(-currRadius, currRadius);\n"
-    //                   "    bloom += texture2D(DepthTex, Out_Tex0 + GFX1v.xy * currRadiusVec).rgb;\n"
-    //                   "    bloom += texture2D(DepthTex, Out_Tex0 - GFX1v.xy * currRadiusVec).rgb;\n"
-    //                   "    bloom += texture2D(DepthTex, Out_Tex0 + GFX1v.xy * currRadius).rgb;\n"
-    //                   "    bloom += texture2D(DepthTex, Out_Tex0 - GFX1v.xy * currRadius).rgb;\n"
-    //                   "    currRadius *= 0.75;\n"
-    //                   "  }\n"
-    //                   "  bloom /= (1.0 + blurPasses * 4.0);\n"
-    //                   "  vec3 color = texture2D(Diffuse, Out_Tex0).rgb;\n"
-    //                   "  color = clamp(color + bloom, 0.0, 1.0);\n"
-    //                   "  gl_FragColor = vec4(color, 1.0);\n"
-    //                   "}"; // Kawase-like blur (doesnt fit!)
-    char sBloomPxl[] = "precision mediump float;\n"
+    char sBloom1Pxl[] = "precision mediump float;\n"
                        "uniform sampler2D Diffuse;\n"
-                       "uniform sampler2D DepthTex;\n"
                        "uniform mediump vec4 GFX1v;\n"
                        "varying mediump vec2 Out_Tex0;\n"
-                       "const float blurRadius = 2.0;\n"
                        "void main() {\n"
-                       "  vec3 bloom = vec3(0.0);\n"
-                       "  float kernelSize = 0.0;\n"
-                       "  float softenEdge = 0.0;\n"
-                       "  for(float x = -blurRadius; x <= blurRadius; ++x) {\n"
-                       "    for(float y = -blurRadius; y <= blurRadius; ++y) {\n"
-                       "      softenEdge = 1.0 - abs(x + y) / (4.0 * blurRadius);\n"
-                       "      bloom += softenEdge * texture2D(DepthTex, Out_Tex0 + GFX1v.xy * 5.0 * vec2(x, y)).rgb;\n"
-                       "      kernelSize += 1.0;\n"
-                       "    }\n"
+                       "  float weight[5];\n"
+                       "  weight[0] = 0.2270270270;\n"
+                       "  weight[1] = 0.1945945946;\n"
+                       "  weight[2] = 0.1216216216;\n"
+                       "  weight[3] = 0.0540540541;\n"
+                       "  weight[4] = 0.0162162162;\n"
+                       "  vec3 color = texture2D(Diffuse, Out_Tex0).rgb * weight[0];\n"
+                       "  for (int i = 1; i < 5; ++i) {\n"
+                       "    color += texture2D(Diffuse, Out_Tex0 + GFX1v.xy * vec2(GFX1v.z * float(i), 0.0)).rgb * weight[i];\n"
+                       "    color += texture2D(Diffuse, Out_Tex0 - GFX1v.xy * vec2(GFX1v.z * float(i), 0.0)).rgb * weight[i];\n"
                        "  }\n"
-                       "  bloom /= kernelSize;\n"
-                       "  vec3 color = texture2D(Diffuse, Out_Tex0).rgb;\n"
-                       "  color = clamp(color + GFX1v.z * bloom, 0.0, 1.0);\n"
                        "  gl_FragColor = vec4(color, 1.0);\n"
                        "}";
     char sBloomVtx[] = "precision highp float;\n"
@@ -442,6 +423,38 @@ void CreateEffectsShaders()
                        "void main() {\n"
                        "  gl_Position = vec4(Position.xy - 1.0, 0.0, 1.0);\n"
                        "  Out_Tex0 = TexCoord0;\n"
+                       "}";
+    g_pBloomP1Shader = CreateCustomShaderAlloc(0, sBloom1Pxl, sBloomVtx, sizeof(sBloom1Pxl), sizeof(sBloomVtx)); // Horizontal blur
+
+    char sBloom2Pxl[] = "precision mediump float;\n"
+                       "uniform sampler2D Diffuse;\n"
+                       "uniform mediump vec4 GFX1v;\n"
+                       "varying mediump vec2 Out_Tex0;\n"
+                       "void main() {\n"
+                       "  float weight[5];\n"
+                       "  weight[0] = 0.2270270270;\n"
+                       "  weight[1] = 0.1945945946;\n"
+                       "  weight[2] = 0.1216216216;\n"
+                       "  weight[3] = 0.0540540541;\n"
+                       "  weight[4] = 0.0162162162;\n"
+                       "  vec3 color = texture2D(Diffuse, Out_Tex0).rgb * weight[0];\n"
+                       "  for (int i = 1; i < 5; ++i) {\n"
+                       "    color += texture2D(Diffuse, Out_Tex0 + GFX1v.xy * vec2(0.0, GFX1v.z * float(i))).rgb * weight[i];\n"
+                       "    color += texture2D(Diffuse, Out_Tex0 - GFX1v.xy * vec2(0.0, GFX1v.z * float(i))).rgb * weight[i];\n"
+                       "  }\n"
+                       "  gl_FragColor = vec4(color, 1.0);\n"
+                       "}";
+    g_pBloomP2Shader = CreateCustomShaderAlloc(0, sBloom2Pxl, sBloomVtx, sizeof(sBloom2Pxl), sizeof(sBloomVtx)); // Vertical blur
+
+    char sBloomPxl[] = "precision mediump float;\n"
+                       "uniform sampler2D Diffuse;\n"
+                       "uniform sampler2D DepthTex;\n"
+                       "uniform mediump vec4 GFX1v;\n"
+                       "varying mediump vec2 Out_Tex0;\n"
+                       "void main() {\n"
+                       "  vec3 color = texture2D(Diffuse, Out_Tex0).rgb;\n"
+                       "  vec3 bloom = GFX1v.z * texture2D(DepthTex, Out_Tex0).rgb;\n"
+                       "  gl_FragColor = vec4(color + bloom, 1.0);\n"
                        "}";
     g_pBloomShader = CreateCustomShaderAlloc(0, sBloomPxl, sBloomVtx, sizeof(sBloomPxl), sizeof(sBloomVtx));
 }
@@ -522,6 +535,15 @@ void CSBSettingChanged(int oldVal, int newVal, void* data = NULL)
 
     cfg->Save();
 }
+void BloomSettingChanged(int oldVal, int newVal, void* data = NULL)
+{
+    if(oldVal == newVal) return;
+
+    pCFGBloom->SetBool(newVal != 0);
+    g_bBloom = pCFGBloom->GetBool();
+
+    cfg->Save();
+}
 void CreateGrainTexture(RwRaster* target)
 {
     if(!target) return;
@@ -588,7 +610,7 @@ void GFX_ActivateProcessedDepthTexture()
 }
 void GFX_ActivateBrightnessTexture()
 {
-    ES2Texture* brTexture = GetES2Raster(pSkyGFXBrightnessRaster);
+    ES2Texture* brTexture = GetES2Raster(pSkyGFXBloomP2Raster);
     ERQ_SetActiveTexture(2, brTexture->texID);
 }
 void GFX_DeActivateTexture()
@@ -613,6 +635,12 @@ void GFX_CheckBuffersSize()
 
         if(pSkyGFXBrightnessRaster) RwRasterDestroy(pSkyGFXBrightnessRaster);
         pSkyGFXBrightnessRaster = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMATDEFAULT);
+
+        if(pSkyGFXBloomP1Raster) RwRasterDestroy(pSkyGFXBloomP1Raster);
+        pSkyGFXBloomP1Raster = RwRasterCreate(0.25f * postfxX, 0.25f * postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMATDEFAULT);
+
+        if(pSkyGFXBloomP2Raster) RwRasterDestroy(pSkyGFXBloomP2Raster);
+        pSkyGFXBloomP2Raster = RwRasterCreate(0.25f * postfxX, 0.25f * postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMATDEFAULT);
     }
 }
 void GFX_GrabScreen(bool second = false)
@@ -654,12 +682,49 @@ void GFX_GrabDepth()
         ImmediateModeRenderStatesReStore();
     }
 }
+void GFX_GrabTexIntoTex(RwRaster* src, RwRaster* dst, ES2Shader* shader = NULL, RQVector* uniValues = NULL)
+{
+    ImmediateModeRenderStatesStore();
+    ImmediateModeRenderStatesSet();
+
+    RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
+    RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERLINEAR);
+
+    float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
+    if(shader)
+    {
+        DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
+        pForcedShader = shader;
+        if(uniValues)
+        {
+            pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues->x, 4);
+        }
+        PostEffectsDrawQuad(0.0f, 0.0f,
+                            2.0f * (float)dst->width / (float)(RsGlobal->maximumWidth),
+                            2.0f * (float)dst->height / (float)(RsGlobal->maximumHeight),
+                            255, 255, 255, 255, src);
+        pForcedShader = NULL;
+    }
+    else
+    {
+        DrawQuadSetUVs(umin, vmax, umax, vmax, umax, vmin, umin, vmin);
+        PostEffectsDrawQuad(0.0f, RsGlobal->maximumHeight - dst->height, dst->width, dst->height, 255, 255, 255, 255, src);
+    }
+
+    ERQ_GrabFramebuffer(dst);
+    ERQ_GrabFramebufferPost();
+
+    ImmediateModeRenderStatesReStore();
+}
 void GFX_GrabBrightness(float luminance)
 {
     GFX_CheckBuffersSize();
 
     if(pSkyGFXBrightnessRaster)
     {
+        GFX_ActivateProcessedDepthTexture();
+
         ImmediateModeRenderStatesStore();
         ImmediateModeRenderStatesSet();
 
@@ -1103,6 +1168,20 @@ void GFX_DepthBuffer() // Completed
     
     ImmediateModeRenderStatesReStore();
 }
+void GFX_BloomBuffer() // Completed
+{
+    ImmediateModeRenderStatesStore();
+    ImmediateModeRenderStatesSet();
+
+    RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
+
+    float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
+    DrawQuadSetUVs(umin, vmax, umax, vmax, umax, vmin, umin, vmin);
+    PostEffectsDrawQuad(0.0, 0.0, RsGlobal->maximumWidth, RsGlobal->maximumHeight, 255, 255, 255, 255, pSkyGFXBloomP2Raster);
+    
+    ImmediateModeRenderStatesReStore();
+}
 
 /* Hooks */
 DECL_HOOKv(WaterCannons_Render)
@@ -1151,9 +1230,16 @@ DECL_HOOKv(PostFX_Render)
 
     if(g_bBloom)
     {
-        GFX_GrabBrightness(0.62f);
+        // Grabbing brightness values
+        GFX_GrabBrightness(*currArea == 0 ? 0.5f : 0.7f);
+        // Bloom pass 1 (Downscaling + horizontal blurring)
+        RQVector uniValues = RQVector{ 1.0f / (float)pSkyGFXBloomP1Raster->width, 1.0f / (float)pSkyGFXBloomP1Raster->height, 1.0f, 0.0f };
+        GFX_GrabTexIntoTex(pSkyGFXBrightnessRaster, pSkyGFXBloomP1Raster, g_pBloomP1Shader, &uniValues);
+        // Bloom pass 2 (Vertical blurring)
+        GFX_GrabTexIntoTex(pSkyGFXBloomP1Raster, pSkyGFXBloomP2Raster, g_pBloomP2Shader, &uniValues);
+        // Apply bloom to the framebuffer
         GFX_ActivateBrightnessTexture();
-        GFX_FrameBufferBloom(0.5f);
+        GFX_FrameBufferBloom(*currArea == 0 ? 0.6f : 0.4f);
     }
 
     if(*pbFog) RenderScreenFogPostEffect();
@@ -1376,7 +1462,10 @@ void StartEffectsStuff()
         g_fSaturation = cfg->GetFloat("CSBFilter_Saturation", g_fSaturation, "EnchancedEffects");
         g_fBrightness = cfg->GetFloat("CSBFilter_Brightness", g_fBrightness, "EnchancedEffects");
         g_fGamma = cfg->GetFloat("CSBFilter_Gamma", g_fGamma, "EnchancedEffects");
-        
+
+        pCFGBloom = cfg->Bind("Bloom", g_bBloom, "EnchancedEffects");
+        BloomSettingChanged(g_bBloom, pCFGBloom->GetBool());
+        AddSetting("Bloom", g_bBloom, 0, sizeofA(aYesNo)-1, aYesNo, BloomSettingChanged, NULL);
 
         if(g_bHeatHaze)
         {

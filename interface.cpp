@@ -29,8 +29,13 @@ extern bool g_bFixCarLightsIntensity;
 extern int g_nSpeedFX;
 extern bool g_bRadiosity;
 extern int g_nDOF;
+extern bool g_bDOFUseScale;
+extern float g_fDOFStrength;
+extern float g_fDOFDistance;
 extern int g_nVignette;
 extern int g_nUWR;
+extern bool g_bCSB;
+extern bool g_bBloom;
 
 static int Global_GetFeatureLevel(eSkyGFXFeature f)
 {
@@ -65,8 +70,20 @@ static int Global_GetFeatureLevel(eSkyGFXFeature f)
         case GFX_SPEEDFX: return g_bMissingPostEffects ? g_nSpeedFX : 0;
         case GFX_RADIOSITY: return g_bMissingPostEffects ? g_bRadiosity : 0;
         case GFX_DOF: return g_bMissingPostEffects ? g_nDOF : 0;
+        case GFX_DOFUSESCALING: return g_bMissingPostEffects ? g_bDOFUseScale : 0;
+        case GFX_DOFSTRENGTH: return g_bMissingPostEffects ? (100.0f * g_fDOFStrength) : 0;
+        case GFX_DOFDISTANCEORSCALE:
+        {
+            if(g_bDOFUseScale)
+            {
+                return g_bMissingPostEffects ? (100.0f * g_fDOFDistance) : 0;
+            }
+            return (int)g_fDOFDistance;
+        }
         case GFX_VIGNETTE: return g_bMissingPostEffects ? g_nVignette : 0;
         case GFX_UNDERWATERRIPPLE: return g_bMissingPostEffects ? g_nUWR : 0;
+        case GFX_CSBFILTER: return g_bMissingPostEffects ? g_bCSB : 0;
+        case GFX_BLOOM: return g_bMissingPostEffects ? g_bBloom : 0;
     }
 }
 

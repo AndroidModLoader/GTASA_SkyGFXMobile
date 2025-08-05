@@ -91,7 +91,7 @@ enum ExtendedRQCommand : __int32
     erqGrabFramebuffer,
     erqGrabFramebufferPost,
     erqSetActiveTexture,
-    erqRenderFramebufferIntoTexture,
+    erqRenderTextureIntoTexture,
 
     EXRQC_END
 };
@@ -100,12 +100,11 @@ struct ExtendedRQ
 {
     ExtendedRQ() { memset(this, 0, sizeof(*this)); }
 
-    bool m_bViewportBackupped;
-    bool m_bAlphaBlending;
-
     GLint m_aViewportBackup[4] { -1, -1, -1, -1 };
     GLint m_nPrevTex = -1, m_nPrevActiveTex = -1, m_nPrevBuffer = -1;
     GLuint m_NormalMapBuffer { 0 };
+
+    bool m_bAlphaBlending = false;
 };
 extern ExtendedRQ extRQ;
 
@@ -157,10 +156,11 @@ inline void ERQ_SetActiveTexture(int texNum, GLuint texId)
     RQUEUE_WRITEINT(texId);
     RQUEUE_CLOSE();
 }
-inline void ERQ_RenderFramebufferIntoTexture(RwRaster* raster)
+inline void ERQ_RenderTextureIntoTexture(RwRaster* src, RwRaster* dst)
 {
     RQUEUE_QUEUE(rqDebugMarker);
-    RQUEUE_WRITEINT(erqRenderFramebufferIntoTexture);
-    RQUEUE_WRITEPTR(GetES2Raster(raster));
+    RQUEUE_WRITEINT(erqRenderTextureIntoTexture);
+    RQUEUE_WRITEPTR(GetES2Raster(src));
+    RQUEUE_WRITEPTR(GetES2Raster(dst));
     RQUEUE_CLOSE();
 }

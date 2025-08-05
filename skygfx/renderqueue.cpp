@@ -64,12 +64,15 @@ void RQ_Command_erqGrabFramebuffer(uint8_t** data)
 
     if(!dst || !(*backTarget)) return;
 
-    extRQ.m_nPrevBuffer = ( (*currentTarget) ? (*currentTarget)->frameBuffer : *backBuffer ); //glGetIntegerv(GL_FRAMEBUFFER_BINDING, &extRQ.m_nPrevBuffer);
-    extRQ.m_nPrevTex = boundTextures[*curActiveTexture]; //glGetIntegerv(GL_TEXTURE_BINDING_2D, &extRQ.m_nPrevTex);
+    //glGetIntegerv(GL_FRAMEBUFFER_BINDING, &extRQ.m_nPrevBuffer);
+    //glGetIntegerv(GL_TEXTURE_BINDING_2D, &extRQ.m_nPrevTex);
+    // below are faster \/
+    extRQ.m_nPrevBuffer = ( (*currentTarget) ? (*currentTarget)->frameBuffer : *backBuffer );
+    extRQ.m_nPrevTex = boundTextures[*curActiveTexture];
 
     glBindFramebuffer(GL_FRAMEBUFFER, (*backTarget)->frameBuffer);
     glBindTexture(GL_TEXTURE_2D, dst->texID);
-    glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, *renderWidth, *renderHeight);
+    glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, dst->width, dst->height);
 }
 void RQ_Command_erqGrabFramebufferPost(uint8_t** data)
 {
@@ -80,7 +83,7 @@ void RQ_Command_erqGrabFramebufferPost(uint8_t** data)
     }
     if(extRQ.m_nPrevActiveTex != -1)
     {
-        glActiveTexture(extRQ.m_nPrevActiveTex);
+        glActiveTexture(GL_TEXTURE0 + extRQ.m_nPrevActiveTex);
         extRQ.m_nPrevActiveTex = -1;
     }
     if(extRQ.m_nPrevTex != -1)
@@ -100,10 +103,56 @@ void RQ_Command_erqSetActiveTexture(uint8_t** data)
     GLuint texId = (GLuint)RQUEUE_READINT(data);
     activeTextures[texNum] = texId;
 }
-void RQ_Command_erqRenderFramebufferIntoTexture(uint8_t** data)
+extern ES2Shader* g_pFramebufferRenderShader;
+void RQ_Command_erqRenderTextureIntoTexture(uint8_t** data)
 {
-    ES2Texture* tex = (ES2Texture*)RQUEUE_READPTR(data);
+    ES2Texture* src = (ES2Texture*)RQUEUE_READPTR(data);
+    ES2Texture* dst = (ES2Texture*)RQUEUE_READPTR(data);
+
+    glGetError();
+
+    GLint vp[4];
+    glGetIntegerv(GL_VIEWPORT, &vp[0]);
+    GLint m_nPrevBuffer = ( (*currentTarget) ? (*currentTarget)->frameBuffer : *backBuffer );
+    GLint m_nPrevActiveTex = *curActiveTexture;
+    GLint m_nPrevTex = boundTextures[*curActiveTexture];
+
+    glBindFramebuffer(GL_FRAMEBUFFER, dst->target->frameBuffer);
+    glViewport(0, 0, dst->width, dst->height);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, src->texID);
+
+    glUseProgram(g_pFramebufferRenderShader->nShaderId);
+
+    GLfloat positions[] = {
+        -1.0f, -1.0f, 0.0f, 1.0f,
+         1.0f, -1.0f, 0.0f, 1.0f,
+        -1.0f,  1.0f, 0.0f, 1.0f,
+         1.0f,  1.0f, 0.0f, 1.0f
+    };
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, positions);
+
+    GLfloat texcoords[] = {
+        0.0f, 0.0f,
+        1.0f, 0.0f,
+        0.0f, 1.0f,
+        1.0f, 1.0f
+    };
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, texcoords);
+
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    //glDisableVertexAttribArray(0);
+    //glDisableVertexAttribArray(1);
     
+    logger->Info("1: Error 0x%04X, FRAMEBUF STATUS 0x%04X, dstID %d, srcID %d", glGetError(), glCheckFramebufferStatus(GL_FRAMEBUFFER), dst->target->frameBuffer, src->texID);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, m_nPrevBuffer);
+    glViewport(vp[0], vp[1], vp[2], vp[3]);
+    glActiveTexture(m_nPrevActiveTex);
+    glBindTexture(GL_TEXTURE_2D, m_nPrevTex);
 }
 
 /* Hooks */
@@ -131,7 +180,7 @@ DECL_HOOKv(RQ_Command_rqDebugMarker, uint8_t** data)
         CASE_RQ( erqGrabFramebuffer );
         CASE_RQ( erqGrabFramebufferPost );
         CASE_RQ( erqSetActiveTexture );
-        CASE_RQ( erqRenderFramebufferIntoTexture );
+        CASE_RQ( erqRenderTextureIntoTexture );
     }
 }
 DECL_HOOKv(RQ_Command_rqTargetCreate, uint8_t** data)
