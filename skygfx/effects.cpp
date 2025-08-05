@@ -52,7 +52,7 @@ bool g_bHeatHaze = false;
 float g_fFocalRange = 2.2f;
 int g_nUWR = UWR_CLASSIC;
 bool g_bCSB = false;
-float g_fContrast = 1.0f, g_fSaturation = 1.0f, g_fBrightness = 1.0f;
+float g_fContrast = 1.0f, g_fSaturation = 1.0f, g_fBrightness = 1.0f, g_fGamma = 1.0f;
 
 int g_nGrainRainStrength = 0;
 int g_nInitialGrain = 0;
@@ -132,10 +132,10 @@ void CreateEffectsShaders()
     char sSimpleDepthPxl[] = "precision highp float;\n"
                              "uniform sampler2D DepthTex;\n"
                              "varying mediump vec2 Out_Tex0;\n"
-                             "uniform highp vec3 FogDistances;\n"
+                             "uniform highp vec4 GFX1v;\n"
                              "void main() {\n"
-                             "  float zNear = FogDistances.x;\n"
-                             "  mediump float zFar = FogDistances.y;\n"
+                             "  float zNear = GFX1v.x;\n"
+                             "  mediump float zFar = GFX1v.y;\n"
                              "  float depth = 2.0 * texture2D(DepthTex, Out_Tex0).r - 1.0;\n"
                              "  depth = 2.0 * zNear / (zFar + zNear - depth * (zFar - zNear));\n"
                              "  gl_FragColor = vec4(vec3(1.0 - depth), 1.0);\n"
@@ -244,18 +244,18 @@ void CreateEffectsShaders()
                      "uniform sampler2D Diffuse;\n"
                      "uniform sampler2D DepthTex;\n"
                      "varying mediump vec2 Out_Tex0;\n"
-                     "uniform mediump vec3 FogDistances;\n"
+                     "uniform mediump vec4 GFX1v;\n"
                      "const float steps = 3.0;\n"
                      "const float blurPasses = 6.0;\n"
                      "void main() {\n"
                      "  vec3 color = texture2D(Diffuse, Out_Tex0).rgb;\n"
-                     "  float coc = clamp((0.93 - texture2D(DepthTex, Out_Tex0).r) * FogDistances.z, 0.0, 1.0);\n"
+                     "  float coc = clamp((0.93 - texture2D(DepthTex, Out_Tex0).r) * GFX1v.z, 0.0, 1.0);\n"
                      "  if(coc > 0.0) {\n"
                      "    int radius = int(blurPasses * coc);\n"
                      "    float passes = 1.0;\n"
                      "    for(int x = -radius; x <= radius; x += 2) {\n"
                      "      for(int y = -radius; y <= radius; y += 2) {\n"
-                     "        color += texture2D(Diffuse, Out_Tex0 + vec2(float(x), float(y)) * FogDistances.xy).rgb;\n"
+                     "        color += texture2D(Diffuse, Out_Tex0 + vec2(float(x), float(y)) * GFX1v.xy).rgb;\n"
                      "        passes += 1.0;\n"
                      "      }\n"
                      "    }\n"
@@ -277,21 +277,21 @@ void CreateEffectsShaders()
                        "uniform sampler2D Diffuse;\n"
                        "uniform sampler2D DepthTex;\n"
                        "varying mediump vec2 Out_Tex0;\n"
-                       "uniform mediump vec3 FogDistances;\n"
+                       "uniform mediump vec4 GFX1v;\n"
                        "const float steps = 3.0;\n"
                        "const float blurPasses = 6.0;\n"
                        "void main() {\n"
                        "  vec3 color = texture2D(Diffuse, Out_Tex0).rgb;\n"
                        "  highp float pixelDepth = texture2D(DepthTex, Out_Tex0).r;\n"
-                       "  mediump float coc = clamp((0.93 - pixelDepth) * FogDistances.z, 0.0, 1.0);\n"
+                       "  mediump float coc = clamp((0.93 - pixelDepth) * GFX1v.z, 0.0, 1.0);\n"
                        "  if(coc > 0.0) {\n"
                        "    int radius = int(blurPasses * coc);\n"
                        "    float passes = 1.0;\n"
                        "    for(int x = -radius; x <= radius; x += 2) {\n"
                        "      for(int y = -radius; y <= radius; y += 2) {\n"
-                       "        float targetDepth = texture2D(DepthTex, Out_Tex0 + vec2(x, y) * FogDistances.xy).r;\n"
+                       "        float targetDepth = texture2D(DepthTex, Out_Tex0 + vec2(x, y) * GFX1v.xy).r;\n"
                        "        if(targetDepth > pixelDepth) continue;\n"
-                       "        color += texture2D(Diffuse, Out_Tex0 + vec2(x, y) * FogDistances.xy).rgb;\n"
+                       "        color += texture2D(Diffuse, Out_Tex0 + vec2(x, y) * GFX1v.xy).rgb;\n"
                        "        passes += 1.0;\n"
                        "      }\n"
                        "    }\n"
@@ -311,7 +311,7 @@ void CreateEffectsShaders()
 
     char sUWRPxl[] = "precision mediump float;\n"
                      "uniform sampler2D Diffuse;\n"
-                     "uniform mediump vec3 FogDistances;\n"
+                     "uniform mediump vec4 GFX1v;\n"
                      "varying mediump vec2 Out_Tex0;\n"
                      "varying mediump vec2 vPos;\n"
                      "const float pi = 3.141593;\n"
@@ -319,9 +319,9 @@ void CreateEffectsShaders()
                      "const float pi4 = 12.566371;\n"
                      "void main() {\n"
                      "  mediump vec2 tex = Out_Tex0;\n"
-                     "  float xo = 0.004 * FogDistances.x;\n"
+                     "  float xo = 0.004 * GFX1v.x;\n"
                      "  float yo = 77.14 * vPos.y;\n"
-                     "  float wave = sin(FogDistances.z * yo * pi2 + FogDistances.y) * xo;\n"
+                     "  float wave = sin(GFX1v.z * yo * pi2 + GFX1v.y) * xo;\n"
                      "  tex.x += wave * min(1.0, pow(1.7 - abs(vPos.x), 4.0));\n"
                      "  gl_FragColor = vec4(texture2D(Diffuse, tex).rgb, 1.0);\n"
                      "}";
@@ -340,16 +340,16 @@ void CreateEffectsShaders()
     // https://github.com/SableRaf/Filters4Processing/blob/master/sketches/ContrastSaturationBrightness/data/ContrastSaturationBrightness.glsl
     char sCSBPxl[] = "precision mediump float;\n"
                      "uniform sampler2D Diffuse;\n"
-                     "uniform mediump vec3 FogDistances;\n"
+                     "uniform mediump vec4 GFX1v;\n"
                      "varying mediump vec2 Out_Tex0;\n"
                      "const vec3 LumCoeff = vec3(0.2125, 0.7154, 0.0721);\n"
                      "const vec3 AvgLumin = vec3(0.5, 0.5, 0.5);\n"
                      "void main() {\n"
                      "  vec3 color = texture2D(Diffuse, Out_Tex0).rgb;\n"
-                     "  vec3 brtColor  = color * FogDistances.z;\n"
-	             "  vec3 intensity = vec3(dot(brtColor, LumCoeff));\n"
-	             "  vec3 satColor  = mix(intensity, brtColor, FogDistances.y);\n"
-                     "  gl_FragColor = vec4(mix(AvgLumin, satColor, FogDistances.x), 1.0);\n"
+                     "  vec3 brtColor  = color * GFX1v.z;\n"
+                     "  vec3 intensity = vec3(dot(brtColor, LumCoeff));\n"
+                     "  vec3 satColor  = mix(intensity, brtColor, GFX1v.y);\n"
+                     "  gl_FragColor = vec4(pow(mix(AvgLumin, satColor, GFX1v.x), vec3(GFX1v.w)), 1.0);\n"
                      "}";
     char sCSBVtx[] = "precision highp float;\n"
                      "attribute vec3 Position;\n"
@@ -549,7 +549,7 @@ void GFX_GrabDepth()
 {
     GFX_CheckBuffersSize();
 
-    if(pSkyGFXDepthRaster)
+    if(pSkyGFXDepthRaster && Scene->camera)
     {
         ImmediateModeRenderStatesStore();
         ImmediateModeRenderStatesSet();
@@ -559,9 +559,9 @@ void GFX_GrabDepth()
         RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
         RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
 
+        RQVector uniValues = RQVector{ Scene->camera->nearClip, Scene->camera->farClip, 0.0f, 0.0f };
         pForcedShader = g_pSimpleDepthShader;
-        *emu_fogdistances = CVector{ Scene->camera->nearClip, Scene->camera->farClip, 0.0f };
-        pForcedShader->SetVectorConstant(SVCID_FogDistances, &emu_fogdistances->x, 3); // need both ^
+        pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
 
         float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
         DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
@@ -833,8 +833,8 @@ void GFX_UnderWaterRipple_Shader(CRGBA col, float xoIntensity, float speed, floa
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
     RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
 
-    *emu_fogdistances = CVector{ xoIntensity, speed * *m_snTimeInMilliseconds, freq };
-    g_pUnderwaterRippleShader->SetVectorConstant(SVCID_FogDistances, &emu_fogdistances->x, 3); // need both ^
+    RQVector uniValues = RQVector{ xoIntensity, speed * *m_snTimeInMilliseconds, freq, 0.0f };
+    g_pUnderwaterRippleShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
 
     pForcedShader = g_pUnderwaterRippleShader;
     float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
@@ -915,9 +915,9 @@ void GFX_DOF() // Completed
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
     RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
 
+    RQVector uniValues = RQVector{ 1.0f / (float)postfxX, 1.0f / (float)postfxY, g_fFocalRange, 0.0f };
     pForcedShader = g_pDOFShader; // g_pDOFShader_DepthAware (not yet little guys)
-    *emu_fogdistances = CVector{ 1.0f / (float)postfxX, 1.0f / (float)postfxY, g_fFocalRange };
-    pForcedShader->SetVectorConstant(SVCID_FogDistances, &emu_fogdistances->x, 3); // need both ^
+    pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
 
     float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
     DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
@@ -940,7 +940,7 @@ void GFX_FrameBuffer() // Completed
     
     ImmediateModeRenderStatesReStore();
 }
-void GFX_FrameBufferCSB(float contrast, float saturation, float brightness) // Completed
+void GFX_FrameBufferCSB(float contrast, float saturation, float brightness, float gamma = 1.0f) // Completed
 {
     ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
@@ -948,9 +948,9 @@ void GFX_FrameBufferCSB(float contrast, float saturation, float brightness) // C
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
     RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
 
+    RQVector uniValues = RQVector{ contrast, saturation, brightness, 1.0f / g_fGamma };
     pForcedShader = g_pCSBShader;
-    *emu_fogdistances = CVector{ contrast, saturation, brightness };
-    pForcedShader->SetVectorConstant(SVCID_FogDistances, &emu_fogdistances->x, 3); // need both ^
+    pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
     
     float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
     DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
@@ -1009,14 +1009,12 @@ float gfWaterGreen = 0.0f;
 CRGBA m_waterCol(64, 64, 64, 64);
 DECL_HOOKv(PostFX_Render)
 {
-    CVector emu_fogdistances_backup = *emu_fogdistances;
-
     GFX_GrabScreen();
     GFX_GrabDepth();
     if(g_bCSB)
     {
         // I got a request for this.
-        GFX_FrameBufferCSB(g_fContrast, g_fSaturation, g_fBrightness);
+        GFX_FrameBufferCSB(g_fContrast, g_fSaturation, g_fBrightness, g_fGamma);
     }
     else
     {
@@ -1115,7 +1113,7 @@ DECL_HOOKv(PostFX_Render)
                 float yoffset = 24.0f * (((float)RsGlobal->maximumHeight) / 448.0f);
                 GFX_UnderWaterRipple(underwaterCol, xoffset, yoffset, 64, 0.0015f, 0.04f);
             }
-            else
+            else if(g_nUWR == UWR_SHADER)
             {
                 GFX_UnderWaterRipple_Shader(underwaterCol, gfWaterGreen / 24.0f, 0.0015f, 0.04f);
             }
@@ -1142,7 +1140,6 @@ DECL_HOOKv(PostFX_Render)
     GFX_Vignette(g_nVignette * 2.55f);
 
     GFX_DeActivateDepthTexture();
-    *emu_fogdistances = emu_fogdistances_backup;
 }
 DECL_HOOKv(PostFX_CCTV)
 {
@@ -1240,6 +1237,7 @@ void StartEffectsStuff()
         g_fContrast = cfg->GetFloat("CSBFilter_Contrast", g_fContrast, "EnchancedEffects");
         g_fSaturation = cfg->GetFloat("CSBFilter_Saturation", g_fSaturation, "EnchancedEffects");
         g_fBrightness = cfg->GetFloat("CSBFilter_Brightness", g_fBrightness, "EnchancedEffects");
+        g_fGamma = cfg->GetFloat("CSBFilter_Gamma", g_fGamma, "EnchancedEffects");
         
 
         if(g_bHeatHaze)

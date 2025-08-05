@@ -350,6 +350,19 @@ DECL_HOOKv(InitializeShaderAfterCompile, ES2Shader* self)
 
     GLint id = glGetUniformLocation(self->nShaderId, "DepthTex");
     if(id != -1) glUniform1i(id, 2);
+
+    if(self->vBindings[SVCID_RedGrade].uniformID == -1)
+    {
+        self->vBindings[SVCID_RedGrade].uniformID = glGetUniformLocation(self->nShaderId, "GFX1v");
+    }
+    if(self->vBindings[SVCID_GreenGrade].uniformID == -1)
+    {
+        self->vBindings[SVCID_GreenGrade].uniformID = glGetUniformLocation(self->nShaderId, "GFX2v");
+    }
+    if(self->vBindings[SVCID_BlueGrade].uniformID == -1)
+    {
+        self->vBindings[SVCID_BlueGrade].uniformID = glGetUniformLocation(self->nShaderId, "GFX3v");
+    }
 }
 
 /* Main */
