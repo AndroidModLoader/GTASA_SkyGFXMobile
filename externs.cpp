@@ -93,6 +93,7 @@ CVector *emu_fogdistances;
 int *windowSize;
 int *ms_exitEnterState;
 bool *ms_running;
+RwTexture** gpMoonMask;
 
 // Functions
 RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);
@@ -486,5 +487,6 @@ void ResolveExternals()
     SET_TO(emu_fogdistances,                aml->GetSym(hGTASA, "emu_fogdistances"));
     SET_TO(windowSize,                      aml->GetSym(hGTASA, "windowSize"));
     SET_TO(ms_exitEnterState,               aml->GetSym(hGTASA, "_ZN17CEntryExitManager17ms_exitEnterStateE"));
-    SET_TO(ms_running,                      aml->GetSym(hGTASA, "_ZN12CCutsceneMgr10ms_runningE"));
+    SET_TO(ms_running,                      aml->GetSym(hGTASA, "_ZN12CCutsceneMgr10ms_runningE")); 
+    SET_TO(gpMoonMask,                      aml->GetSym(hGTASA, "gpMoonMask")); 
 }

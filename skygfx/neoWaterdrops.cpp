@@ -3,7 +3,7 @@
 
 extern RwRaster *pSkyGFXPostFXRaster1, *pSkyGFXPostFXRaster2, *pDarkRaster;
 float scaling;
-RwOpenGLVertex DropletsBuffer[4 * WaterDrops::MAXDROPS] {};
+RwOpenGLVertex DropletsBuffer[2 * 4 * WaterDrops::MAXDROPS] {};
 
 #define MAXSIZE 15
 #define MINSIZE 4
@@ -273,7 +273,7 @@ void WaterDrops::FillScreenMoving(float amount, bool isBlood)
 {
     if(isBlood && !neoBloodDrops) return;
 
-    int n = (ms_vec.z <= 5.0f ? 1.0f : 1.5f) * amount * 20.0f;
+    int n = (ms_vec.z <= 5.0f ? 1.0f : 1.5f) * amount * 15.0f;
     float x, y, time;
     WaterDrop *drop;
 
@@ -359,14 +359,31 @@ bool WaterDrops::NoRain(void)
 void WaterDrops::InitialiseRender(RwCamera *cam)
 {
     // TODO: Check about indices, immediate mode is heavy af
+    m_pMask = (RwTexture*)sautils->LoadRwTextureFromPNG("texdb/dropmask.png");
+    if(!m_pMask)
+    {
+        uintptr_t txdDB = GetTextureDB("txd");
+        if(txdDB)
+        {
+            RegisterTextureDB(txdDB);
+            m_pMask = GetTextureFromTextureDB("sphere_CJ");
+            UnregisterTextureDB(txdDB);
+        }
+    }
     ms_initialised = 1;
 }
 
 static const float xy[] =
 {
-    -1.0f, 1.0f, 1.0f, 1.0f,
+    -1.0f,  1.0f, 1.0f,  1.0f,
     -1.0f, -1.0f, 1.0f, -1.0f
 };
+static const float uv[] =
+{
+    0.0f, 1.0f, 1.0f, 1.0f,
+    0.0f, 0.0f, 1.0f, 0.0f
+};
+static const RwRGBA dropMaskColor(0, 0, 0, 255);
 void WaterDrops::AddToRenderList(WaterDrop *drop)
 {
     int i;
@@ -388,6 +405,20 @@ void WaterDrops::AddToRenderList(WaterDrop *drop)
 
     scale = drop->size * 0.5f;
 
+    // Mask
+    for(i = 0; i < 4; i++)
+    {
+        ms_vertPtr->pos.x = drop->x + xy[i * 2] * scale + ms_xOff;
+        ms_vertPtr->pos.y = drop->y + xy[i * 2 + 1] * scale + ms_yOff;
+        ms_vertPtr->pos.z = 0.0f;
+        ms_vertPtr->rhw = 1.0f;
+        ms_vertPtr->rgba = dropMaskColor;
+        ms_vertPtr->rgba.alpha = drop->color.alpha;
+        ms_vertPtr->texCoord.u = uv[i * 2];
+        ms_vertPtr->texCoord.v = uv[i * 2 + 1];
+        ms_vertPtr++;
+    }
+    // Drop
     for(i = 0; i < 4; i++)
     {
         ms_vertPtr->pos.x = drop->x + xy[i * 2] * scale + ms_xOff;
@@ -396,7 +427,7 @@ void WaterDrops::AddToRenderList(WaterDrop *drop)
         ms_vertPtr->rhw = 1.0f;
         ms_vertPtr->rgba = drop->color;
         ms_vertPtr->texCoord.u = (i % 2 == 0 ? u1_1 : u1_2);
-        ms_vertPtr->texCoord.v = 1.0f - (i < 2 ? v1_2 : v1_1);
+        ms_vertPtr->texCoord.v = 1.0f - (i < 2 ? v1_1 : v1_2);
         ms_vertPtr++;
     }
 
@@ -428,11 +459,24 @@ void WaterDrops::Render(void)
         RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)false);
         RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)false);
         RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)true);
-        RwRenderStateSet(rwRENDERSTATETEXTURERASTER, (void*)pSkyGFXPostFXRaster1);
 
+        int buf = 0;
+        RwRaster* moonmaskRaster = m_pMask ? m_pMask->raster : (*gpMoonMask)->raster;
         for(int i = 0; i < ms_numBatchedDrops; ++i)
         {
-            RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, &DropletsBuffer[4 * i], 4);
+            RwRenderStateSet(rwRENDERSTATETEXTURERASTER, (void*)moonmaskRaster);
+            RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
+            RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
+            ERQ_BlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_SRC_ALPHA, GL_ZERO);
+            RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, &DropletsBuffer[buf], 4);
+            ERQ_BlendFuncSeparate(GL_ONE, GL_ZERO, GL_ONE, GL_ZERO); // initial values
+
+            RwRenderStateSet(rwRENDERSTATETEXTURERASTER, (void*)pSkyGFXPostFXRaster1);
+            RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDDESTALPHA);
+            RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVDESTALPHA);
+            RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, &DropletsBuffer[buf + 4], 4);
+
+            buf += 8;
         }
         
         RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)false);

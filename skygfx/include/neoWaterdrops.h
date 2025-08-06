@@ -29,7 +29,12 @@ public:
     // Config
 
     static inline bool neoDrops = false;
-    static inline bool neoBloodDrops = false;
+    static inline bool neoBloodDrops = true;
+
+    // Debugging
+
+    static inline bool sprayWater = false;
+    static inline bool sprayBlood = false;
 
     // Logic
 
@@ -49,11 +54,7 @@ public:
     static inline RwV3d ms_posDelta;
 
     static inline int ms_splashDuration = -1;
-
-    // Debugging
-
-    static inline bool sprayWater = false;
-    static inline bool sprayBlood = false;
+    static inline RwTexture* m_pMask = NULL;
 
     static void Process(void);
     static void CalculateMovement(void);
@@ -65,7 +66,6 @@ public:
     static WaterDrop *PlaceNew(float x, float y, float size, float time, bool fades, int R, int G, int B);
     static void NewTrace(WaterDropMoving*);
     static void NewDropMoving(WaterDrop*);
-    // this has one more argument in VC: ttl, but it's always 2000.0
     static void FillScreenMoving(float amount, bool isBlood = false);
     static void FillScreen(int n);
     static void Clear(void);

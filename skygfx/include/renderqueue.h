@@ -108,6 +108,15 @@ struct ExtendedRQ
 };
 extern ExtendedRQ extRQ;
 
+inline void ERQ_ColorMask(bool r, bool g, bool b, bool a)
+{
+    RQUEUE_QUEUE(rqDebugMarker);
+    
+    RQUEUE_WRITEINT(erqColorMask);
+    RQUEUE_WRITEINT((r | (g << 1) | (b << 2) | (a << 3)));
+
+    RQUEUE_CLOSE();
+}
 inline void ERQ_BlendFuncSeparate(GLenum sfactorRGB, GLenum dfactorRGB, GLenum sfactorAlpha, GLenum dfactorAlpha)
 {
     RQUEUE_QUEUE(rqDebugMarker);
