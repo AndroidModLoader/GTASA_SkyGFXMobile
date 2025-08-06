@@ -109,11 +109,20 @@ void RQ_Command_erqRenderTextureIntoTexture(uint8_t** data)
     ES2Texture* src = (ES2Texture*)RQUEUE_READPTR(data);
     ES2Texture* dst = (ES2Texture*)RQUEUE_READPTR(data);
 
-    glGetError();
-
-    GLint vp[4];
-    glGetIntegerv(GL_VIEWPORT, &vp[0]);
-    GLint m_nPrevBuffer = ( (*currentTarget) ? (*currentTarget)->frameBuffer : *backBuffer );
+    GLint vp[4] { 0, 0, 0, 0 };
+    GLint m_nPrevBuffer;
+    if(*currentTarget)
+    {
+        vp[2] = (*currentTarget)->targetTexture->width;
+        vp[3] = (*currentTarget)->targetTexture->height;
+        m_nPrevBuffer = (*currentTarget)->frameBuffer;
+    }
+    else
+    {
+        vp[2] = windowSize[0];
+        vp[3] = windowSize[1];
+        m_nPrevBuffer = *backBuffer;
+    }
     GLint m_nPrevActiveTex = *curActiveTexture;
     GLint m_nPrevTex = boundTextures[*curActiveTexture];
 
@@ -146,8 +155,6 @@ void RQ_Command_erqRenderTextureIntoTexture(uint8_t** data)
 
     //glDisableVertexAttribArray(0);
     //glDisableVertexAttribArray(1);
-    
-    logger->Info("1: Error 0x%04X, FRAMEBUF STATUS 0x%04X, dstID %d, srcID %d", glGetError(), glCheckFramebufferStatus(GL_FRAMEBUFFER), dst->target->frameBuffer, src->texID);
 
     glBindFramebuffer(GL_FRAMEBUFFER, m_nPrevBuffer);
     glViewport(vp[0], vp[1], vp[2], vp[3]);

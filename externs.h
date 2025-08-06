@@ -272,6 +272,7 @@ extern CColourSet *m_CurrentColours;
 extern uint32_t *m_snTimeInMilliseconds;
 extern GLint *backBuffer;
 extern CVector *emu_fogdistances;
+extern int *windowSize;
 
 // Functions
 extern RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);

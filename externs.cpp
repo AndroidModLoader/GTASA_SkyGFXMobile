@@ -90,6 +90,7 @@ CColourSet *m_CurrentColours;
 uint32_t *m_snTimeInMilliseconds;
 GLint *backBuffer;
 CVector *emu_fogdistances;
+int *windowSize;
 
 // Functions
 RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);
@@ -473,4 +474,5 @@ void ResolveExternals()
     SET_TO(m_snTimeInMilliseconds,          aml->GetSym(hGTASA, "_ZN6CTimer22m_snTimeInMillisecondsE"));
     SET_TO(backBuffer,                      aml->GetSym(hGTASA, "_ZN15ES2RenderTarget10backBufferE"));
     SET_TO(emu_fogdistances,                aml->GetSym(hGTASA, "emu_fogdistances"));
+    SET_TO(windowSize,                      aml->GetSym(hGTASA, "windowSize"));
 }

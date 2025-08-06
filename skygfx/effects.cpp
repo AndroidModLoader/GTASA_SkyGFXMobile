@@ -55,6 +55,7 @@ int g_nUWR = UWR_CLASSIC;
 bool g_bCSB = false;
 float g_fContrast = 1.0f, g_fSaturation = 1.0f, g_fBrightness = 1.0f, g_fGamma = 1.0f;
 bool g_bBloom = false;
+bool g_bAutoExposure = false;
 
 int g_nGrainRainStrength = 0;
 int g_nInitialGrain = 0;
@@ -65,7 +66,8 @@ float fpostfxX = 0, fpostfxY = 0;
 float fpostfxXInv = 0, fpostfxYInv = 0;
 RwRaster *pSkyGFXPostFXRaster1 = NULL, *pSkyGFXPostFXRaster2 = NULL,
          *pSkyGFXDepthRaster = NULL,   *pSkyGFXBrightnessRaster = NULL,
-         *pSkyGFXBloomP1Raster = NULL, *pSkyGFXBloomP2Raster = NULL;
+         *pSkyGFXBloomP1Raster = NULL, *pSkyGFXBloomP2Raster = NULL,
+         *pSkyGFXSceneBrightnessRaster = NULL;
 RwRaster *pDarkRaster = NULL;
 
 ES2Shader* g_pFramebufferRenderShader = NULL;
@@ -754,6 +756,11 @@ void GFX_GrabBrightness(float luminance)
         ImmediateModeRenderStatesReStore();
     }
 }
+void GFX_GrabSceneBrightness()
+{
+    GFX_CheckBuffersSize();
+    GFX_GrabTexIntoTex(pSkyGFXPostFXRaster1, pSkyGFXSceneBrightnessRaster);
+}
 void GFX_CCTV() // Completed
 {
     ImmediateModeRenderStatesStore();
@@ -1160,7 +1167,7 @@ void GFX_FrameBufferBloom(float intensity) // Completed
     pForcedShader = NULL;
     ImmediateModeRenderStatesReStore();
 
-    GFX_GrabScreen(); // Update the framebuffer with CSB-processed image
+    GFX_GrabScreen(); // Update the framebuffer with Bloom-processed image
 }
 void GFX_DepthBuffer() // Completed
 {
@@ -1202,21 +1209,16 @@ DECL_HOOKv(WaterCannons_Render)
 }
 DECL_HOOKv(PostFX_Init)
 {
-    if(pGrainRaster)
-    {
-        RwRasterDestroy(pGrainRaster);
-        pGrainRaster = NULL;
-    }
+    if(pGrainRaster) RwRasterDestroy(pGrainRaster);
     pGrainRaster = RwRasterCreate(64, 64, 32, rwRASTERTYPETEXTURE | rwRASTERFORMAT8888);
     CreateGrainTexture(pGrainRaster);
 
-    if(pDarkRaster)
-    {
-        RwRasterDestroy(pDarkRaster);
-        pDarkRaster = NULL;
-    }
+    if(pDarkRaster) RwRasterDestroy(pDarkRaster);
     pDarkRaster = RwRasterCreate(64, 64, 32, rwRASTERTYPETEXTURE | rwRASTERFORMAT8888);
     CreatePlainTexture(pDarkRaster, CRGBA(0, 0, 0));
+
+    if(pSkyGFXSceneBrightnessRaster) RwRasterDestroy(pSkyGFXSceneBrightnessRaster);
+    pSkyGFXSceneBrightnessRaster = RwRasterCreate(8, 8, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMATDEFAULT);
 
     *pbFog = false; // uninitialised variable
 }
@@ -1248,6 +1250,12 @@ DECL_HOOKv(PostFX_Render)
         // Apply bloom to the framebuffer
         GFX_ActivateBrightnessTexture();
         GFX_FrameBufferBloom( *currArea == 0 ? 0.55f : 0.4f );
+    }
+
+    if(g_bAutoExposure)
+    {
+        GFX_GrabSceneBrightness();
+        GFX_FrameBuffer();
     }
 
     if(*pbFog) RenderScreenFogPostEffect();
