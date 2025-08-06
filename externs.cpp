@@ -91,6 +91,8 @@ uint32_t *m_snTimeInMilliseconds;
 GLint *backBuffer;
 CVector *emu_fogdistances;
 int *windowSize;
+int *ms_exitEnterState;
+bool *ms_running;
 
 // Functions
 RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);
@@ -235,6 +237,10 @@ RwBool              (*RwTextureDestroy)(RwTexture*);
 CVehicle*           (*FindPlayerVehicle)(int,bool);
 void                (*RwIm2DRenderPrimitive)(RwPrimitiveType,RwOpenGLVertex*,int);
 float               (*RwIm2DGetNearScreenZ)();
+CPad*               (*GetPad)(int);
+bool                (*GetLookBehindForCar)(CPad*);
+bool                (*GetLookLeft)(CPad*, bool);
+bool                (*GetLookRight)(CPad*, bool);
 
 // Main
 void ResolveExternals()
@@ -402,6 +408,10 @@ void ResolveExternals()
     SET_TO(FindPlayerVehicle,               aml->GetSym(hGTASA, "_Z17FindPlayerVehicleib"));
     SET_TO(RwIm2DRenderPrimitive,           aml->GetSym(hGTASA, "_Z28RwIm2DRenderPrimitive_BUGFIX15RwPrimitiveTypeP14RwOpenGLVertexi"));
     SET_TO(RwIm2DGetNearScreenZ,            aml->GetSym(hGTASA, "_Z20RwIm2DGetNearScreenZv"));
+    SET_TO(GetPad,                          aml->GetSym(hGTASA, "_ZN4CPad6GetPadEi"));
+    SET_TO(GetLookBehindForCar,             aml->GetSym(hGTASA, "_ZN4CPad19GetLookBehindForCarEv"));
+    SET_TO(GetLookLeft,                     aml->GetSym(hGTASA, "_ZN4CPad11GetLookLeftEb"));
+    SET_TO(GetLookRight,                    aml->GetSym(hGTASA, "_ZN4CPad12GetLookRightEb"));
 
     SET_TO(CamDistComp,                     aml->GetSym(hGTASA, "_ZN22CRealTimeShadowManager11CamDistCompEPKvS1_"));
     SET_TO(StoreRealTimeShadow,             aml->GetSym(hGTASA, "_ZN8CShadows19StoreRealTimeShadowEP9CPhysicalffffff"));
@@ -475,4 +485,6 @@ void ResolveExternals()
     SET_TO(backBuffer,                      aml->GetSym(hGTASA, "_ZN15ES2RenderTarget10backBufferE"));
     SET_TO(emu_fogdistances,                aml->GetSym(hGTASA, "emu_fogdistances"));
     SET_TO(windowSize,                      aml->GetSym(hGTASA, "windowSize"));
+    SET_TO(ms_exitEnterState,               aml->GetSym(hGTASA, "_ZN17CEntryExitManager17ms_exitEnterStateE"));
+    SET_TO(ms_running,                      aml->GetSym(hGTASA, "_ZN12CCutsceneMgr10ms_runningE"));
 }

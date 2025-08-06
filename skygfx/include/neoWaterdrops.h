@@ -20,10 +20,16 @@ struct WaterDropMoving
 class WaterDrops
 {
 public:
-    enum {
+    enum
+    {
         MAXDROPS = 2000,
         MAXDROPSMOVING = 700
     };
+
+    // Config
+
+    static inline bool neoDrops = false;
+    static inline bool neoBloodDrops = false;
 
     // Logic
 
@@ -44,7 +50,8 @@ public:
 
     static inline int ms_splashDuration = -1;
 
-    // debugging
+    // Debugging
+
     static inline bool sprayWater = false;
     static inline bool sprayBlood = false;
 
@@ -59,7 +66,7 @@ public:
     static void NewTrace(WaterDropMoving*);
     static void NewDropMoving(WaterDrop*);
     // this has one more argument in VC: ttl, but it's always 2000.0
-    static void FillScreenMoving(float amount, bool isBlood);
+    static void FillScreenMoving(float amount, bool isBlood = false);
     static void FillScreen(int n);
     static void Clear(void);
     static void Reset(void);
@@ -71,12 +78,7 @@ public:
     // Rendering
 
     static inline RwTexture *ms_maskTex;
-    static inline RwTexture *ms_tex;
-    // static inline RwRaster *ms_maskRaster;
-    static inline RwRaster *ms_raster;
     static inline int ms_fbWidth, ms_fbHeight;
-    static inline void *ms_vertexBuf;
-    static inline void *ms_indexBuf;
     static inline RwOpenGLVertex *ms_vertPtr;
     static inline int ms_numBatchedDrops;
     static inline int ms_initialised;

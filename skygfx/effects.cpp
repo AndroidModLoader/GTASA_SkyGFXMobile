@@ -1,5 +1,6 @@
 #include <externs.h>
 #include "include/renderqueue.h"
+#include "include/neoWaterdrops.h"
 
 /* Enums */
 enum eSpeedFX : uint8_t
@@ -1361,6 +1362,17 @@ DECL_HOOKv(PostFX_Render)
         {
             gfWaterGreen = 0.0f;
         }
+    }
+
+    if(WaterDrops::neoDrops)
+    {
+        WaterDrops::Process();
+        WaterDrops::Render();
+        // Debugging
+        //if(WaterDrops::ms_numDrops < WaterDrops::MAXDROPS)
+        //{
+        //    WaterDrops::FillScreenMoving(1.0f);
+        //}
     }
 
     // Enchanced PostFXs

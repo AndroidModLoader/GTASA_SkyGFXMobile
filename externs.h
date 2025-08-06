@@ -273,6 +273,8 @@ extern uint32_t *m_snTimeInMilliseconds;
 extern GLint *backBuffer;
 extern CVector *emu_fogdistances;
 extern int *windowSize;
+extern int *ms_exitEnterState;
+extern bool *ms_running;
 
 // Functions
 extern RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);
@@ -417,6 +419,10 @@ extern RwBool              (*RwTextureDestroy)(RwTexture*);
 extern CVehicle*           (*FindPlayerVehicle)(int,bool);
 extern void                (*RwIm2DRenderPrimitive)(RwPrimitiveType,RwOpenGLVertex*,int);
 extern float               (*RwIm2DGetNearScreenZ)();
+extern CPad*               (*GetPad)(int);
+extern bool                (*GetLookBehindForCar)(CPad*);
+extern bool                (*GetLookLeft)(CPad*, bool);
+extern bool                (*GetLookRight)(CPad*, bool);
 
 // Main
 void ResolveExternals();
