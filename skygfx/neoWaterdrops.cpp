@@ -16,14 +16,12 @@ RwOpenGLVertex DropletsBuffer[2 * 4 * WaterDrops::MAXDROPS] {};
     (o)->y = (((a)->y) + ( (b)->y));                            \
     (o)->z = (((a)->z) + ( (b)->z));                            \
 }
-
 #define RwV3dSub(o, a, b)                                       \
 {                                                               \
     (o)->x = (((a)->x) - ( (b)->x));                            \
     (o)->y = (((a)->y) - ( (b)->y));                            \
     (o)->z = (((a)->z) - ( (b)->z));                            \
 }
-
 #define RwV3dScale(o, a, s)                                     \
 {                                                               \
     (o)->x = (((a)->x) * ( (s)));                               \
@@ -48,6 +46,120 @@ inline float RwV3dLength(RwV3d* v)
 inline float RwV3dDotProduct(RwV3d* a, RwV3d* b)
 {
     return DotProduct((CVector&)*a, (CVector&)*b);
+}
+
+// Hooks
+
+DECL_HOOKv(CAEFireAudioEntity_AddAudioEvent, void* self, eAudioEvents event, RwV3d* position)
+{
+    CAEFireAudioEntity_AddAudioEvent(self, event, position);
+    if(WaterDrops::neoWaterDrops && event == AE_FIRE_HYDRANT)
+    {
+        WaterDrops::RegisterSplash(position, 10.0f, 20);
+    }
+}
+DECL_HOOKv(TriggerWaterSplash, void* self, RwV3d* position)
+{
+    TriggerWaterSplash(self, position);
+    if(WaterDrops::neoWaterDrops)
+    {
+        WaterDrops::RegisterSplash(position, 10.0f, 1);
+    }
+}
+DECL_HOOKv(TriggerBulletSplash, void* self, RwV3d* position)
+{
+    TriggerBulletSplash(self, position);
+    if(WaterDrops::neoWaterDrops)
+    {
+        WaterDrops::RegisterSplash(position, 10.0f, 1);
+    }
+}
+DECL_HOOKv(TriggerFootSplash, void* self, RwV3d* position)
+{
+    TriggerFootSplash(self, position);
+    if(WaterDrops::neoWaterDrops)
+    {
+        WaterDrops::RegisterSplash(position, 10.0f, 1);
+    }
+}
+DECL_HOOKv(ProcessHarvester_AddBodyPart, CObject* entity)
+{
+    ProcessHarvester_AddBodyPart(entity);
+    if(WaterDrops::neoWaterDrops)
+    {
+        RwV3d dist;
+        RwV3dSub(&dist, (RwV3d*)&entity->GetPosition(), &WaterDrops::ms_lastPos);
+        if(RwV3dLength(&dist) <= 20.0f)
+        {
+            WaterDrops::FillScreenMoving(0.5f, true);
+        }
+    }
+}
+DECL_HOOKv(Chainsaw_AddAudioEvent, uintptr_t aeentity, eAudioEvents event)
+{
+    Chainsaw_AddAudioEvent(aeentity, event);
+    if(WaterDrops::neoWaterDrops)
+    {
+        /* FIX_BUGS */
+        if((aeentity - BYBIT(0x398, 0x470)) == (uintptr_t)FindPlayerPed(-1))
+        {
+            WaterDrops::FillScreenMoving(1.0f, true);
+        }
+    }
+}
+DECL_HOOKv(AddFxParticle, void* self, RwV3d *pos, RwV3d *vel, float timeSince, void *fxMults, float zRot, float lightMult, float lightMultLimit, uint8_t createLocal)
+{
+    AddFxParticle(self, pos, vel, timeSince, fxMults, zRot, lightMult, lightMultLimit, createLocal);
+
+    if(!WaterDrops::neoWaterDrops) return;
+
+    RwV3d dist;
+    RwV3dSub(&dist, pos, &WaterDrops::ms_lastPos);
+    float pd = 20.0f;
+    //bool isBlood = false;
+    /*if(self == g_fx->prt_blood) { pd = 5.0; isBlood = true; }
+    else*/ if(self == g_fx->prt_boatsplash) { pd = 40.0; }
+    else if(self == g_fx->prt_splash) { pd = 15.0; }
+    else if(self == g_fx->prt_wake) { pd = 10.0; }
+    else if(self == g_fx->prt_watersplash) { pd = 30.0; }
+    else return;
+
+    float len = RwV3dLength(&dist);
+    if(len <= pd)
+    {
+        WaterDrops::FillScreenMoving(1.0f / (len / 2.0f) /*, isBlood*/);
+    }
+}
+DECL_HOOKv(AddBloodFx, void* self, RwV3d *pos, RwV3d *dir, int32 num, float lightMult)
+{
+    AddBloodFx(self, pos, dir, num, lightMult);
+    if(WaterDrops::neoWaterDrops)
+    {
+        RwV3d dist;
+        RwV3dSub(&dist, pos, &WaterDrops::ms_lastPos);
+        float len = RwV3dLength(&dist);
+        if(len <= 7.0f) // org. 5.0f
+        {
+            for(int i = 0; i < num; ++i)
+            {
+                WaterDrops::FillScreenMoving(1.0f / (len / 2.0f), true);
+            }
+        }
+    }
+}
+
+// Main Init
+
+void WaterDrops::InitialiseHooks()
+{
+    HOOKPLT(CAEFireAudioEntity_AddAudioEvent, pGTASA + BYBIT(0x673B9C, 0x8464F0));
+    HOOK(TriggerWaterSplash, aml->GetSym(hGTASA, "_ZN4Fx_c18TriggerWaterSplashER7CVector"));
+    HOOK(TriggerBulletSplash, aml->GetSym(hGTASA, "_ZN4Fx_c19TriggerBulletSplashER7CVector"));
+    HOOK(TriggerFootSplash, aml->GetSym(hGTASA, "_ZN4Fx_c17TriggerFootSplashER7CVector"));
+    HOOKBLX(ProcessHarvester_AddBodyPart, pGTASA + BYBIT(0x55797A + 0x1, 0x6781A4));
+    HOOKBLX(Chainsaw_AddAudioEvent, pGTASA + BYBIT(0x4DA62E + 0x1, 0x5DBEBC));
+    HOOKPLT(AddFxParticle, pGTASA + BYBIT(0x67358C, 0x845AD8));
+    HOOKPLT(AddBloodFx, pGTASA + BYBIT(0x66E82C, 0x83DD68)); // A little fix for bleeding wood
 }
 
 // Single Drop

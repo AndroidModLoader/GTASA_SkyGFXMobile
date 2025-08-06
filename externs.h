@@ -188,6 +188,27 @@ struct ShadowCameraStorage
     CShadowCamera* m_pShadowCamera;
     RwTexture*     m_pShadowTexture;
 };
+struct FakeFx_c
+{
+    void* prt_blood;
+    void* prt_boatsplash;
+    void* prt_bubble;
+    void* prt_cardebris;
+    void* prt_collisionsmoke;
+    void* prt_gunshell;
+    void* prt_sand;
+    void* prt_sand2;
+    void* prt_smoke_huge;
+    void* prt_smokeII_3_expand;
+    void* prt_spark;
+    void* prt_spark_2;
+    void* prt_splash;
+    void* prt_wake;
+    void* prt_watersplash;
+    void* prt_wheeldirt;
+    void* prt_glass;
+    //...
+};
 
 // Hooks
 extern DECL_HOOKv(InitialisePostEffects);
@@ -276,6 +297,7 @@ extern int *windowSize;
 extern int *ms_exitEnterState;
 extern bool *ms_running;
 extern RwTexture** gpMoonMask;
+extern FakeFx_c* g_fx;
 
 // Functions
 extern RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);

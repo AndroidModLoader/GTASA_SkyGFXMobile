@@ -184,11 +184,11 @@ void StartColorfilter()
     aml->Write32(pGTASA + 0x6DA708, 0x39400108);
   #endif
 
-    pCFGColorFilter = cfg->Bind("Colorfilter", COLFIL_MOBILE, "Visuals");
+    pCFGColorFilter = cfg->Bind("Colorfilter", COLFIL_MOBILE, "Visual");
     ColorfilterSettingChanged(COLFIL_MOBILE, pCFGColorFilter->GetInt(), NULL);
     AddSetting("Colorfilter", g_nColorFilter, 0, sizeofA(aColorFilterNames)-1, aColorFilterNames, ColorfilterSettingChanged, NULL);
 
-    pCFGUsePCTimecyc = cfg->Bind("UsePCTimecyc", g_bUsePCTimecyc, "Visuals");
+    pCFGUsePCTimecyc = cfg->Bind("UsePCTimecyc", g_bUsePCTimecyc, "Visual");
     PCTimecycSettingChanged(1, pCFGUsePCTimecyc->GetBool(), NULL);
     AddSetting("Using PC Timecyc", g_bUsePCTimecyc, 0, sizeofA(aYesNo)-1, aYesNo, PCTimecycSettingChanged, NULL);
 }

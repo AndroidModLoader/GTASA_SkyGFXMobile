@@ -28,7 +28,7 @@ public:
 
     // Config
 
-    static inline bool neoDrops = false;
+    static inline bool neoWaterDrops = true;
     static inline bool neoBloodDrops = true;
 
     // Debugging
@@ -56,6 +56,7 @@ public:
     static inline int ms_splashDuration = -1;
     static inline RwTexture* m_pMask = NULL;
 
+    static void InitialiseHooks();
     static void Process(void);
     static void CalculateMovement(void);
     static void SprayDrops(void);

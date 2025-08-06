@@ -56,6 +56,8 @@ int g_nUWR = UWR_CLASSIC;
 bool g_bCSB = false;
 float g_fContrast = 1.0f, g_fSaturation = 1.0f, g_fBrightness = 1.0f, g_fGamma = 1.0f;
 bool g_bBloom = false;
+float g_fBloomSkyMult = 0.5f;
+float g_fBloomIntensity = 0.55f;
 bool g_bAutoExposure = false;
 
 int g_nGrainRainStrength = 0;
@@ -124,6 +126,8 @@ ConfigEntry *pCFGDOF;
 ConfigEntry *pCFGUWR;
 ConfigEntry* pCFGCSB;
 ConfigEntry* pCFGBloom;
+ConfigEntry *pCFGNeoWaterDrops;
+ConfigEntry *pCFGNeoBloodDrops;
 
 /* Functions */
 void CreateEffectsShaders()
@@ -175,7 +179,7 @@ void CreateEffectsShaders()
                               "  vec3 color = texture2D(Diffuse, Out_Tex0).rgb;\n"
                               "  float intensity = dot(color, LumCoeff);\n"
                               "  if(depth < 0.01) {\n"
-                              "    gl_FragColor = vec4(vec3(0.8 * intensity), 1.0);\n"
+                              "    gl_FragColor = vec4(vec3(GFX1v.y * intensity), 1.0);\n"
                               "  } else if(intensity >= GFX1v.x) {\n"
                               "    gl_FragColor = vec4(color, 1.0);\n"
                               "  } else {\n"
@@ -549,6 +553,24 @@ void BloomSettingChanged(int oldVal, int newVal, void* data = NULL)
 
     cfg->Save();
 }
+void NEOWaterDropsSettingChanged(int oldVal, int newVal, void* data = NULL)
+{
+    if(oldVal == newVal) return;
+
+    pCFGNeoWaterDrops->SetBool(newVal != 0);
+    WaterDrops::neoWaterDrops = pCFGNeoWaterDrops->GetBool();
+
+    cfg->Save();
+}
+void NEOBloodDropsSettingChanged(int oldVal, int newVal, void* data = NULL)
+{
+    if(oldVal == newVal) return;
+
+    pCFGNeoBloodDrops->SetBool(newVal != 0);
+    WaterDrops::neoBloodDrops = pCFGNeoBloodDrops->GetBool();
+
+    cfg->Save();
+}
 void CreateGrainTexture(RwRaster* target)
 {
     if(!target) return;
@@ -742,7 +764,7 @@ void GFX_GrabBrightness(float luminance)
         RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
         RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
 
-        RQVector uniValues = RQVector{ luminance, 0.0f, 0.0f, 0.0f };
+        RQVector uniValues = RQVector{ luminance, g_fBloomSkyMult, 0.0f, 0.0f };
         pForcedShader = g_pSimpleBrightShader;
         pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
 
@@ -1250,7 +1272,13 @@ DECL_HOOKv(PostFX_Render)
         GFX_GrabTexIntoTex(pSkyGFXBloomP1Raster, pSkyGFXBloomP2Raster, g_pBloomP2Shader, &uniValues);
         // Apply bloom to the framebuffer
         GFX_ActivateBrightnessTexture();
-        GFX_FrameBufferBloom( *currArea == 0 ? 0.55f : 0.4f );
+
+        float bloomIntensity = g_fBloomIntensity;
+        if(*currArea != 0)
+        {
+            bloomIntensity *= 0.72f;
+        }
+        GFX_FrameBufferBloom( bloomIntensity );
     }
 
     if(g_bAutoExposure)
@@ -1364,15 +1392,10 @@ DECL_HOOKv(PostFX_Render)
         }
     }
 
-    if(WaterDrops::neoDrops)
+    if(WaterDrops::neoWaterDrops)
     {
         WaterDrops::Process();
         WaterDrops::Render();
-        // Debugging
-        //if(WaterDrops::ms_numDrops < WaterDrops::MAXDROPS)
-        //{
-        //    WaterDrops::FillScreenMoving(1.0f);
-        //}
     }
 
     // Enchanced PostFXs
@@ -1445,6 +1468,7 @@ void StartEffectsStuff()
 
     if(g_bMissingPostEffects)
     {
+        WaterDrops::InitialiseHooks();
         HOOK(PostFX_Init,   aml->GetSym(hGTASA, "_ZN12CPostEffects21SetupBackBufferVertexEv"));
         HOOK(PostFX_Render, aml->GetSym(hGTASA, "_ZN12CPostEffects12MobileRenderEv"));
         HOOK(PostFX_CCTV,   aml->GetSym(hGTASA, "_ZN12CPostEffects4CCTVEv"));
@@ -1463,6 +1487,14 @@ void StartEffectsStuff()
         pCFGUWR = cfg->Bind("UnderwaterRippleType", g_nUWR, "Effects");
         UWRSettingChanged(g_nUWR, pCFGUWR->GetInt());
         AddSetting("Underwater Ripple", g_nUWR, 0, sizeofA(aUWRSettings)-1, aUWRSettings, UWRSettingChanged, NULL);
+
+        pCFGNeoWaterDrops = cfg->Bind("NEOWaterDrops", WaterDrops::neoWaterDrops, "Effects");
+        NEOWaterDropsSettingChanged(WaterDrops::neoWaterDrops, pCFGNeoWaterDrops->GetBool());
+        AddSetting("NEO Water Drops", WaterDrops::neoWaterDrops, 0, sizeofA(aYesNo)-1, aYesNo, NEOWaterDropsSettingChanged, NULL);
+
+        pCFGNeoBloodDrops = cfg->Bind("NEOBloodDrops", WaterDrops::neoBloodDrops, "Effects");
+        NEOBloodDropsSettingChanged(WaterDrops::neoBloodDrops, pCFGNeoBloodDrops->GetBool());
+        AddSetting("NEO Blood Drops", WaterDrops::neoBloodDrops, 0, sizeofA(aYesNo)-1, aYesNo, NEOBloodDropsSettingChanged, NULL);
 
         pCFGCrAbFX = cfg->Bind("ChromaticAberration", g_nCrAb, "EnchancedEffects");
         CrAbFXSettingChanged(g_nCrAb, pCFGCrAbFX->GetInt());
@@ -1494,6 +1526,8 @@ void StartEffectsStuff()
         pCFGBloom = cfg->Bind("Bloom", g_bBloom, "EnchancedEffects");
         BloomSettingChanged(g_bBloom, pCFGBloom->GetBool());
         AddSetting("Bloom", g_bBloom, 0, sizeofA(aYesNo)-1, aYesNo, BloomSettingChanged, NULL);
+        g_fBloomSkyMult = cfg->GetFloat("Bloom_SkyMult", g_fBloomSkyMult, "EnchancedEffects");
+        g_fBloomIntensity = cfg->GetFloat("Bloom_Intensity", g_fBloomIntensity, "EnchancedEffects");
 
         if(g_bHeatHaze)
         {
