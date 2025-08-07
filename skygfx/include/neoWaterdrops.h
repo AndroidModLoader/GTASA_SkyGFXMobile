@@ -5,7 +5,7 @@ struct WaterDrop
     float x, y, time;
     float size, uvsize, ttl;
     RwRGBA color;
-    bool active;
+    bool active = false;
     bool fades;
 
     void Fade(void);
@@ -13,8 +13,8 @@ struct WaterDrop
 
 struct WaterDropMoving
 {
-    WaterDrop *drop;
-    float dist;
+    WaterDrop *drop = NULL;
+    float dist = 0.0f;;
 };
 
 class WaterDrops
@@ -40,9 +40,9 @@ public:
 
     static inline float ms_xOff, ms_yOff; // not quite sure what these are
     static inline WaterDrop ms_drops[MAXDROPS] {};
-    static inline int ms_numDrops;
+    static inline int ms_numDrops = 0;
     static inline WaterDropMoving ms_dropsMoving[MAXDROPSMOVING] {};
-    static inline int ms_numDropsMoving;
+    static inline int ms_numDropsMoving = 0;
 
     static inline bool ms_enabled;
     static inline bool ms_movingEnabled;
