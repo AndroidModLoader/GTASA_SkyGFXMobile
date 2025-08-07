@@ -28,7 +28,7 @@ ConfigEntry* pCFGEnvMapType;
 DECL_HOOKv(RenderEnvMap)
 {
     float saveVal = *ms_fFarClip;
-    *ms_fFarClip = 0.995f * g_fForcedEnvRadius; // env sphere farclip
+    *ms_fFarClip = 0.99f * g_fForcedEnvRadius; // env sphere farclip
 
     // TODO: need to rewrite RenderScene(0) (which is above that func)
     if(g_nEnvMapType == ENVMAP_MOBILE)
@@ -95,7 +95,7 @@ void StartEnvMapStuff()
   #ifdef AML32
     aml->PlaceNOP(pGTASA + 0x5C4EC2, 1);
     aml->PlaceNOP(pGTASA + 0x5C4EC8, 1);
-    aml->PlaceNOP(pGTASA + 0x5C4ECE, 1);
+    aml->PlaceNOP(pGTASA + 0x5C4ECC, 1);
     aml->WriteFloat(pGTASA + 0x5C4FFC, g_fForcedEnvRadius);
     aml->WriteFloat(pGTASA + 0x5C5000, g_fForcedEnvRadius); // envMap radius
   #else
