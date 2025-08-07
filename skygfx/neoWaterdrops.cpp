@@ -232,20 +232,20 @@ void WaterDrops::CalculateMovement(void)
 
 void WaterDrops::SprayDrops(void)
 {
+    float delta = *ms_fTimeStep / (50.0f / 30.0f);
     if(!NoRain() && *pfWeatherRain != 0.0f && ms_enabled)
     {
-        float delta = *ms_fTimeStep / (50.0f / 30.0f);
         float tmp = 180.0f - ms_rainStrength;
         if(tmp < 40.0f) tmp = 40.0f;
         FillScreenMoving((tmp - 40.0f) / 150.0f * *pfWeatherRain * 0.5f * delta);
     }
-    if(sprayWater) FillScreenMoving(0.5f, false);
-    if(sprayBlood) FillScreenMoving(0.5f, true);
+    if(sprayWater) FillScreenMoving(0.5f * delta, false);
+    if(sprayBlood) FillScreenMoving(0.5f * delta, true);
     if(ms_splashDuration >= 0)
     {
         if(ms_numDrops < MAXDROPS)
         {
-            FillScreenMoving(1.0f); // VC does STRANGE things here
+            FillScreenMoving(delta); // VC does STRANGE things here
         }
         ms_splashDuration--;
     }
