@@ -166,7 +166,7 @@ void WaterDrops::InitialiseHooks()
 
 void WaterDrop::Fade(void)
 {
-    int delta = *ms_fTimeStep * 1000.0f / 50.0f;
+    float delta = *ms_fTimeStep * 1000.0f / 50.0f;
     this->time += delta;
     if(this->time >= this->ttl)
     {
@@ -230,17 +230,14 @@ void WaterDrops::CalculateMovement(void)
     ms_rainStrength = RAD2DEG(acos(c));
 }
 
-static int ndrops[] = {
-    125, 250, 500, 1000, 1000,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
 void WaterDrops::SprayDrops(void)
 {
     if(!NoRain() && *pfWeatherRain != 0.0f && ms_enabled)
     {
-        int tmp = 180.0f - ms_rainStrength;
-        if(tmp < 40) tmp = 40;
-        FillScreenMoving((tmp - 40.0f) / 150.0f * *pfWeatherRain * 0.5f);
+        float delta = *ms_fTimeStep / (50.0f / 30.0f);
+        float tmp = 180.0f - ms_rainStrength;
+        if(tmp < 40.0f) tmp = 40.0f;
+        FillScreenMoving((tmp - 40.0f) / 150.0f * *pfWeatherRain * 0.5f * delta);
     }
     if(sprayWater) FillScreenMoving(0.5f, false);
     if(sprayBlood) FillScreenMoving(0.5f, true);
