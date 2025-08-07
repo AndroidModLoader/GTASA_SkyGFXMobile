@@ -5,8 +5,8 @@ extern RwRaster *pSkyGFXPostFXRaster1, *pSkyGFXPostFXRaster2, *pDarkRaster;
 float scaling;
 RwOpenGLVertex DropletsBuffer[2 * 4 * WaterDrops::MAXDROPS] {};
 
-#define MAXSIZE 15
-#define MINSIZE 4
+#define MAXSIZE 18
+#define MINSIZE 5
 #define SC(x) ((int)((x)*scaling))
 #define RAD2DEG(x) (180.0f*(x)/M_PI)
 #define RwCameraGetFrame(_camera) ((RwFrame *)((_camera)->object.object.parent))
@@ -386,7 +386,7 @@ void WaterDrops::FillScreenMoving(float amount, bool isBlood)
     if(isBlood && !neoBloodDrops) return;
 
     int n = (ms_vec.z <= 5.0f ? 1.0f : 1.5f) * amount * 15.0f;
-    float x, y, time;
+    float x, y, size;
     WaterDrop *drop;
 
     while(n--)
@@ -395,14 +395,14 @@ void WaterDrops::FillScreenMoving(float amount, bool isBlood)
         {
             x = rand() % ms_fbWidth;
             y = rand() % ms_fbHeight;
-            time = rand() % (SC(MAXSIZE) - SC(MINSIZE)) + SC(MINSIZE);
+            size = rand() % (SC(MAXSIZE) - SC(MINSIZE)) + SC(MINSIZE);
             if(!isBlood)
             {
-                drop = PlaceNew(x, y, time, 2000.0f, 1);
+                drop = PlaceNew(x, y, size, 2000.0f, 1);
             }
             else
             {
-                drop = PlaceNew(x, y, time, 2000.0f, 1, 0xFF, 0x00, 0x00);
+                drop = PlaceNew(x, y, size, 2000.0f, 1, 255, 30, 30);
             }
             if(drop) NewDropMoving(drop);
         }
@@ -411,7 +411,7 @@ void WaterDrops::FillScreenMoving(float amount, bool isBlood)
 
 void WaterDrops::FillScreen(int n)
 {
-    float x, y, time;
+    float x, y, size;
     WaterDrop *drop;
 
     if(!ms_initialised) return;
@@ -423,8 +423,8 @@ void WaterDrops::FillScreen(int n)
         {
             x = rand() % ms_fbWidth;
             y = rand() % ms_fbHeight;
-            time = rand() % (SC(MAXSIZE) - SC(MINSIZE)) + SC(MINSIZE);
-            PlaceNew(x, y, time, 2000.0f, 1);
+            size = rand() % (SC(MAXSIZE) - SC(MINSIZE)) + SC(MINSIZE);
+            PlaceNew(x, y, size, 2000.0f, 1);
         }
     }
 }
@@ -503,9 +503,8 @@ void WaterDrops::AddToRenderList(WaterDrop *drop)
 
     float u1_1, u1_2;
     float v1_1, v1_2;
-    float tmp;
-
-    tmp = drop->uvsize * (300.0f - 40.0f) + 40.0f;
+    float tmp = drop->uvsize * (300.0f - 40.0f) + 40.0f;
+    
     u1_1 = drop->x + ms_xOff - tmp;
     v1_1 = drop->y + ms_yOff - tmp;
     u1_2 = drop->x + ms_xOff + tmp;
