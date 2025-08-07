@@ -14,7 +14,7 @@ struct WaterDrop
 struct WaterDropMoving
 {
     WaterDrop *drop = NULL;
-    float dist = 0.0f;;
+    float dist = 0.0f;
 };
 
 class WaterDrops
@@ -23,7 +23,7 @@ public:
     enum
     {
         MAXDROPS = 2000,
-        MAXDROPSMOVING = 700
+        MAXDROPSMOVING = 1000
     };
 
     // Config
@@ -47,7 +47,7 @@ public:
     static inline bool ms_enabled;
     static inline bool ms_movingEnabled;
 
-    static inline float ms_distMoved, ms_vecLen, ms_rainStrength;
+    static inline float ms_distMoved = 0.0f, ms_vecLen = 0.0f, ms_rainStrength = 0.0f;
     static inline RwV3d ms_vec;
     static inline RwV3d ms_lastAt;
     static inline RwV3d ms_lastPos;
@@ -78,7 +78,6 @@ public:
 
     // Rendering
 
-    static inline RwTexture *ms_maskTex;
     static inline int ms_fbWidth, ms_fbHeight;
     static inline RwOpenGLVertex *ms_vertPtr;
     static inline int ms_numBatchedDrops;
