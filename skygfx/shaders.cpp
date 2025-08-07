@@ -62,7 +62,7 @@ void StartShaders()
     // Specular light 2 on vehicles
     // 81 max including terminator
     const char* sSpecPart2 = "float specAmt=pow(max(dot(reflVector,DirLightDirection),0.0),4.0)*0.125;";
-    aml->Write(pGTASA + BYBIT(0x5EBCDD, 0x71265B), sSpecPart2, strlen(sSpecPart2)+1);
+    aml->Write(pGTASA + BYBIT(0x5EBF9D, 0x71265B), sSpecPart2, strlen(sSpecPart2)+1);
 
     // Water Sun Reflections are now affected by the fog (TODO: breaking it)
   #ifdef AML32
