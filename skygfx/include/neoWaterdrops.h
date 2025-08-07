@@ -22,8 +22,8 @@ class WaterDrops
 public:
     enum
     {
-        MAXDROPS = 2000,
-        MAXDROPSMOVING = 1000
+        MAXDROPS = 1500,
+        MAXDROPSMOVING = 700
     };
 
     // Config
@@ -78,7 +78,7 @@ public:
 
     // Rendering
 
-    static inline int ms_fbWidth, ms_fbHeight;
+    //static inline int ms_fbWidth, ms_fbHeight;
     static inline RwOpenGLVertex *ms_vertPtr;
     static inline int ms_numBatchedDrops;
     static inline int ms_initialised;

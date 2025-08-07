@@ -55,7 +55,7 @@ DECL_HOOKv(CAEFireAudioEntity_AddAudioEvent, void* self, eAudioEvents event, RwV
     CAEFireAudioEntity_AddAudioEvent(self, event, position);
     if(WaterDrops::neoWaterDrops && event == AE_FIRE_HYDRANT)
     {
-        WaterDrops::RegisterSplash(position, 10.0f, 15);
+        WaterDrops::RegisterSplash(position, 15.0f, 13);
     }
 }
 DECL_HOOKv(TriggerWaterSplash, void* self, RwV3d* position)
@@ -184,9 +184,10 @@ void WaterDrop::Fade(void)
 void WaterDrops::Process()
 {
     // In case resolution changes
-    ms_fbWidth = Scene->camera->framebuf->width;
-    ms_fbHeight = Scene->camera->framebuf->height;
-    scaling = ms_fbHeight / 480.0f;
+    //ms_fbWidth = Scene->camera->framebuf->width;
+    //ms_fbHeight = Scene->camera->framebuf->height;
+    //scaling = ms_fbHeight / 480.0f;
+    scaling = fpostfxY / 480.0f;
     frameTimeDelta = *ms_fTimeStep / (50.0f / 30.0f);
 
     if(!ms_initialised) InitialiseRender(Scene->camera);
@@ -270,14 +271,14 @@ void WaterDrops::MoveDrop(WaterDropMoving *moving)
         // movement out of center 
         float d = ms_vec.z * 0.2f;
         float dx, dy, sum;
-        dx = drop->x - ms_fbWidth * 0.5f + ms_vec.x;
+        dx = drop->x - fpostfxX * 0.5f + ms_vec.x;
         if(mode == MODE_1STPERSON)
         {
-            dy = drop->y - ms_fbHeight * 1.2f - ms_vec.y;
+            dy = drop->y - fpostfxY * 1.2f - ms_vec.y;
         }
         else
         {
-            dy = drop->y - ms_fbHeight * 0.5f - ms_vec.y;
+            dy = drop->y - fpostfxY * 0.5f - ms_vec.y;
         }
         sum = fabsf(dx) + fabsf(dy);
         if(sum >= 0.001f)
@@ -299,7 +300,7 @@ void WaterDrops::MoveDrop(WaterDropMoving *moving)
         drop->y += ms_vec.y;
     }
 
-    if(drop->x < 0.0f || drop->y < 0.0f || drop->x > ms_fbWidth || drop->y > ms_fbHeight)
+    if(drop->x < 0.0f || drop->y < 0.0f || drop->x > fpostfxX || drop->y > fpostfxY)
     {
         moving->drop = NULL;
         ms_numDropsMoving--;
@@ -391,8 +392,8 @@ void WaterDrops::FillScreenMoving(float amount, bool isBlood)
     {
         if(ms_numDrops < MAXDROPS && ms_numDropsMoving < MAXDROPSMOVING)
         {
-            x = rand() % ms_fbWidth;
-            y = rand() % ms_fbHeight;
+            x = rand() % postfxX;
+            y = rand() % postfxY;
             size = rand() % (SC(MAXSIZE) - SC(MINSIZE)) + SC(MINSIZE);
             if(!isBlood)
             {
@@ -419,8 +420,8 @@ void WaterDrops::FillScreen(int n)
         drop->active = 0;
         if(drop < &ms_drops[n])
         {
-            x = rand() % ms_fbWidth;
-            y = rand() % ms_fbHeight;
+            x = rand() % postfxX;
+            y = rand() % postfxY;
             size = rand() % (SC(MAXSIZE) - SC(MINSIZE)) + SC(MINSIZE);
             PlaceNew(x, y, size, 2000.0f, 1);
         }
@@ -509,8 +510,8 @@ void WaterDrops::AddToRenderList(WaterDrop *drop)
     v1_2 = drop->y + ms_yOff + tmp;
     u1_1 = (u1_1 <= 0.0f ? 0.0f : u1_1) / pSkyGFXPostFXRaster1->width;
     v1_1 = (v1_1 <= 0.0f ? 0.0f : v1_1) / pSkyGFXPostFXRaster1->height;
-    u1_2 = (u1_2 >= ms_fbWidth ? ms_fbWidth : u1_2) / pSkyGFXPostFXRaster1->width;
-    v1_2 = (v1_2 >= ms_fbHeight ? ms_fbHeight : v1_2) / pSkyGFXPostFXRaster1->height;
+    u1_2 = (u1_2 >= fpostfxX ? fpostfxX : u1_2) / pSkyGFXPostFXRaster1->width;
+    v1_2 = (v1_2 >= fpostfxY ? fpostfxY : v1_2) / pSkyGFXPostFXRaster1->height;
 
     scale = drop->size * 0.5f;
 

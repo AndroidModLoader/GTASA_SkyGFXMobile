@@ -24,6 +24,10 @@
 extern uintptr_t pGTASA;
 extern void* hGTASA;
 
+extern int postfxX, postfxY;
+extern float fpostfxX, fpostfxY;
+extern float fpostfxXInv, fpostfxYInv;
+
 template <typename T>
 struct BasicEvent
 {
