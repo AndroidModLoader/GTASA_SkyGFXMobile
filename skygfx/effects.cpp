@@ -56,7 +56,7 @@ int g_nUWR = UWR_CLASSIC;
 bool g_bCSB = false;
 float g_fContrast = 1.0f, g_fSaturation = 1.0f, g_fBrightness = 1.0f, g_fGamma = 1.0f;
 bool g_bBloom = false;
-float g_fBloomSkyMult = 0.5f;
+float g_fBloomSkyMult = 0.7f;
 float g_fBloomIntensity = 0.55f;
 bool g_bAutoExposure = false;
 
@@ -179,7 +179,7 @@ void CreateEffectsShaders()
                               "  vec3 color = texture2D(Diffuse, Out_Tex0).rgb;\n"
                               "  float intensity = dot(color, LumCoeff);\n"
                               "  if(depth == 0.0) {\n"
-                              "    gl_FragColor = vec4(vec3(GFX1v.y * intensity), 1.0);\n"
+                              "    gl_FragColor = vec4(vec3(GFX1v.y * intensity * intensity), 1.0);\n"
                               "  } else if(intensity >= GFX1v.x) {\n"
                               "    gl_FragColor = vec4(color, 1.0);\n"
                               "  } else {\n"
