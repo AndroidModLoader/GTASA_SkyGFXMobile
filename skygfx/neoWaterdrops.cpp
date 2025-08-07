@@ -2,7 +2,7 @@
 #include "include/renderqueue.h"
 
 extern RwRaster *pSkyGFXPostFXRaster1, *pSkyGFXPostFXRaster2, *pDarkRaster;
-float scaling;
+float scaling, frameTimeDelta;
 RwOpenGLVertex DropletsBuffer[2 * 4 * WaterDrops::MAXDROPS] {};
 
 #define MAXSIZE 18
@@ -55,7 +55,7 @@ DECL_HOOKv(CAEFireAudioEntity_AddAudioEvent, void* self, eAudioEvents event, RwV
     CAEFireAudioEntity_AddAudioEvent(self, event, position);
     if(WaterDrops::neoWaterDrops && event == AE_FIRE_HYDRANT)
     {
-        WaterDrops::RegisterSplash(position, 10.0f, 20);
+        WaterDrops::RegisterSplash(position, 10.0f, 15);
     }
 }
 DECL_HOOKv(TriggerWaterSplash, void* self, RwV3d* position)
@@ -187,6 +187,7 @@ void WaterDrops::Process()
     ms_fbWidth = Scene->camera->framebuf->width;
     ms_fbHeight = Scene->camera->framebuf->height;
     scaling = ms_fbHeight / 480.0f;
+    frameTimeDelta = *ms_fTimeStep / (50.0f / 30.0f);
 
     if(!ms_initialised) InitialiseRender(Scene->camera);
     WaterDrops::CalculateMovement();
@@ -210,10 +211,10 @@ void WaterDrops::CalculateMovement(void)
     RwV3dScale(&ms_vec, &ms_vec, 10.0f);
     ms_vecLen = sqrtf(ms_vec.y*ms_vec.y + ms_vec.x*ms_vec.x);
 
-    short mode = GetCamMode();
+    uint16_t mode = GetCamMode();
     bool istopdown = (mode == MODE_TOPDOWN || mode == MODE_TWOPLAYER_SEPARATE_CARS_TOPDOWN);
     bool carlookdirection = 0;
-    if(mode == MODE_1STPERSON && FindPlayerVehicle(-1, 0))
+    if(mode == MODE_1STPERSON && FindPlayerVehicle(-1, false))
     {
         CPad *p = GetPad(0);
         if(GetLookBehindForCar(p) || GetLookLeft(p, true) || GetLookRight(p, true))
@@ -232,12 +233,12 @@ void WaterDrops::CalculateMovement(void)
 
 void WaterDrops::SprayDrops(void)
 {
-    float delta = *ms_fTimeStep / (50.0f / 30.0f);
+    float delta = frameTimeDelta;
     if(!NoRain() && *pfWeatherRain != 0.0f && ms_enabled)
     {
         float tmp = 180.0f - ms_rainStrength;
         if(tmp < 40.0f) tmp = 40.0f;
-        FillScreenMoving((tmp - 40.0f) * *pfWeatherRain * delta / 300.0f);
+        FillScreenMoving((tmp - 40.0f) * *pfWeatherRain * delta / 400.0f);
     }
     if(sprayWater) FillScreenMoving(0.5f * delta, false);
     if(sprayBlood) FillScreenMoving(0.5f * delta, true);
@@ -245,7 +246,7 @@ void WaterDrops::SprayDrops(void)
     {
         if(ms_numDrops < MAXDROPS)
         {
-            FillScreenMoving(delta); // VC does STRANGE things here
+            FillScreenMoving(1.0f * delta); // VC does STRANGE things here
         }
         ms_splashDuration--;
     }
@@ -382,7 +383,7 @@ void WaterDrops::FillScreenMoving(float amount, bool isBlood)
 {
     if(isBlood && !neoBloodDrops) return;
 
-    int n = (ms_vec.z <= 5.0f ? 1.0f : 1.5f) * amount * 14.0f;
+    int n = (ms_vec.z <= 5.0f ? 1.0f : 1.5f) * amount * 10.0f;
     float x, y, size;
     WaterDrop *drop;
 
