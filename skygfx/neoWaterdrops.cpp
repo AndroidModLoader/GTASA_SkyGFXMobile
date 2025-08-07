@@ -237,7 +237,7 @@ void WaterDrops::SprayDrops(void)
     {
         float tmp = 180.0f - ms_rainStrength;
         if(tmp < 40.0f) tmp = 40.0f;
-        FillScreenMoving((tmp - 40.0f) / 150.0f * *pfWeatherRain * 0.5f * delta);
+        FillScreenMoving((tmp - 40.0f) * *pfWeatherRain * delta / 300.0f);
     }
     if(sprayWater) FillScreenMoving(0.5f * delta, false);
     if(sprayBlood) FillScreenMoving(0.5f * delta, true);
@@ -382,7 +382,7 @@ void WaterDrops::FillScreenMoving(float amount, bool isBlood)
 {
     if(isBlood && !neoBloodDrops) return;
 
-    int n = (ms_vec.z <= 5.0f ? 1.0f : 1.5f) * amount * 15.0f;
+    int n = (ms_vec.z <= 5.0f ? 1.0f : 1.5f) * amount * 14.0f;
     float x, y, size;
     WaterDrop *drop;
 
