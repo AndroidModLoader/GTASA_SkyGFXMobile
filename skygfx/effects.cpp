@@ -658,22 +658,22 @@ void GFX_CheckBuffersSize()
         fpostfxYInv = 1.0f / fpostfxY;
 
         if(pSkyGFXPostFXRaster1) RwRasterDestroy(pSkyGFXPostFXRaster1);
-        pSkyGFXPostFXRaster1 = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMATDEFAULT);
+        pSkyGFXPostFXRaster1 = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
 
         if(pSkyGFXPostFXRaster2) RwRasterDestroy(pSkyGFXPostFXRaster2);
-        pSkyGFXPostFXRaster2 = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMATDEFAULT);
+        pSkyGFXPostFXRaster2 = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
 
         if(pSkyGFXDepthRaster) RwRasterDestroy(pSkyGFXDepthRaster);
-        pSkyGFXDepthRaster = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMATDEFAULT);
+        pSkyGFXDepthRaster = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
 
         if(pSkyGFXBrightnessRaster) RwRasterDestroy(pSkyGFXBrightnessRaster);
-        pSkyGFXBrightnessRaster = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMATDEFAULT);
+        pSkyGFXBrightnessRaster = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
 
         if(pSkyGFXBloomP1Raster) RwRasterDestroy(pSkyGFXBloomP1Raster);
-        pSkyGFXBloomP1Raster = RwRasterCreate(0.25f * fpostfxX, 0.25f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMATDEFAULT);
+        pSkyGFXBloomP1Raster = RwRasterCreate(0.25f * fpostfxX, 0.25f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
 
         if(pSkyGFXBloomP2Raster) RwRasterDestroy(pSkyGFXBloomP2Raster);
-        pSkyGFXBloomP2Raster = RwRasterCreate(0.25f * fpostfxX, 0.25f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMATDEFAULT);
+        pSkyGFXBloomP2Raster = RwRasterCreate(0.25f * fpostfxX, 0.25f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
     }
 }
 void GFX_GrabScreen(bool second = false)
@@ -1241,7 +1241,7 @@ DECL_HOOKv(PostFX_Init)
     CreatePlainTexture(pDarkRaster, CRGBA(0, 0, 0));
 
     if(pSkyGFXSceneBrightnessRaster) RwRasterDestroy(pSkyGFXSceneBrightnessRaster);
-    pSkyGFXSceneBrightnessRaster = RwRasterCreate(8, 8, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMATDEFAULT);
+    pSkyGFXSceneBrightnessRaster = RwRasterCreate(8, 8, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
 
     *pbFog = false; // uninitialised variable
 }
