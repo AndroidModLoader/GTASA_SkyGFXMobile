@@ -3,6 +3,7 @@
 
 extern RwRaster *pSkyGFXPostFXRaster1, *pSkyGFXPostFXRaster2, *pDarkRaster;
 float scaling, frameTimeDelta, deltaMs;
+int minScaled = 0, maxScaled = 0, maxminDiff = 0, oneScaled = 0;
 RwOpenGLVertex DropletsBuffer[2 * 4 * WaterDrops::MAXDROPS] {};
 
 static const RwRGBA dropColor(255, 255, 255, 255);
@@ -195,6 +196,10 @@ void WaterDrops::Process()
     scaling = fpostfxY / 480.0f;
     frameTimeDelta = *ms_fTimeStep / (50.0f / 30.0f);
     deltaMs = *ms_fTimeStep * 1000.0f / 50.0f;
+    minScaled = SC(MINSIZE);
+    maxScaled = SC(MAXSIZE);
+    maxminDiff = maxScaled - minScaled;
+    oneScaled = SC(1);
 
     if(!ms_initialised) InitialiseRender(Scene->camera);
     WaterDrops::CalculateMovement();
@@ -293,7 +298,7 @@ void WaterDrops::MoveDrop(WaterDropMoving *moving)
             dy *= (1.0 / sum);
         }
         moving->dist += d;
-        if(moving->dist > 20.0f) NewTrace(moving);
+        if(moving->dist > 25.0f) NewTrace(moving);
         drop->x += dx * d;
         drop->y += dy * d;
     }
@@ -301,7 +306,7 @@ void WaterDrops::MoveDrop(WaterDropMoving *moving)
     {
         // movement when camera turns
         moving->dist += ms_vecLen;
-        if(moving->dist > 20.0f) NewTrace(moving);
+        if(moving->dist > 25.0f) NewTrace(moving);
         drop->x -= ms_vec.x;
         drop->y += ms_vec.y;
     }
@@ -340,7 +345,7 @@ WaterDrop* WaterDrops::PlaceNew(float x, float y, float size, float ttl, bool fa
             drop->x = x;
             drop->y = y;
             drop->size = size;
-            drop->uvsize = (SC(MAXSIZE) - size + 1.0f) / (SC(MAXSIZE) - SC(MINSIZE) + 1.0f);
+            drop->uvsize = (maxScaled - size + 1.0f) / (maxminDiff + 1.0f);
             drop->fades = fades;
             drop->active = 1;
             drop->color.red = R;
@@ -361,7 +366,12 @@ void WaterDrops::NewTrace(WaterDropMoving *moving)
     if(ms_numDrops < MAXDROPS)
     {
         moving->dist = 0.0f;
-        PlaceNew(moving->drop->x, moving->drop->y, SC(MINSIZE), 500.0f, 1, moving->drop->color.red, moving->drop->color.green, moving->drop->color.blue);
+    
+        WaterDrop* drop = moving->drop;
+        if(drop->size <= minScaled) return;
+    
+        moving->drop -= oneScaled;
+        PlaceNew(drop->x, drop->y, minScaled, 500.0f, 1, drop->color.red, drop->color.green, drop->color.blue);
     }
 }
 
@@ -393,7 +403,7 @@ void WaterDrops::FillScreenMoving(float amount, bool isBlood, bool isDirt)
         {
             x = rand() % postfxX;
             y = rand() % postfxY;
-            size = rand() % (SC(MAXSIZE) - SC(MINSIZE)) + SC(MINSIZE);
+            size = rand() % (maxminDiff) + minScaled;
             
             if(isDirt)
             {
@@ -426,7 +436,7 @@ void WaterDrops::FillScreen(int n)
         {
             x = rand() % postfxX;
             y = rand() % postfxY;
-            size = rand() % (SC(MAXSIZE) - SC(MINSIZE)) + SC(MINSIZE);
+            size = rand() % (maxminDiff) + minScaled;
             PlaceNew(x, y, size, 2000.0f, 1, dropColor.red, dropColor.green, dropColor.blue);
         }
     }
