@@ -22,8 +22,8 @@ class WaterDrops
 public:
     enum
     {
-        MAXDROPS = 1500,
-        MAXDROPSMOVING = 700
+        MAXDROPS = 1400,
+        MAXDROPSMOVING = 1000
     };
 
     // Config
