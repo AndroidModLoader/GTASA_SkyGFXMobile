@@ -5,6 +5,12 @@ extern RwRaster *pSkyGFXPostFXRaster1, *pSkyGFXPostFXRaster2, *pDarkRaster;
 float scaling, frameTimeDelta;
 RwOpenGLVertex DropletsBuffer[2 * 4 * WaterDrops::MAXDROPS] {};
 
+static const RwRGBA dropColor(255, 255, 255, 255);
+static const RwRGBA dropMaskColor(0, 0, 0, 255);
+static const RwRGBA dropBloodColor(255, 30, 30, 255);
+static const RwRGBA dropDirtColor(155, 118, 83, 255);
+static const RwRGBA dropDirt2Color(128, 93, 60, 255);
+
 #define MAXSIZE 18
 #define MINSIZE 5
 #define SC(x) ((int)((x)*scaling))
@@ -324,7 +330,7 @@ void WaterDrops::Fade(void)
     }
 }
 
-WaterDrop* WaterDrops::PlaceNew(float x, float y, float size, float ttl, bool fades, int R = 0xFF, int G = 0xFF, int B = 0xFF)
+WaterDrop* WaterDrops::PlaceNew(float x, float y, float size, float ttl, bool fades, int R, int G, int B)
 {
     if(NoDrops()) return NULL;
     for(WaterDrop* drop = &ms_drops[0]; drop < &ms_drops[MAXDROPS]; ++drop)
@@ -372,7 +378,7 @@ void WaterDrops::NewDropMoving(WaterDrop *drop)
     }
 }
 
-void WaterDrops::FillScreenMoving(float amount, bool isBlood)
+void WaterDrops::FillScreenMoving(float amount, bool isBlood, bool isDirt)
 {
     if(isBlood && !neoBloodDrops) return;
 
@@ -387,13 +393,18 @@ void WaterDrops::FillScreenMoving(float amount, bool isBlood)
             x = rand() % postfxX;
             y = rand() % postfxY;
             size = rand() % (SC(MAXSIZE) - SC(MINSIZE)) + SC(MINSIZE);
-            if(!isBlood)
+            
+            if(isDirt)
             {
-                drop = PlaceNew(x, y, size, 2000.0f, 1);
+                drop = PlaceNew(x, y, size, 2000.0f, 1, dropDirt2Color.red, dropDirt2Color.green, dropDirt2Color.blue);
+            }
+            else if(isBlood)
+            {
+                drop = PlaceNew(x, y, size, 2000.0f, 1, dropBloodColor.red, dropBloodColor.green, dropBloodColor.blue);
             }
             else
             {
-                drop = PlaceNew(x, y, size, 2000.0f, 1, 255, 30, 30);
+                drop = PlaceNew(x, y, size, 2000.0f, 1, dropColor.red, dropColor.green, dropColor.blue);
             }
             if(drop) NewDropMoving(drop);
         }
@@ -406,15 +417,16 @@ void WaterDrops::FillScreen(int n)
     
     float x, y, size;
     ms_numDrops = 0;
+    WaterDrop* dropEnd = &ms_drops[n];
     for(WaterDrop* drop = &ms_drops[0]; drop < &ms_drops[MAXDROPS]; drop++)
     {
         drop->active = 0;
-        if(drop < &ms_drops[n])
+        if(drop < dropEnd)
         {
             x = rand() % postfxX;
             y = rand() % postfxY;
             size = rand() % (SC(MAXSIZE) - SC(MINSIZE)) + SC(MINSIZE);
-            PlaceNew(x, y, size, 2000.0f, 1);
+            PlaceNew(x, y, size, 2000.0f, 1, dropColor.red, dropColor.green, dropColor.blue);
         }
     }
 }
@@ -483,7 +495,6 @@ static const float uv[] =
     0.0f, 1.0f, 1.0f, 1.0f,
     0.0f, 0.0f, 1.0f, 0.0f
 };
-static const RwRGBA dropMaskColor(0, 0, 0, 255);
 void WaterDrops::AddToRenderList(WaterDrop *drop)
 {
     int i;
