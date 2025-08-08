@@ -123,21 +123,20 @@ DECL_HOOKv(AddFxParticle, void* self, RwV3d *pos, RwV3d *vel, float timeSince, v
 
     RwV3d dist;
     RwV3dSub(&dist, pos, &WaterDrops::ms_lastPos);
-    float pd = 20.0f;
-    bool isBlood = false;
-    bool isDirt = false;
+    float pd = 20.0f, intens = 1.0f;
+    bool isBlood = false, isDirt = false;
     /*if(self == g_fx->prt_blood) { pd = 5.0; isBlood = true; }
     else*/ if(self == g_fx->prt_boatsplash) { pd = 40.0; }
     //else if(self == g_fx->prt_splash) { pd = 15.0; }
     else if(self == g_fx->prt_wake) { pd = 10.0; }
     else if(self == g_fx->prt_watersplash) { pd = 30.0; }
-    else if(self == g_fx->prt_wheeldirt && *pfWeatherRain != 0.0f) { pd = 15.0; isDirt = true; }
+    else if(self == g_fx->prt_wheeldirt && *pfWeatherRain != 0.0f) { pd = 15.0; isDirt = true; intens = 0.1f; }
     else return;
 
     float len = RwV3dLength(&dist);
     if(len <= pd)
     {
-        WaterDrops::FillScreenMoving(frameTimeDelta * 1.0f / (len / 2.0f), isBlood, isDirt);
+        WaterDrops::FillScreenMoving(frameTimeDelta * intens / (len / 2.0f), isBlood, isDirt);
     }
 }
 DECL_HOOKv(AddBloodFx, void* self, RwV3d *pos, RwV3d *dir, int32 num, float lightMult)
@@ -394,6 +393,7 @@ void WaterDrops::NewDropMoving(WaterDrop *drop)
 void WaterDrops::FillScreenMoving(float amount, bool isBlood, bool isDirt)
 {
     if((isBlood && !neoBloodDrops) || (isDirt && !neoDirtyDrops)) return;
+    if(amount > 2.0f) amount = 2.0f;
 
     int n = (ms_vec.z <= 5.0f ? 1.0f : 1.5f) * amount * 20.0f;
     float x, y, size;
