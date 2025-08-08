@@ -243,6 +243,7 @@ CPad*               (*GetPad)(int);
 bool                (*GetLookBehindForCar)(CPad*);
 bool                (*GetLookLeft)(CPad*, bool);
 bool                (*GetLookRight)(CPad*, bool);
+void                (*RwIm2DRenderIndexedPrimitive)(RwPrimitiveType,RwOpenGLVertex*,int,uint16_t*,int);
 
 // Main
 void ResolveExternals()
@@ -414,6 +415,7 @@ void ResolveExternals()
     SET_TO(GetLookBehindForCar,             aml->GetSym(hGTASA, "_ZN4CPad19GetLookBehindForCarEv"));
     SET_TO(GetLookLeft,                     aml->GetSym(hGTASA, "_ZN4CPad11GetLookLeftEb"));
     SET_TO(GetLookRight,                    aml->GetSym(hGTASA, "_ZN4CPad12GetLookRightEb"));
+    SET_TO(RwIm2DRenderIndexedPrimitive,    aml->GetSym(hGTASA, "_Z28RwIm2DRenderIndexedPrimitive15RwPrimitiveTypeP14RwOpenGLVertexiPti"));
 
     SET_TO(CamDistComp,                     aml->GetSym(hGTASA, "_ZN22CRealTimeShadowManager11CamDistCompEPKvS1_"));
     SET_TO(StoreRealTimeShadow,             aml->GetSym(hGTASA, "_ZN8CShadows19StoreRealTimeShadowEP9CPhysicalffffff"));

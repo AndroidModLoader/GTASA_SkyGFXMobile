@@ -6,7 +6,8 @@ float scaling, frameTimeDelta, frameTimeDeltaInv, deltaMs;
 float fRX, fRY, fRXInv, fRYInv;
 int nRX, nRY;
 int minScaled = 0, maxScaled = 0, maxminDiff = 0, oneScaled = 0;
-RwOpenGLVertex DropletsBuffer[2 * 4 * WaterDrops::MAXDROPS] {};
+RwOpenGLVertex DropletsMaskBuffer[4 * WaterDrops::MAXDROPS] {};
+RwOpenGLVertex DropletsBuffer[4 * WaterDrops::MAXDROPS] {};
 uint16_t DropletsIndices[6 * WaterDrops::MAXDROPS] {};
 uint32_t nextDirtDrop = 0;
 
@@ -20,23 +21,23 @@ static const RwRGBA dropDirtColor(182, 159, 102, 255);
 #define SC(x) ((int)((x)*scaling))
 #define RAD2DEG(x) (180.0f*(x)/M_PI)
 #define RwCameraGetFrame(_camera) ((RwFrame *)((_camera)->object.object.parent))
-#define RwV3dAdd(o, a, b)                                       \
-{                                                               \
-    (o)->x = (((a)->x) + ( (b)->x));                            \
-    (o)->y = (((a)->y) + ( (b)->y));                            \
-    (o)->z = (((a)->z) + ( (b)->z));                            \
+#define RwV3dAdd(o, a, b)               \
+{                                       \
+    (o)->x = (((a)->x) + ( (b)->x));    \
+    (o)->y = (((a)->y) + ( (b)->y));    \
+    (o)->z = (((a)->z) + ( (b)->z));    \
 }
-#define RwV3dSub(o, a, b)                                       \
-{                                                               \
-    (o)->x = (((a)->x) - ( (b)->x));                            \
-    (o)->y = (((a)->y) - ( (b)->y));                            \
-    (o)->z = (((a)->z) - ( (b)->z));                            \
+#define RwV3dSub(o, a, b)               \
+{                                       \
+    (o)->x = (((a)->x) - ( (b)->x));    \
+    (o)->y = (((a)->y) - ( (b)->y));    \
+    (o)->z = (((a)->z) - ( (b)->z));    \
 }
-#define RwV3dScale(o, a, s)                                     \
-{                                                               \
-    (o)->x = (((a)->x) * ( (s)));                               \
-    (o)->y = (((a)->y) * ( (s)));                               \
-    (o)->z = (((a)->z) * ( (s)));                               \
+#define RwV3dScale(o, a, s)             \
+{                                       \
+    (o)->x = (((a)->x) * ( (s)));       \
+    (o)->y = (((a)->y) * ( (s)));       \
+    (o)->z = (((a)->z) * ( (s)));       \
 }
 
 // Other Funcs
@@ -386,7 +387,7 @@ void WaterDrops::NewTrace(WaterDropMoving *moving)
 
 void WaterDrops::NewDropMoving(WaterDrop *drop)
 {
-    for(WaterDropMoving* moving = &ms_dropsMoving[0]; moving < &ms_dropsMoving[MAXDROPSMOVING]; moving++)
+    for(WaterDropMoving* moving = &ms_dropsMoving[0]; moving < &ms_dropsMoving[MAXDROPSMOVING]; ++moving)
     {
         if(moving->drop == NULL)
         {
@@ -439,7 +440,7 @@ void WaterDrops::FillScreen(int n)
     float x, y, size;
     ms_numDrops = 0;
     WaterDrop* dropEnd = &ms_drops[n];
-    for(WaterDrop* drop = &ms_drops[0]; drop < &ms_drops[MAXDROPS]; drop++)
+    for(WaterDrop* drop = &ms_drops[0]; drop < &ms_drops[MAXDROPS]; ++drop)
     {
         drop->active = 0;
         if(drop < dropEnd)
@@ -454,7 +455,7 @@ void WaterDrops::FillScreen(int n)
 
 void WaterDrops::Clear(void)
 {
-    for(WaterDrop* drop = &ms_drops[0]; drop < &ms_drops[MAXDROPS]; drop++)
+    for(WaterDrop* drop = &ms_drops[0]; drop < &ms_drops[MAXDROPS]; ++drop)
     {
         drop->active = 0;
     }
@@ -491,10 +492,11 @@ bool WaterDrops::NoRain(void)
 
 void WaterDrops::InitialiseRender(RwCamera *cam)
 {
-    // TODO: Check about indices, immediate mode is heavy af
+    // Get water drop mask
     m_pMask = (RwTexture*)sautils->LoadRwTextureFromPNG("texdb/dropmask.png");
     if(!m_pMask)
     {
+        // Use sphere_CJ if no dropmask found!
         uintptr_t txdDB = GetTextureDB("txd");
         if(txdDB)
         {
@@ -503,12 +505,18 @@ void WaterDrops::InitialiseRender(RwCamera *cam)
             UnregisterTextureDB(txdDB);
         }
     }
-    for(int i = 0; i < 2 * 4 * WaterDrops::MAXDROPS; ++i)
+
+    // Initialise repeatable stuff
+    for(int i = 0; i < 4 * MAXDROPS; ++i)
     {
+        DropletsMaskBuffer[i].rhw = 1.0f;
+        DropletsMaskBuffer[i].pos.z = 0.0f;
         DropletsBuffer[i].rhw = 1.0f;
         DropletsBuffer[i].pos.z = 0.0f;
     }
-    for(int i = 0; i < WaterDrops::MAXDROPS; ++i)
+
+    // Initialise indices
+    for(int i = 0; i < MAXDROPS; ++i)
     {
         int iIndex = i * 6;
         int vIndex = i * 4;
@@ -516,10 +524,12 @@ void WaterDrops::InitialiseRender(RwCamera *cam)
         DropletsIndices[iIndex + 0] = vIndex + 0;
         DropletsIndices[iIndex + 1] = vIndex + 1;
         DropletsIndices[iIndex + 2] = vIndex + 2;
-        DropletsIndices[iIndex + 3] = vIndex + 0;
-        DropletsIndices[iIndex + 4] = vIndex + 2;
+        DropletsIndices[iIndex + 3] = vIndex + 2;
+        DropletsIndices[iIndex + 4] = vIndex + 1;
         DropletsIndices[iIndex + 5] = vIndex + 3;
     }
+
+    // Finish
     ms_initialised = 1;
 }
 
@@ -535,46 +545,39 @@ static const float uv[] =
 };
 void WaterDrops::AddToRenderList(WaterDrop *drop)
 {
-    int i;
-    float scale;
-
-    float u1_1, u1_2;
-    float v1_1, v1_2;
     float tmp = drop->uvsize * (300.0f - 40.0f) + 40.0f;
-    
-    u1_1 = drop->x - tmp;
-    v1_1 = drop->y - tmp;
-    u1_2 = drop->x + tmp;
-    v1_2 = drop->y + tmp;
+    float u1_1 = drop->x - tmp;
+    float v1_1 = drop->y - tmp;
+    float u1_2 = drop->x + tmp;
+    float v1_2 = drop->y + tmp;
     u1_1 = (u1_1 <= 0.0f ? 0.0f : u1_1) * fRXInv;
     v1_1 = (v1_1 <= 0.0f ? 0.0f : v1_1) * fRYInv;
     u1_2 = (u1_2 >= fRX ? fRX : u1_2) * fRXInv;
     v1_2 = (v1_2 >= fRY ? fRY : v1_2) * fRYInv;
-
-    scale = drop->size * 0.5f;
+    float scale = drop->size * 0.5f;
 
     // Mask
-    for(i = 0; i < 4; i++)
+    float x, y;
+    for(int i = 0; i < 4; ++i)
     {
-        ms_vertPtr->pos.x = drop->x + xy[i * 2] * scale;
-        ms_vertPtr->pos.y = drop->y + xy[i * 2 + 1] * scale;
-        ms_vertPtr->rgba = dropMaskColor;
-        ms_vertPtr->rgba.alpha = drop->color.alpha;
-        ms_vertPtr->texCoord.u = uv[i * 2];
-        ms_vertPtr->texCoord.v = uv[i * 2 + 1];
-        ms_vertPtr++;
-    }
-    // Drop
-    for(i = 0; i < 4; i++)
-    {
-        ms_vertPtr->pos.x = drop->x + xy[i * 2] * scale;
-        ms_vertPtr->pos.y = drop->y + xy[i * 2 + 1] * scale;
-        ms_vertPtr->rgba = drop->color;
-        ms_vertPtr->texCoord.u = (i % 2 == 0 ? u1_1 : u1_2);
-        ms_vertPtr->texCoord.v = 1.0f - (i < 2 ? v1_1 : v1_2);
-        ms_vertPtr++;
-    }
+        x = drop->x + xy[i * 2] * scale;
+        y = drop->y + xy[i * 2 + 1] * scale;
 
+        ms_vertMaskPtr->pos.x = x;
+        ms_vertMaskPtr->pos.y = y;
+        ms_vertMaskPtr->rgba = dropMaskColor;
+        ms_vertMaskPtr->rgba.alpha = drop->color.alpha;
+        ms_vertMaskPtr->texCoord.u = uv[i * 2];
+        ms_vertMaskPtr->texCoord.v = uv[i * 2 + 1];
+        ms_vertMaskPtr++;
+
+        ms_vertDropPtr->pos.x = x;
+        ms_vertDropPtr->pos.y = y;
+        ms_vertDropPtr->rgba = drop->color;
+        ms_vertDropPtr->texCoord.u = (i % 2 == 0 ? u1_1 : u1_2);
+        ms_vertDropPtr->texCoord.v = 1.0f - (i < 2 ? v1_1 : v1_2);
+        ms_vertDropPtr++;
+    }
     ms_numBatchedDrops++;
 }
 
@@ -590,44 +593,35 @@ void WaterDrops::Render(void)
         return;
     }
 
-    ms_vertPtr = &DropletsBuffer[0];
+    ms_vertDropPtr = &DropletsBuffer[0];
+    ms_vertMaskPtr = &DropletsMaskBuffer[0];
     ms_numBatchedDrops = 0;
-    for(WaterDrop *drop = &ms_drops[0]; drop < &ms_drops[MAXDROPS]; drop++)
+    for(WaterDrop *drop = &ms_drops[0]; drop < &ms_drops[MAXDROPS]; ++drop)
     {
         if(drop->active) AddToRenderList(drop);
     }
 
     if(ms_numBatchedDrops > 0)
     {
+        RwRaster* moonmaskRaster = m_pMask ? m_pMask->raster : (*gpMoonMask)->raster;
+        ERQ_BlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_SRC_ALPHA, GL_ZERO);
+
         RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)false);
         RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)false);
         RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)false);
         RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)true);
 
         // Mask
-        int buf = 0;
-        RwRaster* moonmaskRaster = m_pMask ? m_pMask->raster : (*gpMoonMask)->raster;
         RwRenderStateSet(rwRENDERSTATETEXTURERASTER, (void*)moonmaskRaster);
         RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
         RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
-        ERQ_BlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_SRC_ALPHA, GL_ZERO);
-        for(int i = 0; i < ms_numBatchedDrops; ++i)
-        {
-            RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, &DropletsBuffer[buf], 4);
-            buf += 8;
-        }
-        ERQ_BlendFuncSeparate(GL_ONE, GL_ZERO, GL_ONE, GL_ZERO); // initial values
+        RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, &DropletsMaskBuffer[0], 4 * ms_numBatchedDrops, DropletsIndices, 6 * ms_numBatchedDrops);
 
         // Drops
-        buf = 4;
         RwRenderStateSet(rwRENDERSTATETEXTURERASTER, (void*)pSkyGFXPostFXRaster1);
         RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDDESTALPHA);
         RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVDESTALPHA);
-        for(int i = 0; i < ms_numBatchedDrops; ++i)
-        {
-            RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, &DropletsBuffer[buf], 4);
-            buf += 8;
-        }
+        RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, &DropletsBuffer[0], 4 * ms_numBatchedDrops, DropletsIndices, 6 * ms_numBatchedDrops);
 
         // Restore states
         RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)false);
@@ -635,5 +629,6 @@ void WaterDrops::Render(void)
         RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)true);
         RwRenderStateSet(rwRENDERSTATETEXTURERASTER, NULL);
         RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)false);
+        ERQ_BlendFuncSeparate(GL_ONE, GL_ZERO, GL_ONE, GL_ZERO); // initial values
     }
 }

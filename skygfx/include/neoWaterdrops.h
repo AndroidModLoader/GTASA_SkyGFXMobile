@@ -79,7 +79,8 @@ public:
     // Rendering
 
     //static inline int ms_fbWidth, ms_fbHeight;
-    static inline RwOpenGLVertex *ms_vertPtr;
+    static inline RwOpenGLVertex *ms_vertMaskPtr;
+    static inline RwOpenGLVertex *ms_vertDropPtr;
     static inline int ms_numBatchedDrops;
     static inline int ms_initialised;
 

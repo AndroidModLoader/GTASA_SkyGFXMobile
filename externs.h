@@ -450,6 +450,7 @@ extern CPad*               (*GetPad)(int);
 extern bool                (*GetLookBehindForCar)(CPad*);
 extern bool                (*GetLookLeft)(CPad*, bool);
 extern bool                (*GetLookRight)(CPad*, bool);
+extern void                (*RwIm2DRenderIndexedPrimitive)(RwPrimitiveType,RwOpenGLVertex*,int,uint16_t*,int);
 
 // Main
 void ResolveExternals();
