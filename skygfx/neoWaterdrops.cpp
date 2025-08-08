@@ -128,7 +128,7 @@ DECL_HOOKv(AddFxParticle, void* self, RwV3d *pos, RwV3d *vel, float timeSince, v
     //bool isBlood = false;
     /*if(self == g_fx->prt_blood) { pd = 5.0; isBlood = true; }
     else*/ if(self == g_fx->prt_boatsplash) { pd = 40.0; }
-    else if(self == g_fx->prt_splash) { pd = 15.0; }
+    //else if(self == g_fx->prt_splash) { pd = 15.0; }
     else if(self == g_fx->prt_wake) { pd = 10.0; }
     else if(self == g_fx->prt_watersplash) { pd = 30.0; }
     else return;
