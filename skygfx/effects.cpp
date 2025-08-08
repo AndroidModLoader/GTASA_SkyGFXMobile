@@ -59,7 +59,7 @@ bool g_bBloom = false;
 float g_fBloomSkyMult = 0.7f;
 float g_fBloomIntensity = 0.55f;
 bool g_bAutoExposure = false;
-bool g_bFXAA = true;
+bool g_bFXAA = false;
 
 int g_nGrainRainStrength = 0;
 int g_nInitialGrain = 0;
@@ -89,7 +89,7 @@ ES2Shader* g_pCSBShader = NULL;
 ES2Shader* g_pBloomP1Shader = NULL;
 ES2Shader* g_pBloomP2Shader = NULL;
 ES2Shader* g_pBloomShader = NULL;
-ES2Shader* g_pFXAAShader = NULL;
+ES2Shader* g_pFXAAShader = NULL; // FXAA v2.0 shader
 
 /* Other */
 static const char* aSpeedFXSettings[SPEEDFX_SETTINGS] = 
@@ -126,10 +126,11 @@ ConfigEntry *pCFGVignette;
 ConfigEntry *pCFGRadiosity;
 ConfigEntry *pCFGDOF;
 ConfigEntry *pCFGUWR;
-ConfigEntry* pCFGCSB;
-ConfigEntry* pCFGBloom;
+ConfigEntry *pCFGCSB;
+ConfigEntry *pCFGBloom;
 ConfigEntry *pCFGNeoWaterDrops;
 ConfigEntry *pCFGNeoBloodDrops;
+ConfigEntry *pCFGFXAA;
 
 /* Functions */
 void CreateEffectsShaders()
@@ -619,6 +620,15 @@ void NEOBloodDropsSettingChanged(int oldVal, int newVal, void* data = NULL)
 
     pCFGNeoBloodDrops->SetBool(newVal != 0);
     WaterDrops::neoBloodDrops = pCFGNeoBloodDrops->GetBool();
+
+    cfg->Save();
+}
+void FXAASettingChanged(int oldVal, int newVal, void* data = NULL)
+{
+    if(oldVal == newVal) return;
+
+    pCFGFXAA->SetBool(newVal != 0);
+    g_bFXAA = pCFGFXAA->GetBool();
 
     cfg->Save();
 }
@@ -1575,6 +1585,10 @@ void StartEffectsStuff()
         NEOBloodDropsSettingChanged(WaterDrops::neoBloodDrops, pCFGNeoBloodDrops->GetBool());
         AddSetting("NEO Blood Drops", WaterDrops::neoBloodDrops, 0, sizeofA(aYesNo)-1, aYesNo, NEOBloodDropsSettingChanged, NULL);
 
+        pCFGFXAA = cfg->Bind("AntiAliasing", g_bFXAA, "EnchancedEffects");
+        FXAASettingChanged(g_bFXAA, pCFGFXAA->GetBool());
+        AddSetting("FXAA", g_bFXAA, 0, sizeofA(aYesNo)-1, aYesNo, FXAASettingChanged, NULL);
+        
         pCFGCrAbFX = cfg->Bind("ChromaticAberration", g_nCrAb, "EnchancedEffects");
         CrAbFXSettingChanged(g_nCrAb, pCFGCrAbFX->GetInt());
         AddSetting("Chromatic Aberration", g_nCrAb, 0, sizeofA(aCrAbFXSettings)-1, aCrAbFXSettings, CrAbFXSettingChanged, NULL);
