@@ -7,6 +7,7 @@ float fRX, fRY, fRXInv, fRYInv;
 int nRX, nRY;
 int minScaled = 0, maxScaled = 0, maxminDiff = 0, oneScaled = 0;
 RwOpenGLVertex DropletsBuffer[2 * 4 * WaterDrops::MAXDROPS] {};
+uint32_t nextDirtDrop = 0;
 
 static const RwRGBA dropColor(255, 255, 255, 255);
 static const RwRGBA dropMaskColor(0, 0, 0, 255);
@@ -123,20 +124,26 @@ DECL_HOOKv(AddFxParticle, void* self, RwV3d *pos, RwV3d *vel, float timeSince, v
 
     RwV3d dist;
     RwV3dSub(&dist, pos, &WaterDrops::ms_lastPos);
-    float pd = 20.0f, intens = 1.0f;
-    bool isBlood = false, isDirt = false;
-    /*if(self == g_fx->prt_blood) { pd = 5.0; isBlood = true; }
-    else*/ if(self == g_fx->prt_boatsplash) { pd = 40.0; }
+    float pd = 20.0f, intens = 1.0f, delta = 1.0f;
+    bool isDirt = false, isFrameSensitive = false;
+    
+    if(self == g_fx->prt_boatsplash) { pd = 40.0; isFrameSensitive = true; }
     //else if(self == g_fx->prt_splash) { pd = 15.0; }
-    else if(self == g_fx->prt_wake) { pd = 10.0; }
-    else if(self == g_fx->prt_watersplash) { pd = 30.0; }
-    else if(self == g_fx->prt_wheeldirt && *pfWeatherRain != 0.0f) { pd = 15.0; isDirt = true; intens = 0.1f; }
+    else if(self == g_fx->prt_wake) { pd = 10.0; isFrameSensitive = true; }
+    else if(self == g_fx->prt_watersplash) { pd = 30.0; isFrameSensitive = true; }
+    else if(self == g_fx->prt_wheeldirt && *pfWeatherRain != 0.0f) { pd = 15.0; isDirt = true; intens = 0.5f; }
     else return;
 
     float len = RwV3dLength(&dist);
     if(len <= pd)
     {
-        WaterDrops::FillScreenMoving(frameTimeDelta * intens / (len / 2.0f), isBlood, isDirt);
+        if(isDirt)
+        {
+            if(nextDirtDrop < *m_snTimeInMilliseconds) return;
+            nextDirtDrop = *m_snTimeInMilliseconds + 50;
+        }
+        if(isFrameSensitive) delta = frameTimeDelta;
+        WaterDrops::FillScreenMoving(delta * intens / (len / 2.0f), false, isDirt);
     }
 }
 DECL_HOOKv(AddBloodFx, void* self, RwV3d *pos, RwV3d *dir, int32 num, float lightMult)
