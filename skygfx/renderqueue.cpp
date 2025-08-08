@@ -196,10 +196,9 @@ DECL_HOOKv(RQ_Command_rqTargetCreate, uint8_t** data)
     ES2Texture* targetTexture = target->targetTexture;
     unsigned int width = targetTexture->width, height = targetTexture->height;
 
-    if(*backBuffer == -1) glGetIntegerv(GL_FRAMEBUFFER_BINDING, backBuffer);
-
     GLint lastFBO;
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &lastFBO);
+    if(*backBuffer == -1) *backBuffer = lastFBO;
 
     // Depthbuf Part
     if(!target->sharedDepth && target->depthType != TDT_None)
@@ -309,6 +308,9 @@ DECL_HOOKv(RQ_Command_rqTargetCreate, uint8_t** data)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         // - Bind the texture only
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1_EXT, GL_TEXTURE_2D, extRQ.m_NormalMapBuffer, 0);
+
+        GLenum bufs[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1_EXT };
+        glDrawBuffers(2, bufs);
     }
 #endif
 
@@ -400,7 +402,7 @@ void StartRenderQueue()
     HOOKPLT(RQ_Command_rqDebugMarker, pGTASA + BYBIT(0x677850, 0x84D0C8));
     HOOKPLT(RQ_Command_rqTargetCreate, pGTASA + BYBIT(0x677024, 0x84C080));
     HOOKPLT(RQ_Command_rqTargetDelete, pGTASA + BYBIT(0x6797B0, 0x850F68));
-    HOOKPLT(RQ_Command_rqTargetSelect, pGTASA + BYBIT(0x679B6C, 0x8516F8));
+    //HOOKPLT(RQ_Command_rqTargetSelect, pGTASA + BYBIT(0x679B6C, 0x8516F8));
     HOOK(InitializeShaderAfterCompile, aml->GetSym(hGTASA, "_ZN9ES2Shader22InitializeAfterCompileEv"));
 
     glDrawBuffers = (PFNGLDRAWBUFFERSEXTPROC)eglGetProcAddress("glDrawBuffers");
