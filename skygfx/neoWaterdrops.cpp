@@ -64,7 +64,7 @@ DECL_HOOKv(CAEFireAudioEntity_AddAudioEvent, void* self, eAudioEvents event, RwV
     CAEFireAudioEntity_AddAudioEvent(self, event, position);
     if(WaterDrops::neoWaterDrops && event == AE_FIRE_HYDRANT)
     {
-        WaterDrops::RegisterSplash(position, 15.0f, 13);
+        WaterDrops::RegisterSplash(position, 13.0f, 20);
     }
 }
 DECL_HOOKv(TriggerWaterSplash, void* self, RwV3d* position)
@@ -125,18 +125,20 @@ DECL_HOOKv(AddFxParticle, void* self, RwV3d *pos, RwV3d *vel, float timeSince, v
     RwV3d dist;
     RwV3dSub(&dist, pos, &WaterDrops::ms_lastPos);
     float pd = 20.0f;
-    //bool isBlood = false;
+    bool isBlood = false;
+    bool isDirt = false;
     /*if(self == g_fx->prt_blood) { pd = 5.0; isBlood = true; }
     else*/ if(self == g_fx->prt_boatsplash) { pd = 40.0; }
     //else if(self == g_fx->prt_splash) { pd = 15.0; }
     else if(self == g_fx->prt_wake) { pd = 10.0; }
     else if(self == g_fx->prt_watersplash) { pd = 30.0; }
+    else if(self == g_fx->prt_wheeldirt && *pfWeatherRain != 0.0f) { pd = 15.0; isDirt = true; }
     else return;
 
     float len = RwV3dLength(&dist);
     if(len <= pd)
     {
-        WaterDrops::FillScreenMoving(1.0f / (len / 2.0f) /*, isBlood*/);
+        WaterDrops::FillScreenMoving(1.0f / (len / 2.0f), isBlood, isDirt);
     }
 }
 DECL_HOOKv(AddBloodFx, void* self, RwV3d *pos, RwV3d *dir, int32 num, float lightMult)
@@ -259,10 +261,7 @@ void WaterDrops::SprayDrops(void)
     if(sprayBlood) FillScreenMoving(0.5f * delta, true);
     if(ms_splashDuration >= 0)
     {
-        if(ms_numDrops < MAXDROPS)
-        {
-            FillScreenMoving(1.0f * delta); // VC does STRANGE things here
-        }
+        FillScreenMoving(1.0f * delta); // VC does STRANGE things here
         ms_splashDuration--;
     }
 }
