@@ -30,6 +30,7 @@ public:
 
     static inline bool neoWaterDrops = true;
     static inline bool neoBloodDrops = true;
+    static inline bool neoDirtyDrops = true;
 
     // Debugging
 
@@ -38,7 +39,6 @@ public:
 
     // Logic
 
-    static inline float ms_xOff, ms_yOff; // not quite sure what these are
     static inline WaterDrop ms_drops[MAXDROPS] {};
     static inline int ms_numDrops = 0;
     static inline WaterDropMoving ms_dropsMoving[MAXDROPSMOVING] {};
@@ -67,7 +67,7 @@ public:
     static WaterDrop *PlaceNew(float x, float y, float size, float time, bool fades, int R, int G, int B);
     static void NewTrace(WaterDropMoving*);
     static void NewDropMoving(WaterDrop*);
-    static void FillScreenMoving(float amount, bool isBlood = false);
+    static void FillScreenMoving(float amount, bool isBlood = false, bool isDirt = false);
     static void FillScreen(int n);
     static void Clear(void);
     static void Reset(void);
