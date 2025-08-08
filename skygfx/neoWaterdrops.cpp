@@ -591,25 +591,32 @@ void WaterDrops::Render(void)
         RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)false);
         RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)true);
 
+        // Mask
         int buf = 0;
         RwRaster* moonmaskRaster = m_pMask ? m_pMask->raster : (*gpMoonMask)->raster;
+        RwRenderStateSet(rwRENDERSTATETEXTURERASTER, (void*)moonmaskRaster);
+        RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
+        RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
+        ERQ_BlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_SRC_ALPHA, GL_ZERO);
         for(int i = 0; i < ms_numBatchedDrops; ++i)
         {
-            RwRenderStateSet(rwRENDERSTATETEXTURERASTER, (void*)moonmaskRaster);
-            RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
-            RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
-            ERQ_BlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_SRC_ALPHA, GL_ZERO);
             RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, &DropletsBuffer[buf], 4);
-            ERQ_BlendFuncSeparate(GL_ONE, GL_ZERO, GL_ONE, GL_ZERO); // initial values
-
-            RwRenderStateSet(rwRENDERSTATETEXTURERASTER, (void*)pSkyGFXPostFXRaster1);
-            RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDDESTALPHA);
-            RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVDESTALPHA);
-            RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, &DropletsBuffer[buf + 4], 4);
-
             buf += 8;
         }
-        
+        ERQ_BlendFuncSeparate(GL_ONE, GL_ZERO, GL_ONE, GL_ZERO); // initial values
+
+        // Drops
+        buf = 4;
+        RwRenderStateSet(rwRENDERSTATETEXTURERASTER, (void*)pSkyGFXPostFXRaster1);
+        RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDDESTALPHA);
+        RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVDESTALPHA);
+        for(int i = 0; i < ms_numBatchedDrops; ++i)
+        {
+            RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, &DropletsBuffer[buf], 4);
+            buf += 8;
+        }
+
+        // Restore states
         RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)false);
         RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)true);
         RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)true);
