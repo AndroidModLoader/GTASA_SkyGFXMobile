@@ -2,7 +2,7 @@
 #include "include/renderqueue.h"
 
 extern RwRaster *pSkyGFXPostFXRaster1, *pSkyGFXPostFXRaster2, *pDarkRaster;
-float scaling, frameTimeDelta, deltaMs;
+float scaling, frameTimeDelta, frameTimeDeltaInv, deltaMs;
 float fRX, fRY, fRXInv, fRYInv;
 int nRX, nRY;
 int minScaled = 0, maxScaled = 0, maxminDiff = 0, oneScaled = 0;
@@ -197,6 +197,7 @@ void WaterDrops::Process()
     // In case resolution changes
     scaling = fRY / 480.0f;
     frameTimeDelta = *ms_fTimeStep / (50.0f / 30.0f);
+    frameTimeDeltaInv = 1.0f / frameTimeDelta;
     deltaMs = *ms_fTimeStep * 1000.0f / 50.0f;
     minScaled = SC(MINSIZE);
     maxScaled = SC(MAXSIZE);
@@ -247,7 +248,7 @@ void WaterDrops::CalculateMovement(void)
 
 void WaterDrops::SprayDrops(void)
 {
-    float delta = frameTimeDelta;
+    float delta = frameTimeDeltaInv;
     if(!NoRain() && *pfWeatherRain != 0.0f && ms_enabled)
     {
         float tmp = 180.0f - ms_rainStrength;
