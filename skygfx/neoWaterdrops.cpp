@@ -196,7 +196,7 @@ void WaterDrops::Process()
     
     // In case resolution changes
     scaling = fRY / 480.0f;
-    frameTimeDelta = *ms_fTimeStep * (50.0f / 30.0f);
+    frameTimeDelta = *ms_fTimeStep / (50.0f / 30.0f);
     frameTimeDeltaInv = 1.0f / frameTimeDelta;
     deltaMs = *ms_fTimeStep * 1000.0f / 50.0f;
     minScaled = SC(MINSIZE);
@@ -248,7 +248,7 @@ void WaterDrops::CalculateMovement(void)
 
 void WaterDrops::SprayDrops(void)
 {
-    float delta = frameTimeDeltaInv;
+    float delta = frameTimeDelta;
     if(!NoRain() && *pfWeatherRain != 0.0f && ms_enabled)
     {
         float tmp = 180.0f - ms_rainStrength;
