@@ -3,6 +3,8 @@
 
 extern RwRaster *pSkyGFXPostFXRaster1, *pSkyGFXPostFXRaster2, *pDarkRaster;
 float scaling, frameTimeDelta, deltaMs;
+float fRX, fRY, fRXInv, fRYInv;
+int nRX, nRY;
 int minScaled = 0, maxScaled = 0, maxminDiff = 0, oneScaled = 0;
 RwOpenGLVertex DropletsBuffer[2 * 4 * WaterDrops::MAXDROPS] {};
 
@@ -189,11 +191,11 @@ void WaterDrop::Fade(void)
 
 void WaterDrops::Process()
 {
+    nRX = RsGlobal->maximumWidth; fRX = nRX; fRXInv = 1.0f / fRX;
+    nRX = RsGlobal->maximumHeight; fRY = nRY; fRYInv = 1.0f / fRY;
+    
     // In case resolution changes
-    //ms_fbWidth = Scene->camera->framebuf->width;
-    //ms_fbHeight = Scene->camera->framebuf->height;
-    //scaling = ms_fbHeight / 480.0f;
-    scaling = fpostfxY / 480.0f;
+    scaling = fRY / 480.0f;
     frameTimeDelta = *ms_fTimeStep / (50.0f / 30.0f);
     deltaMs = *ms_fTimeStep * 1000.0f / 50.0f;
     minScaled = SC(MINSIZE);
@@ -282,14 +284,14 @@ void WaterDrops::MoveDrop(WaterDropMoving *moving)
         // movement out of center 
         float d = ms_vec.z * 0.2f;
         float dx, dy, sum;
-        dx = drop->x - fpostfxX * 0.5f + ms_vec.x;
+        dx = drop->x - fRX * 0.5f + ms_vec.x;
         if(mode == MODE_1STPERSON)
         {
-            dy = drop->y - fpostfxY * 1.2f - ms_vec.y;
+            dy = drop->y - fRY * 1.2f - ms_vec.y;
         }
         else
         {
-            dy = drop->y - fpostfxY * 0.5f - ms_vec.y;
+            dy = drop->y - fRY * 0.5f - ms_vec.y;
         }
         sum = fabsf(dx) + fabsf(dy);
         if(sum >= 0.001f)
@@ -311,7 +313,7 @@ void WaterDrops::MoveDrop(WaterDropMoving *moving)
         drop->y += ms_vec.y;
     }
 
-    if(drop->x < 0.0f || drop->y < 0.0f || drop->x > fpostfxX || drop->y > fpostfxY)
+    if(drop->x < 0.0f || drop->y < 0.0f || drop->x > fRX || drop->y > fRY)
     {
         moving->drop = NULL;
         ms_numDropsMoving--;
@@ -401,8 +403,8 @@ void WaterDrops::FillScreenMoving(float amount, bool isBlood, bool isDirt)
     {
         if(ms_numDrops < MAXDROPS && ms_numDropsMoving < MAXDROPSMOVING)
         {
-            x = rand() % postfxX;
-            y = rand() % postfxY;
+            x = rand() % nRX;
+            y = rand() % nRY;
             size = rand() % (maxminDiff) + minScaled;
             
             if(isDirt)
@@ -434,8 +436,8 @@ void WaterDrops::FillScreen(int n)
         drop->active = 0;
         if(drop < dropEnd)
         {
-            x = rand() % postfxX;
-            y = rand() % postfxY;
+            x = rand() % nRX;
+            y = rand() % nRY;
             size = rand() % (maxminDiff) + minScaled;
             PlaceNew(x, y, size, 2000.0f, 1, dropColor.red, dropColor.green, dropColor.blue);
         }
@@ -524,10 +526,10 @@ void WaterDrops::AddToRenderList(WaterDrop *drop)
     v1_1 = drop->y - tmp;
     u1_2 = drop->x + tmp;
     v1_2 = drop->y + tmp;
-    u1_1 = (u1_1 <= 0.0f ? 0.0f : u1_1) * fpostfxXInv;
-    v1_1 = (v1_1 <= 0.0f ? 0.0f : v1_1) * fpostfxYInv;
-    u1_2 = (u1_2 >= fpostfxX ? fpostfxX : u1_2) * fpostfxXInv;
-    v1_2 = (v1_2 >= fpostfxY ? fpostfxY : v1_2) * fpostfxYInv;
+    u1_1 = (u1_1 <= 0.0f ? 0.0f : u1_1) * fRXInv;
+    v1_1 = (v1_1 <= 0.0f ? 0.0f : v1_1) * fRYInv;
+    u1_2 = (u1_2 >= fRX ? fRX : u1_2) * fRXInv;
+    v1_2 = (v1_2 >= fRY ? fRY : v1_2) * fRYInv;
 
     scale = drop->size * 0.5f;
 
