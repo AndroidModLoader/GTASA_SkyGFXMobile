@@ -316,7 +316,7 @@ void WaterDrops::MoveDrop(WaterDropMoving *moving)
 void WaterDrops::ProcessMoving(void)
 {
     if(!ms_movingEnabled) return;
-    for(WaterDropMoving* moving = ms_dropsMoving; moving < &ms_dropsMoving[MAXDROPSMOVING]; ++moving)
+    for(WaterDropMoving* moving = &ms_dropsMoving[0]; moving < &ms_dropsMoving[MAXDROPSMOVING]; ++moving)
     {
         if(moving->drop) MoveDrop(moving);
     }
@@ -367,13 +367,14 @@ void WaterDrops::NewTrace(WaterDropMoving *moving)
 
 void WaterDrops::NewDropMoving(WaterDrop *drop)
 {
-    for(WaterDropMoving* moving = ms_dropsMoving; moving < &ms_dropsMoving[MAXDROPSMOVING]; moving++)
+    for(WaterDropMoving* moving = &ms_dropsMoving[0]; moving < &ms_dropsMoving[MAXDROPSMOVING]; moving++)
     {
         if(moving->drop == NULL)
         {
             moving->drop = drop;
             moving->dist = 0.0f;
             ms_numDropsMoving++;
+            return;
         }
     }
 }
