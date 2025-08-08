@@ -59,6 +59,7 @@ bool g_bBloom = false;
 float g_fBloomSkyMult = 0.7f;
 float g_fBloomIntensity = 0.55f;
 bool g_bAutoExposure = false;
+bool g_bFXAA = true;
 
 int g_nGrainRainStrength = 0;
 int g_nInitialGrain = 0;
@@ -88,6 +89,7 @@ ES2Shader* g_pCSBShader = NULL;
 ES2Shader* g_pBloomP1Shader = NULL;
 ES2Shader* g_pBloomP2Shader = NULL;
 ES2Shader* g_pBloomShader = NULL;
+ES2Shader* g_pFXAAShader = NULL;
 
 /* Other */
 static const char* aSpeedFXSettings[SPEEDFX_SETTINGS] = 
@@ -466,6 +468,55 @@ void CreateEffectsShaders()
                        "  gl_FragColor = vec4(color + bloom, 1.0);\n"
                        "}";
     g_pBloomShader = CreateCustomShaderAlloc(0, sBloomPxl, sBloomVtx, sizeof(sBloomPxl), sizeof(sBloomVtx));
+
+    char sFXAAPxl[] = "precision mediump float;\n"
+                      "uniform sampler2D Diffuse;\n"
+                      "uniform mediump vec4 GFX1v;\n"
+                      "varying mediump vec2 Out_Tex0;\n"
+                      "const vec3 LumCoeff = vec3(0.2126, 0.7152, 0.0722);\n"
+                      "mediump vec2 rgbNW;\n"
+                      "mediump vec2 rgbNE;\n"
+                      "mediump vec2 rgbSW;\n"
+                      "mediump vec2 rgbSE;\n"
+                      "mediump vec2 rgbM;\n"
+                      "const float FXAA_SPAN_MAX = 8.0;\n"
+                      "const float FXAA_REDUCE_MUL = 1.0 / 8.0;\n"
+                      "const float FXAA_REDUCE_MIN = 1.0 / 128.0;\n"
+                      "\n"
+                      "void main() {\n"
+                      "  vec2 texel = 1.0 / GFX1v.xy;\n"
+                      "  rgbNW = texture2D(Diffuse, Out_Tex0 + vec2(-1.0, -1.0) * texel).rgb;\n"
+                      "  rgbNE = texture2D(Diffuse, Out_Tex0 + vec2( 1.0, -1.0) * texel).rgb;\n"
+                      "  rgbSW = texture2D(Diffuse, Out_Tex0 + vec2(-1.0,  1.0) * texel).rgb;\n"
+                      "  rgbSE = texture2D(Diffuse, Out_Tex0 + vec2( 1.0,  1.0) * texel).rgb;\n"
+                      "  rgbM  = texture2D(Diffuse, Out_Tex0).rgb;\n"
+                      "  float lumaNW = dot(rgbNW, LumCoeff);\n"
+                      "  float lumaNE = dot(rgbNE, LumCoeff);\n"
+                      "  float lumaSW = dot(rgbSW, LumCoeff);\n"
+                      "  float lumaSE = dot(rgbSE, LumCoeff);\n"
+                      "  float lumaM  = dot(rgbM,  LumCoeff);\n"
+                      "  float lumaMin = min(lumaM, min(min(lumaNW, lumaNE), min(lumaSW, lumaSE)));\n"
+                      "  float lumaMax = max(lumaM, max(max(lumaNW, lumaNE), max(lumaSW, lumaSE)));\n"
+                      "  vec2 dir;\n"
+                      "  dir.x = -((lumaNW + lumaNE) - (lumaSW + lumaSE));\n"
+                      "  dir.y =  ((lumaNW + lumaSW) - (lumaNE + lumaSE));\n"
+                      "  float dirReduce = max((lumaNW + lumaNE + lumaSW + lumaSE) * (0.25 * FXAA_REDUCE_MUL), FXAA_REDUCE_MIN);\n"
+                      "  float rcpDirMin = 1.0 / (min(abs(dir.x), abs(dir.y)) + dirReduce);\n"
+                      "  dir = min(vec2(FXAA_SPAN_MAX, FXAA_SPAN_MAX), max(vec2(-FXAA_SPAN_MAX, -FXAA_SPAN_MAX), dir * rcpDirMin)) * texel;\n"
+                      "  vec3 rgbA = 0.5 * (texture2D(Diffuse, Out_Tex0 + dir * (1.0 / 3.0 - 0.5)).rgb + texture2D(Diffuse, Out_Tex0 + dir * (2.0 / 3.0 - 0.5)).rgb);\n"
+                      "  vec3 rgbB = rgbA * 0.5 + 0.25 * (texture2D(Diffuse, Out_Tex0 + dir * (0.0 / 3.0 - 0.5)).rgb + texture2D(Diffuse, Out_Tex0 + dir * (3.0 / 3.0 - 0.5)).rgb);\n"
+                      "  float lumaB = dot(rgbB, LumCoeff);\n"
+                      "  gl_FragColor = vec4((lumaB < lumaMin || lumaB > lumaMax) ? rgbA : rgbB, 1.0);\n"
+                      "}";
+    char sFXAAVtx[] = "precision highp float;\n"
+                      "attribute vec3 Position;\n"
+                      "attribute vec2 TexCoord0;\n"
+                      "varying mediump vec2 Out_Tex0;\n"
+                      "void main() {\n"
+                      "  gl_Position = vec4(Position.xy - 1.0, 0.0, 1.0);\n"
+                      "  Out_Tex0 = TexCoord0;\n"
+                      "}";
+    g_pFXAAShader = CreateCustomShaderAlloc(0, sFXAAPxl, sFXAAVtx, sizeof(sFXAAPxl), sizeof(sFXAAVtx));
 }
 void RenderGrainSettingChanged(int oldVal, int newVal, void* data = NULL)
 {
@@ -1171,6 +1222,25 @@ void GFX_FrameBufferCSB(float contrast, float saturation, float brightness, floa
 
     GFX_GrabScreen(); // Update the framebuffer with CSB-processed image
 }
+void GFX_FrameBufferFXAA() // Completed
+{
+    ImmediateModeRenderStatesStore();
+    ImmediateModeRenderStatesSet();
+
+    RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
+
+    RQVector uniValues = RQVector{ fpostfxXInv, fpostfxYInv, 0.0f, 0.0f };
+    pForcedShader = g_pFXAAShader;
+    pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
+    
+    float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
+    DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
+    PostEffectsDrawQuad(0.0, 0.0, 2.0f, 2.0f, 255, 255, 255, 255, pSkyGFXPostFXRaster2);
+
+    pForcedShader = NULL;
+    ImmediateModeRenderStatesReStore();
+}
 void GFX_FrameBufferBloom(float intensity) // Completed
 {
     ImmediateModeRenderStatesStore();
@@ -1415,6 +1485,12 @@ DECL_HOOKv(PostFX_Render)
     GFX_Vignette(g_nVignette * 2.55f);
 
     GFX_DeActivateTexture();
+
+    if(g_bFXAA)
+    {
+        GFX_GrabScreen(true);
+        GFX_FrameBufferFXAA();
+    }
 }
 DECL_HOOKv(PostFX_CCTV)
 {
