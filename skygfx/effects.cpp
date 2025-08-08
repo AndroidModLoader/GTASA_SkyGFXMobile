@@ -1392,12 +1392,6 @@ DECL_HOOKv(PostFX_Render)
         }
     }
 
-    if(WaterDrops::neoWaterDrops)
-    {
-        WaterDrops::Process();
-        WaterDrops::Render();
-    }
-
     // Enchanced PostFXs
     GFX_ActivateProcessedDepthTexture();
     if(g_nDOF != DOF_INACTIVE && *currArea == 0)
@@ -1407,8 +1401,17 @@ DECL_HOOKv(PostFX_Render)
             GFX_DOF();
         }
     }
+    
     if(g_nCrAb != CRAB_INACTIVE) GFX_ChromaticAberration();
+
+    if(WaterDrops::neoWaterDrops)
+    {
+        WaterDrops::Process();
+        WaterDrops::Render();
+    }
+    
     //GFX_FakeRay(); // doesnt look cool enough
+    
     GFX_Vignette(g_nVignette * 2.55f);
 
     GFX_DeActivateTexture();
