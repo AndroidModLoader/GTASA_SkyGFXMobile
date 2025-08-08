@@ -7,6 +7,7 @@ float fRX, fRY, fRXInv, fRYInv;
 int nRX, nRY;
 int minScaled = 0, maxScaled = 0, maxminDiff = 0, oneScaled = 0;
 RwOpenGLVertex DropletsBuffer[2 * 4 * WaterDrops::MAXDROPS] {};
+uint16_t DropletsIndices[6 * WaterDrops::MAXDROPS] {};
 uint32_t nextDirtDrop = 0;
 
 static const RwRGBA dropColor(255, 255, 255, 255);
@@ -506,6 +507,18 @@ void WaterDrops::InitialiseRender(RwCamera *cam)
     {
         DropletsBuffer[i].rhw = 1.0f;
         DropletsBuffer[i].pos.z = 0.0f;
+    }
+    for(int i = 0; i < WaterDrops::MAXDROPS; ++i)
+    {
+        int iIndex = i * 6;
+        int vIndex = i * 4;
+
+        DropletsIndices[iIndex + 0] = vIndex + 0;
+        DropletsIndices[iIndex + 1] = vIndex + 1;
+        DropletsIndices[iIndex + 2] = vIndex + 2;
+        DropletsIndices[iIndex + 3] = vIndex + 0;
+        DropletsIndices[iIndex + 4] = vIndex + 2;
+        DropletsIndices[iIndex + 5] = vIndex + 3;
     }
     ms_initialised = 1;
 }
