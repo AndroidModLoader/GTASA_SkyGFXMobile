@@ -484,7 +484,7 @@ void CreateEffectsShaders()
                       "const float FXAA_REDUCE_MIN = 1.0 / 128.0;\n"
                       "\n"
                       "void main() {\n"
-                      "  vec2 texel = 1.0 / GFX1v.xy;\n"
+                      "  vec2 texel = 1.0 * GFX1v.xy;\n"
                       "  rgbNW = texture2D(Diffuse, Out_Tex0 + vec2(-1.0, -1.0) * texel).rgb;\n"
                       "  rgbNE = texture2D(Diffuse, Out_Tex0 + vec2( 1.0, -1.0) * texel).rgb;\n"
                       "  rgbSW = texture2D(Diffuse, Out_Tex0 + vec2(-1.0,  1.0) * texel).rgb;\n"
