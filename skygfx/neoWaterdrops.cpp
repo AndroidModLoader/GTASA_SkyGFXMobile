@@ -192,7 +192,7 @@ void WaterDrop::Fade(void)
 void WaterDrops::Process()
 {
     nRX = RsGlobal->maximumWidth; fRX = nRX; fRXInv = 1.0f / fRX;
-    nRX = RsGlobal->maximumHeight; fRY = nRY; fRYInv = 1.0f / fRY;
+    nRY = RsGlobal->maximumHeight; fRY = nRY; fRYInv = 1.0f / fRY;
     
     // In case resolution changes
     scaling = fRY / 480.0f;
