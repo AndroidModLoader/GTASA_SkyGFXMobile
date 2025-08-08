@@ -2,7 +2,7 @@
 #include "include/renderqueue.h"
 
 extern RwRaster *pSkyGFXPostFXRaster1, *pSkyGFXPostFXRaster2, *pDarkRaster;
-float scaling, frameTimeDelta;
+float scaling, frameTimeDelta, deltaMs;
 RwOpenGLVertex DropletsBuffer[2 * 4 * WaterDrops::MAXDROPS] {};
 
 static const RwRGBA dropColor(255, 255, 255, 255);
@@ -172,8 +172,7 @@ void WaterDrops::InitialiseHooks()
 
 void WaterDrop::Fade(void)
 {
-    float delta = *ms_fTimeStep * 1000.0f / 50.0f;
-    this->time += delta;
+    this->time += deltaMs;
     if(this->time >= this->ttl)
     {
         --WaterDrops::ms_numDrops;
@@ -195,6 +194,7 @@ void WaterDrops::Process()
     //scaling = ms_fbHeight / 480.0f;
     scaling = fpostfxY / 480.0f;
     frameTimeDelta = *ms_fTimeStep / (50.0f / 30.0f);
+    deltaMs = *ms_fTimeStep * 1000.0f / 50.0f;
 
     if(!ms_initialised) InitialiseRender(Scene->camera);
     WaterDrops::CalculateMovement();
@@ -482,6 +482,11 @@ void WaterDrops::InitialiseRender(RwCamera *cam)
             UnregisterTextureDB(txdDB);
         }
     }
+    for(int i = 0; i < 2 * 4 * WaterDrops::MAXDROPS; ++i)
+    {
+        DropletsBuffer[i].rhw = 1.0f;
+        DropletsBuffer[i].pos.z = 0.0f;
+    }
     ms_initialised = 1;
 }
 
@@ -508,10 +513,10 @@ void WaterDrops::AddToRenderList(WaterDrop *drop)
     v1_1 = drop->y - tmp;
     u1_2 = drop->x + tmp;
     v1_2 = drop->y + tmp;
-    u1_1 = (u1_1 <= 0.0f ? 0.0f : u1_1) / pSkyGFXPostFXRaster1->width;
-    v1_1 = (v1_1 <= 0.0f ? 0.0f : v1_1) / pSkyGFXPostFXRaster1->height;
-    u1_2 = (u1_2 >= fpostfxX ? fpostfxX : u1_2) / pSkyGFXPostFXRaster1->width;
-    v1_2 = (v1_2 >= fpostfxY ? fpostfxY : v1_2) / pSkyGFXPostFXRaster1->height;
+    u1_1 = (u1_1 <= 0.0f ? 0.0f : u1_1) * fpostfxXInv;
+    v1_1 = (v1_1 <= 0.0f ? 0.0f : v1_1) * fpostfxYInv;
+    u1_2 = (u1_2 >= fpostfxX ? fpostfxX : u1_2) * fpostfxXInv;
+    v1_2 = (v1_2 >= fpostfxY ? fpostfxY : v1_2) * fpostfxYInv;
 
     scale = drop->size * 0.5f;
 
@@ -520,8 +525,6 @@ void WaterDrops::AddToRenderList(WaterDrop *drop)
     {
         ms_vertPtr->pos.x = drop->x + xy[i * 2] * scale;
         ms_vertPtr->pos.y = drop->y + xy[i * 2 + 1] * scale;
-        ms_vertPtr->pos.z = 0.0f;
-        ms_vertPtr->rhw = 1.0f;
         ms_vertPtr->rgba = dropMaskColor;
         ms_vertPtr->rgba.alpha = drop->color.alpha;
         ms_vertPtr->texCoord.u = uv[i * 2];
@@ -533,8 +536,6 @@ void WaterDrops::AddToRenderList(WaterDrop *drop)
     {
         ms_vertPtr->pos.x = drop->x + xy[i * 2] * scale;
         ms_vertPtr->pos.y = drop->y + xy[i * 2 + 1] * scale;
-        ms_vertPtr->pos.z = 0.0f;
-        ms_vertPtr->rhw = 1.0f;
         ms_vertPtr->rgba = drop->color;
         ms_vertPtr->texCoord.u = (i % 2 == 0 ? u1_1 : u1_2);
         ms_vertPtr->texCoord.v = 1.0f - (i < 2 ? v1_1 : v1_2);
