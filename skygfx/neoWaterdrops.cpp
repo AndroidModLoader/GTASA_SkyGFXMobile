@@ -10,8 +10,8 @@ RwOpenGLVertex DropletsBuffer[2 * 4 * WaterDrops::MAXDROPS] {};
 
 static const RwRGBA dropColor(255, 255, 255, 255);
 static const RwRGBA dropMaskColor(0, 0, 0, 255);
-static const RwRGBA dropBloodColor(255, 30, 30, 255);
-static const RwRGBA dropDirtColor(253, 216, 181, 255);
+static const RwRGBA dropBloodColor(255, 40, 40, 255);
+static const RwRGBA dropDirtColor(182, 159, 102, 255);
 
 #define MAXSIZE 18
 #define MINSIZE 5
