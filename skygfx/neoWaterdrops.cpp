@@ -112,7 +112,7 @@ DECL_HOOKv(Chainsaw_AddAudioEvent, uintptr_t aeentity, eAudioEvents event)
         /* FIX_BUGS */
         if((aeentity - BYBIT(0x398, 0x470)) == (uintptr_t)FindPlayerPed(-1))
         {
-            WaterDrops::FillScreenMoving(1.0f, true);
+            WaterDrops::FillScreenMoving(frameTimeDelta * 1.0f, true);
         }
     }
 }
@@ -138,7 +138,7 @@ DECL_HOOKv(AddFxParticle, void* self, RwV3d *pos, RwV3d *vel, float timeSince, v
     float len = RwV3dLength(&dist);
     if(len <= pd)
     {
-        WaterDrops::FillScreenMoving(1.0f / (len / 2.0f), isBlood, isDirt);
+        WaterDrops::FillScreenMoving(frameTimeDelta * 1.0f / (len / 2.0f), isBlood, isDirt);
     }
 }
 DECL_HOOKv(AddBloodFx, void* self, RwV3d *pos, RwV3d *dir, int32 num, float lightMult)
@@ -255,10 +255,11 @@ void WaterDrops::SprayDrops(void)
     {
         float tmp = 180.0f - ms_rainStrength;
         if(tmp < 40.0f) tmp = 40.0f;
-        FillScreenMoving((tmp - 40.0f) * *pfWeatherRain * delta / 300.0f);
+        FillScreenMoving((tmp - 40.0f) * *pfWeatherRain * delta / 280.0f);
     }
     if(sprayWater) FillScreenMoving(0.5f * delta, false);
     if(sprayBlood) FillScreenMoving(0.5f * delta, true);
+    
     if(ms_splashDuration >= 0)
     {
         FillScreenMoving(1.0f * delta); // VC does STRANGE things here
@@ -409,7 +410,7 @@ void WaterDrops::FillScreenMoving(float amount, bool isBlood, bool isDirt)
             
             if(isDirt)
             {
-                drop = PlaceNew(x, y, size, 2000.0f, 1, dropDirt2Color.red, dropDirt2Color.green, dropDirt2Color.blue);
+                drop = PlaceNew(x, y, size, 2000.0f, 1, dropDirtColor.red, dropDirtColor.green, dropDirtColor.blue);
             }
             else if(isBlood)
             {
