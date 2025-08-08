@@ -309,9 +309,8 @@ void WaterDrops::MoveDrop(WaterDropMoving *moving)
 
 void WaterDrops::ProcessMoving(void)
 {
-    WaterDropMoving *moving;
     if(!ms_movingEnabled) return;
-    for(moving = ms_dropsMoving; moving < &ms_dropsMoving[MAXDROPSMOVING]; ++moving)
+    for(WaterDropMoving* moving = ms_dropsMoving; moving < &ms_dropsMoving[MAXDROPSMOVING]; ++moving)
     {
         if(moving->drop) MoveDrop(moving);
     }
@@ -319,8 +318,7 @@ void WaterDrops::ProcessMoving(void)
 
 void WaterDrops::Fade(void)
 {
-    WaterDrop *drop;
-    for(drop = &ms_drops[0]; drop < &ms_drops[MAXDROPS]; ++drop)
+    for(WaterDrop* drop = &ms_drops[0]; drop < &ms_drops[MAXDROPS]; ++drop)
     {
         if(drop->active) drop->Fade();
     }
@@ -328,32 +326,28 @@ void WaterDrops::Fade(void)
 
 WaterDrop* WaterDrops::PlaceNew(float x, float y, float size, float ttl, bool fades, int R = 0xFF, int G = 0xFF, int B = 0xFF)
 {
-    WaterDrop *drop;
-    int i;
-
     if(NoDrops()) return NULL;
-
-    for(i = 0, drop = ms_drops; i < MAXDROPS; ++i, ++drop)
+    for(WaterDrop* drop = &ms_drops[0]; drop < &ms_drops[MAXDROPS]; ++drop)
     {
-        if(ms_drops[i].active == 0) goto found;
+        if(!drop->active)
+        {
+            drop->x = x;
+            drop->y = y;
+            drop->size = size;
+            drop->uvsize = (SC(MAXSIZE) - size + 1.0f) / (SC(MAXSIZE) - SC(MINSIZE) + 1.0f);
+            drop->fades = fades;
+            drop->active = 1;
+            drop->color.red = R;
+            drop->color.green = G;
+            drop->color.blue = B;
+            drop->color.alpha = 0xFF;
+            drop->time = 0.0f;
+            drop->ttl = ttl;
+            ms_numDrops++;
+            return drop;
+        }
     }
     return NULL;
-
-found:
-    ms_numDrops++;
-    drop->x = x;
-    drop->y = y;
-    drop->size = size;
-    drop->uvsize = (SC(MAXSIZE) - size + 1.0f) / (SC(MAXSIZE) - SC(MINSIZE) + 1.0f);
-    drop->fades = fades;
-    drop->active = 1;
-    drop->color.red = R;
-    drop->color.green = G;
-    drop->color.blue = B;
-    drop->color.alpha = 0xFF;
-    drop->time = 0.0f;
-    drop->ttl = ttl;
-    return drop;
 }
 
 void WaterDrops::NewTrace(WaterDropMoving *moving)
@@ -367,17 +361,15 @@ void WaterDrops::NewTrace(WaterDropMoving *moving)
 
 void WaterDrops::NewDropMoving(WaterDrop *drop)
 {
-    WaterDropMoving *moving;
-    for(moving = ms_dropsMoving; moving < &ms_dropsMoving[MAXDROPSMOVING]; moving++)
+    for(WaterDropMoving* moving = ms_dropsMoving; moving < &ms_dropsMoving[MAXDROPSMOVING]; moving++)
     {
-        if(moving->drop == NULL) goto found;
+        if(moving->drop == NULL)
+        {
+            moving->drop = drop;
+            moving->dist = 0.0f;
+            ms_numDropsMoving++;
+        }
     }
-    return;
-
-found:
-    ms_numDropsMoving++;
-    moving->drop = drop;
-    moving->dist = 0.0f;
 }
 
 void WaterDrops::FillScreenMoving(float amount, bool isBlood)
@@ -410,12 +402,11 @@ void WaterDrops::FillScreenMoving(float amount, bool isBlood)
 
 void WaterDrops::FillScreen(int n)
 {
-    float x, y, size;
-    WaterDrop *drop;
-
     if(!ms_initialised) return;
+    
+    float x, y, size;
     ms_numDrops = 0;
-    for(drop = &ms_drops[0]; drop < &ms_drops[MAXDROPS]; drop++)
+    for(WaterDrop* drop = &ms_drops[0]; drop < &ms_drops[MAXDROPS]; drop++)
     {
         drop->active = 0;
         if(drop < &ms_drops[n])
@@ -430,8 +421,7 @@ void WaterDrops::FillScreen(int n)
 
 void WaterDrops::Clear(void)
 {
-    WaterDrop *drop;
-    for(drop = &ms_drops[0]; drop < &ms_drops[MAXDROPS]; drop++)
+    for(WaterDrop* drop = &ms_drops[0]; drop < &ms_drops[MAXDROPS]; drop++)
     {
         drop->active = 0;
     }
@@ -448,7 +438,6 @@ void WaterDrops::RegisterSplash(RwV3d* point, float distance, int duration)
 {
     RwV3d dist;
     RwV3dSub(&dist, point, &ms_lastPos);
-
     if(RwV3dLength(&dist) <= distance)
     {
         ms_splashDuration = duration;
@@ -504,10 +493,10 @@ void WaterDrops::AddToRenderList(WaterDrop *drop)
     float v1_1, v1_2;
     float tmp = drop->uvsize * (300.0f - 40.0f) + 40.0f;
     
-    u1_1 = drop->x + ms_xOff - tmp;
-    v1_1 = drop->y + ms_yOff - tmp;
-    u1_2 = drop->x + ms_xOff + tmp;
-    v1_2 = drop->y + ms_yOff + tmp;
+    u1_1 = drop->x - tmp;
+    v1_1 = drop->y - tmp;
+    u1_2 = drop->x + tmp;
+    v1_2 = drop->y + tmp;
     u1_1 = (u1_1 <= 0.0f ? 0.0f : u1_1) / pSkyGFXPostFXRaster1->width;
     v1_1 = (v1_1 <= 0.0f ? 0.0f : v1_1) / pSkyGFXPostFXRaster1->height;
     u1_2 = (u1_2 >= fpostfxX ? fpostfxX : u1_2) / pSkyGFXPostFXRaster1->width;
@@ -518,8 +507,8 @@ void WaterDrops::AddToRenderList(WaterDrop *drop)
     // Mask
     for(i = 0; i < 4; i++)
     {
-        ms_vertPtr->pos.x = drop->x + xy[i * 2] * scale + ms_xOff;
-        ms_vertPtr->pos.y = drop->y + xy[i * 2 + 1] * scale + ms_yOff;
+        ms_vertPtr->pos.x = drop->x + xy[i * 2] * scale;
+        ms_vertPtr->pos.y = drop->y + xy[i * 2 + 1] * scale;
         ms_vertPtr->pos.z = 0.0f;
         ms_vertPtr->rhw = 1.0f;
         ms_vertPtr->rgba = dropMaskColor;
@@ -531,8 +520,8 @@ void WaterDrops::AddToRenderList(WaterDrop *drop)
     // Drop
     for(i = 0; i < 4; i++)
     {
-        ms_vertPtr->pos.x = drop->x + xy[i * 2] * scale + ms_xOff;
-        ms_vertPtr->pos.y = drop->y + xy[i * 2 + 1] * scale + ms_yOff;
+        ms_vertPtr->pos.x = drop->x + xy[i * 2] * scale;
+        ms_vertPtr->pos.y = drop->y + xy[i * 2 + 1] * scale;
         ms_vertPtr->pos.z = 0.0f;
         ms_vertPtr->rhw = 1.0f;
         ms_vertPtr->rgba = drop->color;
