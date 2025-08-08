@@ -391,7 +391,7 @@ void WaterDrops::NewDropMoving(WaterDrop *drop)
 
 void WaterDrops::FillScreenMoving(float amount, bool isBlood, bool isDirt)
 {
-    if(isBlood && !neoBloodDrops) return;
+    if((isBlood && !neoBloodDrops) || (isDirt && !neoDirtyDrops)) return;
 
     int n = (ms_vec.z <= 5.0f ? 1.0f : 1.5f) * amount * 10.0f;
     float x, y, size;
