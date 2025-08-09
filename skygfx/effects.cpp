@@ -74,7 +74,6 @@ RwRaster *pSkyGFXPostFXRaster1 = NULL, *pSkyGFXPostFXRaster2 = NULL,
          *pSkyGFXSceneBrightnessRaster = NULL;
 RwRaster *pDarkRaster = NULL;
 
-ES2Shader* g_pFramebufferRenderShader = NULL;
 ES2Shader* g_pSimpleInverseShader = NULL;
 ES2Shader* g_pSimpleDepthShader = NULL;
 ES2Shader* g_pSimpleBrightShader = NULL;
@@ -135,28 +134,13 @@ ConfigEntry *pCFGFXAA;
 /* Functions */
 void CreateEffectsShaders()
 {
-    char sFRPxl[] = "precision mediump float;\n"
-                    "uniform sampler2D Diffuse;\n"
-                    "varying mediump vec2 Out_Tex0;\n"
-                    "void main() {\n"
-                    "  gl_FragColor = texture2D(Diffuse, Out_Tex0);\n"
-                    "}";
-    char sFRVtx[] = "attribute vec3 Position;\n"
-                    "attribute vec2 TexCoord0;\n"
-                    "varying mediump vec2 Out_Tex0;\n"
-                    "void main() {\n"
-                    "  gl_Position = vec4(Position.xy, 0.0, 1.0);\n"
-                    "  Out_Tex0 = TexCoord0;\n"
-                    "}";
-    g_pFramebufferRenderShader = CreateCustomShaderAlloc(0, sFRPxl, sFRVtx, sizeof(sFRPxl), sizeof(sFRVtx));
-
     char sSimpleDepthPxl[] = "precision highp float;\n"
                              "uniform highp sampler2D DepthTex;\n"
-                             "varying mediump vec2 Out_Tex0;\n"
+                             "varying highp vec2 Out_Tex0;\n"
                              "uniform highp vec4 GFX1v;\n"
                              "void main() {\n"
                              "  float zNear = GFX1v.x;\n"
-                             "  mediump float zFar = GFX1v.y;\n"
+                             "  float zFar = GFX1v.y;\n"
                              "  float depth = 2.0 * texture2D(DepthTex, Out_Tex0).r - 1.0;\n"
                              "  depth = 2.0 * zNear / (zFar + zNear - depth * (zFar - zNear));\n"
                              "  gl_FragColor = vec4(vec3(1.0 - depth), 1.0);\n"
@@ -164,7 +148,7 @@ void CreateEffectsShaders()
     char sSimpleDepthVtx[] = "precision highp float;\n"
                              "attribute vec3 Position;\n"
                              "attribute vec2 TexCoord0;\n"
-                             "varying mediump vec2 Out_Tex0;\n"
+                             "varying highp vec2 Out_Tex0;\n"
                              "void main() {\n"
                              "  gl_Position = vec4(Position.xy - 1.0, 0.0, 1.0);\n"
                              "  Out_Tex0 = TexCoord0;\n"
