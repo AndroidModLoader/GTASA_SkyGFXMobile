@@ -74,6 +74,7 @@ RwRaster *pSkyGFXPostFXRaster1 = NULL, *pSkyGFXPostFXRaster2 = NULL,
          *pSkyGFXSceneBrightnessRaster = NULL;
 RwRaster *pDarkRaster = NULL;
 
+ES2Shader* g_pFramebufferRenderShader = NULL;
 ES2Shader* g_pSimpleInverseShader = NULL;
 ES2Shader* g_pSimpleDepthShader = NULL;
 ES2Shader* g_pSimpleBrightShader = NULL;
@@ -134,6 +135,21 @@ ConfigEntry *pCFGFXAA;
 /* Functions */
 void CreateEffectsShaders()
 {
+    char sFRPxl[] = "precision mediump float;\n"
+                    "uniform sampler2D Diffuse;\n"
+                    "varying mediump vec2 Out_Tex0;\n"
+                    "void main() {\n"
+                    "  gl_FragColor = texture2D(Diffuse, Out_Tex0);\n"
+                    "}";
+    char sFRVtx[] = "attribute vec3 Position;\n"
+                    "attribute vec2 TexCoord0;\n"
+                    "varying mediump vec2 Out_Tex0;\n"
+                    "void main() {\n"
+                    "  gl_Position = vec4(Position.xy, 0.0, 1.0);\n"
+                    "  Out_Tex0 = TexCoord0;\n"
+                    "}";
+    g_pFramebufferRenderShader = CreateCustomShaderAlloc(0, sFRPxl, sFRVtx, sizeof(sFRPxl), sizeof(sFRVtx));
+    
     char sSimpleDepthPxl[] = "precision highp float;\n"
                              "uniform highp sampler2D DepthTex;\n"
                              "varying highp vec2 Out_Tex0;\n"
