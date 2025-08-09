@@ -151,7 +151,7 @@ void CreateEffectsShaders()
     g_pFramebufferRenderShader = CreateCustomShaderAlloc(0, sFRPxl, sFRVtx, sizeof(sFRPxl), sizeof(sFRVtx));
 
     char sSimpleDepthPxl[] = "precision highp float;\n"
-                             "uniform sampler2D DepthTex;\n"
+                             "uniform highp sampler2D DepthTex;\n"
                              "varying mediump vec2 Out_Tex0;\n"
                              "uniform highp vec4 GFX1v;\n"
                              "void main() {\n"
@@ -173,7 +173,7 @@ void CreateEffectsShaders()
 
     char sSimpleBrightPxl[] = "precision mediump float;\n"
                               "uniform sampler2D Diffuse;\n"
-                              "uniform sampler2D DepthTex;\n"
+                              "uniform highp sampler2D DepthTex;\n"
                               "varying mediump vec2 Out_Tex0;\n"
                               "uniform mediump vec4 GFX1v;\n"
                               "const vec3 LumCoeff = vec3(0.2126, 0.7152, 0.0722);\n"
@@ -261,7 +261,7 @@ void CreateEffectsShaders()
 
     char sFakeRayPxl[] = "precision mediump float;\n"
                          "uniform sampler2D Diffuse;\n"
-                         "uniform sampler2D DepthTex;\n"
+                         "uniform highp sampler2D DepthTex;\n"
                          "varying mediump vec2 Out_Tex0;\n"
                          "varying mediump vec2 vPos;\n"
                          "void main() {\n"
@@ -291,7 +291,7 @@ void CreateEffectsShaders()
 
     char sDOFPxl[] = "precision mediump float;\n"
                      "uniform sampler2D Diffuse;\n"
-                     "uniform sampler2D DepthTex;\n"
+                     "uniform highp sampler2D DepthTex;\n"
                      "varying mediump vec2 Out_Tex0;\n"
                      "uniform mediump vec4 GFX1v;\n"
                      "const float steps = 3.0;\n"
@@ -324,7 +324,7 @@ void CreateEffectsShaders()
 
     char sDOFDAPxl[] = "precision mediump float;\n"
                        "uniform sampler2D Diffuse;\n"
-                       "uniform sampler2D DepthTex;\n"
+                       "uniform highp sampler2D DepthTex;\n"
                        "varying mediump vec2 Out_Tex0;\n"
                        "uniform mediump vec4 GFX1v;\n"
                        "const float steps = 3.0;\n"
