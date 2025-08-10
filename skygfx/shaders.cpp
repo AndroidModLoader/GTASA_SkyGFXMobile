@@ -85,7 +85,7 @@ void StartShaders()
     aml->Write(pGTASA + BYBIT(0x5EAEBC, 0x711508), sOutSpecPart3, strlen(sOutSpecPart3)+1);
 
     // Additional code for vertex shader
-    const char* sMainVertex = ""
+    const char* sMainVertex = /*"varying vec3 WorldNormal;\n"*/
         "void main() {"; // max is 511
   #ifdef AML32
     aml->WriteAddr(pGTASA + 0x1CF8A0, (uintptr_t)sMainVertex - pGTASA - 0x1CEF56);
@@ -97,7 +97,7 @@ void StartShaders()
   #endif
 
     // Additional code for pixel shader
-    const char* sMainPixel = ""
+    const char* sMainPixel = /*"varying vec3 WorldNormal;\n"*/
         "void main()"; // max is 511
   #ifdef AML32
     aml->WriteAddr(pGTASA + 0x1CE8FC, (uintptr_t)sMainPixel - pGTASA - 0x1CE3B0);

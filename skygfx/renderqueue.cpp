@@ -309,8 +309,8 @@ DECL_HOOKv(RQ_Command_rqTargetCreate, uint8_t** data)
         // - Bind the texture only
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1_EXT, GL_TEXTURE_2D, extRQ.m_NormalMapBuffer, 0);
 
-        GLenum bufs[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1_EXT };
-        glDrawBuffers(2, bufs);
+        /*GLenum bufs[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1_EXT };
+        glDrawBuffers(2, bufs);*/
     }
 #endif
 

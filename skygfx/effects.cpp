@@ -1643,5 +1643,47 @@ void StartEffectsStuff()
         {
             HOOKBLX(HeatHazeFX_GrabBuffer, pGTASA + BYBIT(0x5B51E6, 0x6D94EC));
         }
+
+        // Normal map buffer (dumbass Qualcomm removed a required extension from a list, though its supported)
+
+        /*
+
+        // 30 max including terminator
+        const char* gl_FragColorRepl1 = "gl_FragData[0].a=Out_Color.a;";
+        aml->Write(pGTASA + BYBIT(0x0, 0x7115B2), gl_FragColorRepl1, strlen(gl_FragColorRepl1)+1);
+        // 39 max including terminator
+        const char* gl_FragColorRepl2 = "if(gl_FragData[0].a < 0.8){ discard; }";
+        aml->Write(pGTASA + BYBIT(0x0, 0x71161E), gl_FragColorRepl2, strlen(gl_FragColorRepl2)+1);
+        // 39 max including terminator
+        const char* gl_FragColorRepl3 = "if(gl_FragData[0].a < 0.5){ discard; }";
+        aml->Write(pGTASA + BYBIT(0x0, 0x711645), gl_FragColorRepl3, strlen(gl_FragColorRepl3)+1);
+        // 39 max including terminator
+        const char* gl_FragColorRepl4 = "if(gl_FragData[0].a < 0.2){ discard; }";
+        aml->Write(pGTASA + BYBIT(0x0, 0x71166C), gl_FragColorRepl4, strlen(gl_FragColorRepl4)+1);
+        // 33 max including terminator
+        const char* gl_FragColorRepl5 = "gl_FragData[0].a*=AlphaModulate;";
+        aml->Write(pGTASA + BYBIT(0x0, 0x711693), gl_FragColorRepl5, strlen(gl_FragColorRepl5)+1);
+        const char* sApplyColorShaderPart = "gl_FragData[0] = fcolor;\ngl_FragData[1] = vec4(WorldNormal, 1.0);"; // max is 511
+    #ifdef AML32
+        aml->WriteAddr(pGTASA + 0x1CF8A0, (uintptr_t)sApplyColorShaderPart - pGTASA - 0x0);
+    #else
+        aml->Write32(pGTASA + 0x263BF4, 0xF942BC42);
+        aml->WriteAddr(pGTASA + 0x711578, (uintptr_t)sApplyColorShaderPart);
+    #endif
+        // Pre-Final part: Remove vec3 init from WorldNormal, its varying now
+        aml->Write(pGTASA + BYBIT(0x0, 0x711F38), "   ");
+        aml->Write(pGTASA + BYBIT(0x0, 0x711F8C), "   ");
+        aml->Write(pGTASA + BYBIT(0x0, 0x711FCF), "   ");
+        aml->Write(pGTASA + BYBIT(0x0, 0x712006), "   ");
+        // Most Final part: Enable multiple targets
+        const char* sShaderTopPart = "#extension GL_EXT_draw_buffers : require\nprecision mediump float;"; // max is 511
+    #ifdef AML32
+        aml->WriteAddr(pGTASA + 0x1CF8A0, (uintptr_t)sShaderTopPart - pGTASA - 0x0);
+    #else
+        aml->Write32(pGTASA + 0x263650, 0xF947A842);
+        aml->WriteAddr(pGTASA + 0x710F50, (uintptr_t)sShaderTopPart);
+    #endif
+
+        */
     }
 }
