@@ -126,14 +126,14 @@ DECL_HOOKv(AddFxParticle, void* self, RwV3d *pos, RwV3d *vel, float timeSince, v
 
     RwV3d dist;
     RwV3dSub(&dist, pos, &WaterDrops::ms_lastPos);
-    float pd = 20.0f, intens = 1.0f, delta = 1.0f;
+    float pd = 20.0f, delta = 1.0f;
     bool isDirt = false, isFrameSensitive = false;
     
     if(self == g_fx->prt_boatsplash) { pd = 40.0; isFrameSensitive = true; }
     //else if(self == g_fx->prt_splash) { pd = 15.0; }
     else if(self == g_fx->prt_wake) { pd = 10.0; isFrameSensitive = true; }
     else if(self == g_fx->prt_watersplash) { pd = 30.0; isFrameSensitive = true; }
-    else if(self == g_fx->prt_wheeldirt && *pfWeatherRain != 0.0f) { pd = 15.0; isDirt = true; intens = 0.5f; }
+    else if(self == g_fx->prt_wheeldirt && *pfWeatherRain != 0.0f) { pd = 15.0; isDirt = true; }
     else return;
 
     float len = RwV3dLength(&dist);
@@ -145,7 +145,7 @@ DECL_HOOKv(AddFxParticle, void* self, RwV3d *pos, RwV3d *vel, float timeSince, v
             nextDirtDrop = *m_snTimeInMilliseconds + 50;
         }
         if(isFrameSensitive) delta = frameTimeDelta;
-        WaterDrops::FillScreenMoving(delta * intens / (len / 2.0f), false, isDirt);
+        WaterDrops::FillScreenMoving(delta / (len / 2.0f), false, isDirt);
     }
 }
 DECL_HOOKv(AddBloodFx, void* self, RwV3d *pos, RwV3d *dir, int32 num, float lightMult)

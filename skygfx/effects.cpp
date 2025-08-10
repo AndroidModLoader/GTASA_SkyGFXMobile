@@ -153,21 +153,24 @@ void CreateEffectsShaders()
     char sSimpleDepthPxl[] = "precision highp float;\n"
                              "uniform highp sampler2D DepthTex;\n"
                              "varying highp vec2 Out_Tex0;\n"
-                             "uniform highp vec4 GFX1v;\n"
+                             "varying highp vec3 FarNearLogic;\n"
                              "void main() {\n"
-                             "  float zNear = GFX1v.x;\n"
-                             "  float zFar = GFX1v.y;\n"
                              "  float depth = 2.0 * texture2D(DepthTex, Out_Tex0).r - 1.0;\n"
-                             "  depth = 2.0 * zNear / (zFar + zNear - depth * (zFar - zNear));\n"
+                             "  depth = FarNearLogic.x / (FarNearLogic.y - depth * FarNearLogic.z);\n"
                              "  gl_FragColor = vec4(vec3(1.0 - depth), 1.0);\n"
                              "}";
     char sSimpleDepthVtx[] = "precision highp float;\n"
                              "attribute vec3 Position;\n"
                              "attribute vec2 TexCoord0;\n"
                              "varying highp vec2 Out_Tex0;\n"
+                             "uniform highp vec4 GFX1v;\n"
+                             "varying highp vec3 FarNearLogic;\n"
                              "void main() {\n"
                              "  gl_Position = vec4(Position.xy - 1.0, 0.0, 1.0);\n"
                              "  Out_Tex0 = TexCoord0;\n"
+                             "  float zNear = GFX1v.x;\n"
+                             "  float zFar = GFX1v.y;\n"
+                             "  FarNearLogic = vec3(2.0 * zNear, zFar + zNear, zFar - zNear);\n"
                              "}";
     g_pSimpleDepthShader = CreateCustomShaderAlloc(0, sSimpleDepthPxl, sSimpleDepthVtx, sizeof(sSimpleDepthPxl), sizeof(sSimpleDepthVtx));
 
@@ -264,6 +267,7 @@ void CreateEffectsShaders()
                          "uniform highp sampler2D DepthTex;\n"
                          "varying mediump vec2 Out_Tex0;\n"
                          "varying mediump vec2 vPos;\n"
+                         "const vec3 LumCoeff = vec3(0.2126, 0.7152, 0.0722);\n"
                          "void main() {\n"
                          "  vec2 tex = Out_Tex0 - 0.5;\n"
                          "  float pz = 0.0;\n"
@@ -271,7 +275,7 @@ void CreateEffectsShaders()
                          "    vec3 shiftColor = texture2D(Diffuse, (tex *= 0.99) + 0.5).rgb;\n"
                          "    float depth = texture2D(DepthTex, tex + 0.5).r;\n"
                          "    if(depth < 0.01) {\n"
-                         "      float pixelBrightness = dot(shiftColor, vec3(0.299, 0.587, 0.114));\n"
+                         "      float pixelBrightness = dot(shiftColor, LumCoeff);\n"
                          "      pz += pow(max(0.0, 0.5 - length(1.0 - shiftColor.rg)), 2.0) * exp(-i * 0.1);\n"
                          "    }\n"
                          "  }\n"
@@ -410,24 +414,6 @@ void CreateEffectsShaders()
                      "}";
     g_pCSBShader = CreateCustomShaderAlloc(0, sCSBPxl, sCSBVtx, sizeof(sCSBPxl), sizeof(sCSBVtx));
 
-    char sBloom1Pxl[] = "precision mediump float;\n"
-                       "uniform sampler2D Diffuse;\n"
-                       "uniform mediump vec4 GFX1v;\n"
-                       "varying mediump vec2 Out_Tex0;\n"
-                       "void main() {\n"
-                       "  float weight[5];\n"
-                       "  weight[0] = 0.2270270270;\n"
-                       "  weight[1] = 0.1945945946;\n"
-                       "  weight[2] = 0.1216216216;\n"
-                       "  weight[3] = 0.0540540541;\n"
-                       "  weight[4] = 0.0162162162;\n"
-                       "  vec3 color = texture2D(Diffuse, Out_Tex0).rgb * weight[0];\n"
-                       "  for (int i = 1; i < 5; ++i) {\n"
-                       "    color += texture2D(Diffuse, Out_Tex0 + GFX1v.xy * vec2(GFX1v.z * float(i), 0.0)).rgb * weight[i];\n"
-                       "    color += texture2D(Diffuse, Out_Tex0 - GFX1v.xy * vec2(GFX1v.z * float(i), 0.0)).rgb * weight[i];\n"
-                       "  }\n"
-                       "  gl_FragColor = vec4(color, 1.0);\n"
-                       "}";
     char sBloomVtx[] = "precision highp float;\n"
                        "attribute vec3 Position;\n"
                        "attribute vec2 TexCoord0;\n"
@@ -436,6 +422,25 @@ void CreateEffectsShaders()
                        "  gl_Position = vec4(Position.xy - 1.0, 0.0, 1.0);\n"
                        "  Out_Tex0 = TexCoord0;\n"
                        "}";
+    char sBloom1Pxl[] = "precision mediump float;\n"
+                        "uniform sampler2D Diffuse;\n"
+                        "uniform mediump vec4 GFX1v;\n"
+                        "varying mediump vec2 Out_Tex0;\n"
+                        "void main() {\n"
+                        "  float weight[5];\n"
+                        "  weight[0] = 0.2270270270;\n"
+                        "  weight[1] = 0.1945945946;\n"
+                        "  weight[2] = 0.1216216216;\n"
+                        "  weight[3] = 0.0540540541;\n"
+                        "  weight[4] = 0.0162162162;\n"
+                        "  vec3 color = texture2D(Diffuse, Out_Tex0).rgb * weight[0];\n"
+                        "  for (int i = 1; i < 5; ++i) {\n"
+                        "    float axisV = GFX1v.z * float(i);\n"
+                        "    color += texture2D(Diffuse, Out_Tex0 + GFX1v.xy * vec2(axisV, 0.0)).rgb * weight[i];\n"
+                        "    color += texture2D(Diffuse, Out_Tex0 - GFX1v.xy * vec2(axisV, 0.0)).rgb * weight[i];\n"
+                        "  }\n"
+                        "  gl_FragColor = vec4(color, 1.0);\n"
+                        "}";
     g_pBloomP1Shader = CreateCustomShaderAlloc(0, sBloom1Pxl, sBloomVtx, sizeof(sBloom1Pxl), sizeof(sBloomVtx)); // Horizontal blur
 
     char sBloom2Pxl[] = "precision mediump float;\n"
@@ -451,8 +456,9 @@ void CreateEffectsShaders()
                        "  weight[4] = 0.0162162162;\n"
                        "  vec3 color = texture2D(Diffuse, Out_Tex0).rgb * weight[0];\n"
                        "  for (int i = 1; i < 5; ++i) {\n"
-                       "    color += texture2D(Diffuse, Out_Tex0 + GFX1v.xy * vec2(0.0, GFX1v.z * float(i))).rgb * weight[i];\n"
-                       "    color += texture2D(Diffuse, Out_Tex0 - GFX1v.xy * vec2(0.0, GFX1v.z * float(i))).rgb * weight[i];\n"
+                       "    float axisV = GFX1v.z * float(i);\n"
+                       "    color += texture2D(Diffuse, Out_Tex0 + GFX1v.xy * vec2(0.0, axisV)).rgb * weight[i];\n"
+                       "    color += texture2D(Diffuse, Out_Tex0 - GFX1v.xy * vec2(0.0, axisV)).rgb * weight[i];\n"
                        "  }\n"
                        "  gl_FragColor = vec4(color, 1.0);\n"
                        "}";
@@ -472,8 +478,9 @@ void CreateEffectsShaders()
 
     char sFXAAPxl[] = "precision mediump float;\n"
                       "uniform sampler2D Diffuse;\n"
-                      "uniform mediump vec4 GFX1v;\n"
                       "varying mediump vec2 Out_Tex0;\n"
+                      "uniform mediump vec4 GFX1v;\n"
+                      "varying mediump vec2 TexelNegatedAxis;\n"
                       "const vec3 LumCoeff = vec3(0.2126, 0.7152, 0.0722);\n"
                       "mediump vec3 rgbNW;\n"
                       "mediump vec3 rgbNE;\n"
@@ -485,11 +492,10 @@ void CreateEffectsShaders()
                       "const float FXAA_REDUCE_MIN = 1.0 / 128.0;\n"
                       "\n"
                       "void main() {\n"
-                      "  vec2 texel = 1.0 * GFX1v.xy;\n"
-                      "  rgbNW = texture2D(Diffuse, Out_Tex0 + vec2(-1.0, -1.0) * texel).rgb;\n"
-                      "  rgbNE = texture2D(Diffuse, Out_Tex0 + vec2( 1.0, -1.0) * texel).rgb;\n"
-                      "  rgbSW = texture2D(Diffuse, Out_Tex0 + vec2(-1.0,  1.0) * texel).rgb;\n"
-                      "  rgbSE = texture2D(Diffuse, Out_Tex0 + vec2( 1.0,  1.0) * texel).rgb;\n"
+                      "  rgbNW = texture2D(Diffuse, Out_Tex0 - GFX1v.xy).rgb;\n"
+                      "  rgbNE = texture2D(Diffuse, Out_Tex0 - TexelNegatedAxis).rgb;\n"
+                      "  rgbSW = texture2D(Diffuse, Out_Tex0 + TexelNegatedAxis).rgb;\n"
+                      "  rgbSE = texture2D(Diffuse, Out_Tex0 + GFX1v.xy).rgb;\n"
                       "  rgbM  = texture2D(Diffuse, Out_Tex0).rgb;\n"
                       "  float lumaNW = dot(rgbNW, LumCoeff);\n"
                       "  float lumaNE = dot(rgbNE, LumCoeff);\n"
@@ -503,9 +509,9 @@ void CreateEffectsShaders()
                       "  dir.y =  ((lumaNW + lumaSW) - (lumaNE + lumaSE));\n"
                       "  float dirReduce = max((lumaNW + lumaNE + lumaSW + lumaSE) * (0.25 * FXAA_REDUCE_MUL), FXAA_REDUCE_MIN);\n"
                       "  float rcpDirMin = 1.0 / (min(abs(dir.x), abs(dir.y)) + dirReduce);\n"
-                      "  dir = min(vec2(FXAA_SPAN_MAX, FXAA_SPAN_MAX), max(vec2(-FXAA_SPAN_MAX, -FXAA_SPAN_MAX), dir * rcpDirMin)) * texel;\n"
-                      "  vec3 rgbA = 0.5 * (texture2D(Diffuse, Out_Tex0 + dir * (1.0 / 3.0 - 0.5)).rgb + texture2D(Diffuse, Out_Tex0 + dir * (2.0 / 3.0 - 0.5)).rgb);\n"
-                      "  vec3 rgbB = rgbA * 0.5 + 0.25 * (texture2D(Diffuse, Out_Tex0 + dir * (0.0 / 3.0 - 0.5)).rgb + texture2D(Diffuse, Out_Tex0 + dir * (3.0 / 3.0 - 0.5)).rgb);\n"
+                      "  dir = min(vec2(FXAA_SPAN_MAX), max(vec2(-FXAA_SPAN_MAX), dir * rcpDirMin)) * GFX1v.xy;\n"
+                      "  vec3 rgbA = 0.5 * (texture2D(Diffuse, Out_Tex0 - dir * 0.1666667).rgb + texture2D(Diffuse, Out_Tex0 + dir * 0.1666667).rgb);\n"
+                      "  vec3 rgbB = 0.5 * rgbA + 0.25 * (texture2D(Diffuse, Out_Tex0 - dir * 0.5).rgb + texture2D(Diffuse, Out_Tex0 + dir * 0.5).rgb);\n"
                       "  float lumaB = dot(rgbB, LumCoeff);\n"
                       "  gl_FragColor = vec4((lumaB < lumaMin || lumaB > lumaMax) ? rgbA : rgbB, 1.0);\n"
                       "}";
@@ -513,9 +519,12 @@ void CreateEffectsShaders()
                       "attribute vec3 Position;\n"
                       "attribute vec2 TexCoord0;\n"
                       "varying mediump vec2 Out_Tex0;\n"
+                      "uniform mediump vec4 GFX1v;\n"
+                      "varying mediump vec2 TexelNegatedAxis;\n"
                       "void main() {\n"
                       "  gl_Position = vec4(Position.xy - 1.0, 0.0, 1.0);\n"
                       "  Out_Tex0 = TexCoord0;\n"
+                      "  TexelNegatedAxis = vec2(-GFX1v.x, GFX1v.y);\n"
                       "}";
     g_pFXAAShader = CreateCustomShaderAlloc(0, sFXAAPxl, sFXAAVtx, sizeof(sFXAAPxl), sizeof(sFXAAVtx));
 }
@@ -741,17 +750,14 @@ void GFX_GrabScreen(bool second = false)
 {
     GFX_CheckBuffersSize();
 
-    if((!second && pSkyGFXPostFXRaster1) || (second && pSkyGFXPostFXRaster2))
-    {
-        ERQ_GrabFramebuffer(second ? pSkyGFXPostFXRaster2 : pSkyGFXPostFXRaster1);
-        ERQ_GrabFramebufferPost();
-    }
+    ERQ_GrabFramebuffer(second ? pSkyGFXPostFXRaster2 : pSkyGFXPostFXRaster1);
+    ERQ_GrabFramebufferPost();
 }
 void GFX_GrabDepth()
 {
     GFX_CheckBuffersSize();
 
-    if(pSkyGFXDepthRaster && Scene->camera)
+    if(TheCamera->m_pRwCamera)
     {
         ImmediateModeRenderStatesStore();
         ImmediateModeRenderStatesSet();
@@ -761,7 +767,7 @@ void GFX_GrabDepth()
         RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
         RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
 
-        RQVector uniValues = RQVector{ Scene->camera->nearClip, Scene->camera->farClip, 0.0f, 0.0f };
+        RQVector uniValues = RQVector{ TheCamera->m_pRwCamera->nearClip, TheCamera->m_pRwCamera->farClip, 0.0f, 0.0f };
         pForcedShader = g_pSimpleDepthShader;
         pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
 
@@ -954,7 +960,7 @@ void GFX_Radiosity(int intensityLimit, int filterPasses, int renderPasses, int i
 
     const float m_RadiosityFilterUCorrection = 2.0f, m_RadiosityFilterVCorrection = 2.0f;
     float m_RadiosityPixelsX = RsGlobal->maximumWidth, m_RadiosityPixelsY = RsGlobal->maximumHeight;
-    const float rhw = 1.0f / Scene->camera->nearClip;
+    const float rhw = 1.0f / TheCamera->m_pRwCamera->nearClip;
     const float fRasterWidth = pSkyGFXPostFXRaster1->width;
     const float fRasterHeight = pSkyGFXPostFXRaster1->height;
 
@@ -1034,7 +1040,7 @@ void GFX_UnderWaterRipple(CRGBA col, float xo, float yo, int strength, float spe
     TempBufferIndicesStored = 0;
 
     const int nYO = (int)yo;
-    const float recipNearClip = 1.0f / (Scene->camera->nearClip);
+    const float recipNearClip = 1.0f / (TheCamera->m_pRwCamera->nearClip);
     const float nearScreen = RwIm2DGetNearScreenZ();
 
     const float nScreenX = RsGlobal->maximumWidth;
@@ -1174,8 +1180,8 @@ void GFX_DOF() // Completed
     }
     else
     {
-        if(g_fDOFDistance >= Scene->camera->farClip) return;
-        calc01Dist = 1.0f - g_fDOFDistance / (Scene->camera->farClip - Scene->camera->nearClip);
+        if(g_fDOFDistance >= TheCamera->m_pRwCamera->farClip) return;
+        calc01Dist = 1.0f - g_fDOFDistance / (TheCamera->m_pRwCamera->farClip - TheCamera->m_pRwCamera->nearClip);
     }
 
     GFX_GrabScreen(true);
