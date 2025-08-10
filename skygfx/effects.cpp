@@ -1501,24 +1501,24 @@ DECL_HOOKv(PostFX_Render)
     }
     
     if(g_nCrAb != CRAB_INACTIVE) GFX_ChromaticAberration();
+    
+    //GFX_FakeRay(); // doesnt look cool enough
 
     if(WaterDrops::neoWaterDrops)
     {
         WaterDrops::Process();
         WaterDrops::Render();
     }
-    
-    //GFX_FakeRay(); // doesnt look cool enough
-    
-    GFX_Vignette(g_nVignette * 2.55f);
-
-    GFX_DeActivateTexture();
 
     if(g_bFXAA)
     {
         GFX_GrabScreen(true);
         GFX_FrameBufferFXAA();
     }
+    
+    GFX_Vignette(g_nVignette * 2.55f);
+
+    GFX_DeActivateTexture();
 }
 DECL_HOOKv(PostFX_CCTV)
 {
