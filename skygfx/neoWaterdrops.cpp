@@ -129,11 +129,11 @@ DECL_HOOKv(AddFxParticle, void* self, RwV3d *pos, RwV3d *vel, float timeSince, v
     float pd = 20.0f, delta = 1.0f;
     bool isDirt = false, isFrameSensitive = false;
     
-    if(self == g_fx->prt_boatsplash) { pd = 40.0; isFrameSensitive = true; }
+    if(self == g_fx->prt_boatsplash) { pd = 40.0f; isFrameSensitive = true; }
     //else if(self == g_fx->prt_splash) { pd = 15.0; }
-    else if(self == g_fx->prt_wake) { pd = 10.0; isFrameSensitive = true; }
-    else if(self == g_fx->prt_watersplash) { pd = 30.0; isFrameSensitive = true; }
-    else if(self == g_fx->prt_wheeldirt && *pfWeatherRain != 0.0f) { pd = 15.0; isDirt = true; }
+    else if(self == g_fx->prt_wake) { pd = 10.0f; isFrameSensitive = true; }
+    else if(self == g_fx->prt_watersplash) { pd = 30.0f; isFrameSensitive = true; }
+    else if(self == g_fx->prt_wheeldirt && *WetRoads > 0.0f) { pd = 15.0f; isDirt = true; }
     else return;
 
     float len = RwV3dLength(&dist);
@@ -141,7 +141,7 @@ DECL_HOOKv(AddFxParticle, void* self, RwV3d *pos, RwV3d *vel, float timeSince, v
     {
         if(isDirt)
         {
-            if(nextDirtDrop < *m_snTimeInMilliseconds) return;
+            if(nextDirtDrop > *m_snTimeInMilliseconds) return;
             nextDirtDrop = *m_snTimeInMilliseconds + 50;
         }
         if(isFrameSensitive) delta = frameTimeDelta;

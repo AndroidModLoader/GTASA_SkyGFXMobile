@@ -302,6 +302,7 @@ extern int *ms_exitEnterState;
 extern bool *ms_running;
 extern RwTexture** gpMoonMask;
 extern FakeFx_c* g_fx;
+extern float *WetRoads;
 
 // Functions
 extern RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);

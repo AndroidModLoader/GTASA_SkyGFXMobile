@@ -95,6 +95,7 @@ int *ms_exitEnterState;
 bool *ms_running;
 RwTexture** gpMoonMask;
 FakeFx_c* g_fx;
+float *WetRoads;
 
 // Functions
 RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);
@@ -493,4 +494,5 @@ void ResolveExternals()
     SET_TO(ms_running,                      aml->GetSym(hGTASA, "_ZN12CCutsceneMgr10ms_runningE"));
     SET_TO(gpMoonMask,                      aml->GetSym(hGTASA, "gpMoonMask"));
     SET_TO(g_fx,                            aml->GetSym(hGTASA, "g_fx"));
+    SET_TO(WetRoads,                        aml->GetSym(hGTASA, "_ZN8CWeather8WetRoadsE"));
 }
