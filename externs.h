@@ -237,7 +237,6 @@ extern int* rwOpenGLColorMaterialEnabled;
 extern int* ms_envMapPluginOffset;
 extern int* RasterExtOffset;
 extern char* doPop;
-extern RwRaster *grainRaster;
 extern float*  m_fDNBalanceParam;
 extern CPlantSurfProp** m_SurfPropPtrTab;
 extern uint32_t*      m_countSurfPropsAllocated;
