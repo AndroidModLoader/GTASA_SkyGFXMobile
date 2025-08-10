@@ -56,7 +56,6 @@ int g_nUWR = UWR_CLASSIC;
 bool g_bCSB = false;
 float g_fContrast = 1.0f, g_fSaturation = 1.0f, g_fBrightness = 1.0f, g_fGamma = 1.0f;
 bool g_bBloom = false;
-float g_fBloomSkyMult = 0.7f;
 float g_fBloomIntensity = 0.55f;
 bool g_bAutoExposure = false;
 bool g_bFXAA = false;
@@ -71,6 +70,7 @@ float fpostfxXInv = 0, fpostfxYInv = 0;
 RwRaster *pSkyGFXPostFXRaster1 = NULL, *pSkyGFXPostFXRaster2 = NULL,
          *pSkyGFXDepthRaster = NULL,   *pSkyGFXBrightnessRaster = NULL,
          *pSkyGFXBloomP1Raster = NULL, *pSkyGFXBloomP2Raster = NULL,
+         *pSkyGFXBloomP3Raster = NULL, *pSkyGFXBloomP4Raster = NULL,
          *pSkyGFXSceneBrightnessRaster = NULL;
 RwRaster *pDarkRaster = NULL;
 
@@ -145,7 +145,7 @@ void CreateEffectsShaders()
                     "attribute vec2 TexCoord0;\n"
                     "varying mediump vec2 Out_Tex0;\n"
                     "void main() {\n"
-                    "  gl_Position = vec4(Position.xy, 0.0, 1.0);\n"
+                    "  gl_Position = vec4(Position.xy - 1.0, 0.0, 1.0);\n"
                     "  Out_Tex0 = TexCoord0;\n"
                     "}";
     g_pFramebufferRenderShader = CreateCustomShaderAlloc(0, sFRPxl, sFRVtx, sizeof(sFRPxl), sizeof(sFRVtx));
@@ -176,29 +176,26 @@ void CreateEffectsShaders()
 
     char sSimpleBrightPxl[] = "precision mediump float;\n"
                               "uniform sampler2D Diffuse;\n"
-                              "uniform highp sampler2D DepthTex;\n"
                               "varying mediump vec2 Out_Tex0;\n"
                               "uniform mediump vec4 GFX1v;\n"
+                              "varying mediump float CalculatedScaler;\n"
                               "const vec3 LumCoeff = vec3(0.2126, 0.7152, 0.0722);\n"
                               "void main() {\n"
-                              "  highp float depth = texture2D(DepthTex, Out_Tex0).r;\n"
                               "  vec3 color = texture2D(Diffuse, Out_Tex0).rgb;\n"
-                              "  float intensity = dot(color, LumCoeff);\n"
-                              "  if(depth == 0.0) {\n"
-                              "    gl_FragColor = vec4(vec3(GFX1v.y * intensity * intensity), 1.0);\n"
-                              "  } else if(intensity >= GFX1v.x) {\n"
-                              "    gl_FragColor = vec4(color, 1.0);\n"
-                              "  } else {\n"
-                              "    gl_FragColor = vec4(vec3(0.0), 1.0);\n"
-                              "  }\n"
+                              "  float intens = dot(color, LumCoeff);\n"
+                              "  float intensScaled = max(0.0, exp((intens - 1.0) * 2.2) - GFX1v.x) * CalculatedScaler;\n"
+                              "  gl_FragColor = vec4(color * intensScaled, 1.0);\n"
                               "}";
     char sSimpleBrightVtx[] = "precision highp float;\n"
                               "attribute vec3 Position;\n"
                               "attribute vec2 TexCoord0;\n"
                               "varying mediump vec2 Out_Tex0;\n"
+                              "uniform mediump vec4 GFX1v;\n"
+                              "varying mediump float CalculatedScaler;\n"
                               "void main() {\n"
                               "  gl_Position = vec4(Position.xy - 1.0, 0.0, 1.0);\n"
                               "  Out_Tex0 = TexCoord0;\n"
+                              "  CalculatedScaler = 1.0 / (1.0 - GFX1v.x);\n"
                               "}";
     g_pSimpleBrightShader = CreateCustomShaderAlloc(0, sSimpleBrightPxl, sSimpleBrightVtx, sizeof(sSimpleBrightPxl), sizeof(sSimpleBrightVtx));
 
@@ -705,9 +702,19 @@ void GFX_ActivateProcessedDepthTexture()
     ES2Texture* depthTexture = GetES2Raster(pSkyGFXDepthRaster);
     ERQ_SetActiveTexture(2, depthTexture->texID);
 }
-void GFX_ActivateBrightnessTexture()
+void GFX_ActivateFX1Texture()
 {
-    ES2Texture* brTexture = GetES2Raster(pSkyGFXBloomP2Raster);
+    ES2Texture* brTexture = GetES2Raster(pSkyGFXPostFXRaster1);
+    ERQ_SetActiveTexture(2, brTexture->texID);
+}
+void GFX_ActivateFX2Texture()
+{
+    ES2Texture* brTexture = GetES2Raster(pSkyGFXPostFXRaster2);
+    ERQ_SetActiveTexture(2, brTexture->texID);
+}
+void GFX_ActivateFinalBloomTexture()
+{
+    ES2Texture* brTexture = GetES2Raster(pSkyGFXBloomP4Raster);
     ERQ_SetActiveTexture(2, brTexture->texID);
 }
 void GFX_DeActivateTexture()
@@ -740,10 +747,16 @@ void GFX_CheckBuffersSize()
         pSkyGFXBrightnessRaster = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
 
         if(pSkyGFXBloomP1Raster) RwRasterDestroy(pSkyGFXBloomP1Raster);
-        pSkyGFXBloomP1Raster = RwRasterCreate(0.25f * fpostfxX, 0.25f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
+        pSkyGFXBloomP1Raster = RwRasterCreate(0.5f * fpostfxX, 0.5f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
 
         if(pSkyGFXBloomP2Raster) RwRasterDestroy(pSkyGFXBloomP2Raster);
         pSkyGFXBloomP2Raster = RwRasterCreate(0.25f * fpostfxX, 0.25f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
+
+        if(pSkyGFXBloomP3Raster) RwRasterDestroy(pSkyGFXBloomP3Raster);
+        pSkyGFXBloomP3Raster = RwRasterCreate(0.125f * fpostfxX, 0.125f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
+
+        if(pSkyGFXBloomP4Raster) RwRasterDestroy(pSkyGFXBloomP4Raster);
+        pSkyGFXBloomP4Raster = RwRasterCreate(0.125f * fpostfxX, 0.125f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
     }
 }
 void GFX_GrabScreen(bool second = false)
@@ -792,6 +805,7 @@ void GFX_GrabTexIntoTex(RwRaster* src, RwRaster* dst, ES2Shader* shader = NULL, 
     RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERLINEAR);
 
     float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
+    if(!shader) shader = g_pFramebufferRenderShader;
     if(shader)
     {
         DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
@@ -805,11 +819,6 @@ void GFX_GrabTexIntoTex(RwRaster* src, RwRaster* dst, ES2Shader* shader = NULL, 
                             2.0f * (float)dst->height * fpostfxYInv,
                             255, 255, 255, 255, src);
         pForcedShader = NULL;
-    }
-    else
-    {
-        DrawQuadSetUVs(umin, vmax, umax, vmax, umax, vmin, umin, vmin);
-        PostEffectsDrawQuad(0.0f, RsGlobal->maximumHeight - dst->height, dst->width, dst->height, 255, 255, 255, 255, src);
     }
 
     ERQ_GrabFramebuffer(dst);
@@ -831,7 +840,7 @@ void GFX_GrabBrightness(float luminance)
         RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
         RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
 
-        RQVector uniValues = RQVector{ luminance, g_fBloomSkyMult, 0.0f, 0.0f };
+        RQVector uniValues = RQVector{ luminance, 0.0f, 0.0f, 0.0f };
         pForcedShader = g_pSimpleBrightShader;
         pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
 
@@ -1264,6 +1273,7 @@ void GFX_FrameBufferBloom(float intensity) // Completed
 
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
     RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
+    RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERLINEAR);
 
     RQVector uniValues = RQVector{ 1.0f / (float)RsGlobal->maximumWidth, 1.0f / (float)RsGlobal->maximumHeight, intensity, 0.0f };
     pForcedShader = g_pBloomShader;
@@ -1299,10 +1309,11 @@ void GFX_BloomBuffer() // Completed
 
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
     RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
+    RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERLINEAR);
 
     float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
     DrawQuadSetUVs(umin, vmax, umax, vmax, umax, vmin, umin, vmin);
-    PostEffectsDrawQuad(0.0, 0.0, RsGlobal->maximumWidth, RsGlobal->maximumHeight, 255, 255, 255, 255, pSkyGFXBloomP2Raster);
+    PostEffectsDrawQuad(0.0, 0.0, RsGlobal->maximumWidth, RsGlobal->maximumHeight, 255, 255, 255, 255, pSkyGFXBloomP4Raster);
     
     ImmediateModeRenderStatesReStore();
 }
@@ -1350,21 +1361,22 @@ DECL_HOOKv(PostFX_Render)
     if(g_bBloom)
     {
         // Grabbing brightness values
-        GFX_GrabBrightness( *currArea == 0 ? 0.55f : 0.7f );
-        // Bloom pass 1 (Downscaling + horizontal blurring)
-        RQVector uniValues = RQVector{ 1.0f / (float)pSkyGFXBloomP1Raster->width, 1.0f / (float)pSkyGFXBloomP1Raster->height, 1.0f, 0.0f };
-        GFX_GrabTexIntoTex(pSkyGFXBrightnessRaster, pSkyGFXBloomP1Raster, g_pBloomP1Shader, &uniValues);
-        // Bloom pass 2 (Vertical blurring)
-        GFX_GrabTexIntoTex(pSkyGFXBloomP1Raster, pSkyGFXBloomP2Raster, g_pBloomP2Shader, &uniValues);
+        GFX_GrabBrightness( *currArea == 0 ? 0.1f : 0.3f );
+        // Downscale 2 times
+        GFX_GrabTexIntoTex(pSkyGFXBrightnessRaster, pSkyGFXBloomP1Raster);
+        GFX_GrabTexIntoTex(pSkyGFXBloomP1Raster, pSkyGFXBloomP2Raster);
+        // Bloom pass 3 (Final downscaling + horizontal blurring)
+        RQVector uniValues = RQVector{ 1.0f / (float)pSkyGFXBloomP4Raster->width, 1.0f / (float)pSkyGFXBloomP4Raster->height, 1.0f, 0.0f };
+        GFX_GrabTexIntoTex(pSkyGFXBloomP2Raster, pSkyGFXBloomP3Raster, g_pBloomP1Shader, &uniValues);
+        // Bloom pass 4 (Vertical blurring)
+        GFX_GrabTexIntoTex(pSkyGFXBloomP3Raster, pSkyGFXBloomP4Raster, g_pBloomP2Shader, &uniValues);
         // Apply bloom to the framebuffer
-        GFX_ActivateBrightnessTexture();
-
+        GFX_ActivateFinalBloomTexture();
         float bloomIntensity = g_fBloomIntensity;
-        if(*currArea != 0)
-        {
-            bloomIntensity *= 0.72f;
-        }
+        if(*currArea != 0) bloomIntensity *= 0.72f;
         GFX_FrameBufferBloom( bloomIntensity );
+        // Deactivate activated texture (so it can be used!)
+        GFX_DeActivateTexture();
     }
 
     if(g_bAutoExposure)
@@ -1625,7 +1637,6 @@ void StartEffectsStuff()
         pCFGBloom = cfg->Bind("Bloom", g_bBloom, "EnchancedEffects");
         BloomSettingChanged(g_bBloom, pCFGBloom->GetBool());
         AddSetting("Bloom", g_bBloom, 0, sizeofA(aYesNo)-1, aYesNo, BloomSettingChanged, NULL);
-        g_fBloomSkyMult = cfg->GetFloat("Bloom_SkyMult", g_fBloomSkyMult, "EnchancedEffects");
         g_fBloomIntensity = cfg->GetFloat("Bloom_Intensity", g_fBloomIntensity, "EnchancedEffects");
 
         if(g_bHeatHaze)
