@@ -1392,7 +1392,7 @@ DECL_HOOKv(PostFX_Render)
     if(!*pbInCutscene && g_nSpeedFX != SPFX_INACTIVE)
     {
         CAutomobile* veh = (CAutomobile*)FindPlayerVehicle(-1, false);
-        if(veh && (veh->m_nVehicleType < VEHICLE_TYPE_HELI || veh->m_nVehicleType > VEHICLE_TYPE_TRAIN) )
+        if(veh && (veh->m_nVehicleSubType < VEHICLE_TYPE_HELI || veh->m_nVehicleSubType > VEHICLE_TYPE_TRAIN) )
         {
             float dirDot = DotProduct(veh->m_vecMoveSpeed, veh->m_matrix->m_forward);
         #ifdef AML32
