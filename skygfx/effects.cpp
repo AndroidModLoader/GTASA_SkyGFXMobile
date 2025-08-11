@@ -369,7 +369,7 @@ void CreateEffectsShaders()
                        "}";
     g_pDADOFShader = CreateCustomShaderAlloc(0, sDOFDAPxl, sDOFDAVtx, sizeof(sDOFDAPxl), sizeof(sDOFDAVtx));
 
-    char sUWRPxl[] = "precision mediump float;\n"
+    char sUWRPxl[] = "precision highp float;\n"
                      "uniform sampler2D Diffuse;\n"
                      "uniform mediump vec4 GFX1v;\n"
                      "varying mediump vec2 Out_Tex0;\n"
