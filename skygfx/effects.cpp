@@ -248,13 +248,16 @@ void CreateEffectsShaders()
     char sVignettePxl[] = "precision highp float;\n"
                           "uniform sampler2D Diffuse;\n"
                           "varying mediump vec2 Out_Tex0;\n"
+                          "uniform mediump vec4 GFX1v;\n"
+                          "const vec2 centerVec = vec2(0.5, 0.5);\n"
                           "float vignette(vec2 uv, float radius, float smoothness) {\n"
-                          "  float diff = radius - distance(uv, vec2(0.5, 0.5));\n"
+                          "  float diff = radius - distance(uv, centerVec);\n"
                           "  return smoothstep(-smoothness, smoothness, diff);\n"
                           "}\n"
                           "void main() {\n"
-                          "  float vignetteValue = 1.0 - vignette(Out_Tex0, 0.5, 0.5);\n"
+                          "  float vignetteValue = 1.0 - vignette(Out_Tex0, 0.25, 0.5);\n"
                           "  gl_FragColor = texture2D(Diffuse, Out_Tex0) * vignetteValue;\n"
+                          "  gl_FragColor.a *= GFX1v.x;\n"
                           "}";
     char sVignetteVtx[] = "precision highp float;\n"
                           "attribute vec3 Position;\n"
@@ -1415,10 +1418,12 @@ void GFX_Vignette(int alpha) // Completed
     ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
 
+    RQVector uniValues = RQVector{ (float)alpha / 256.0f, 0.0f, 0.0f, 0.0f };
     pForcedShader = g_pVignetteShader;
+    pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
     float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
     DrawQuadSetUVs(umin, vmax, umax, vmax, umax, vmin, umin, vmin);
-    PostEffectsDrawQuad(0.0f, 0.0f, 2.0f, 2.0f, 0, 0, 0, alpha, pDarkRaster);
+    PostEffectsDrawQuad(0.0f, 0.0f, 2.0f, 2.0f, 0, 0, 0, 255, pDarkRaster);
     pForcedShader = NULL;
     
     ImmediateModeRenderStatesReStore();
