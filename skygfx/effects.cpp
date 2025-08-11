@@ -59,6 +59,7 @@ bool g_bBloom = false;
 float g_fBloomIntensity = 0.55f;
 bool g_bAutoExposure = false;
 bool g_bFXAA = false;
+bool g_bSSAO = false;
 
 int g_nGrainRainStrength = 0;
 int g_nInitialGrain = 0;
@@ -72,8 +73,10 @@ RwRaster *pSkyGFXPostFXRaster1 = NULL, *pSkyGFXPostFXRaster2 = NULL,
          *pSkyGFXBloomP1Raster = NULL, *pSkyGFXBloomP2Raster = NULL,
          *pSkyGFXBloomP3Raster = NULL, *pSkyGFXBloomP4Raster = NULL,
          *pSkyGFXSceneBrightnessRaster = NULL, *pSkyGFXOcclusionRaster = NULL,
+         *pSkyGFXOcclusionP1Raster = NULL, *pSkyGFXOcclusionP2Raster = NULL,
+         *pSkyGFXOcclusionP3Raster = NULL,
          *pSkyGFXNormalRaster = NULL, *pSkyGFXRandomRaster = NULL;
-RwRaster *pDarkRaster = NULL;
+RwRaster *pDarkRaster = NULL, *pNoiseRaster = NULL;
 
 ES2Shader* g_pFramebufferRenderShader = NULL;
 ES2Shader* g_pSimpleInverseShader = NULL;
@@ -91,6 +94,7 @@ ES2Shader* g_pBloomP1Shader = NULL;
 ES2Shader* g_pBloomP2Shader = NULL;
 ES2Shader* g_pBloomShader = NULL;
 ES2Shader* g_pFXAAShader = NULL; // FXAA v2.0 shader
+ES2Shader* g_pOcclusionBufferShader = NULL;
 ES2Shader* g_pSSAOShader = NULL;
 ES2Shader* g_pDepthNormalMapShader = NULL;
 
@@ -462,12 +466,12 @@ void CreateEffectsShaders()
 
     char sBloomPxl[] = "precision mediump float;\n"
                        "uniform sampler2D Diffuse;\n"
-                       "uniform sampler2D DepthTex;\n"
+                       "uniform sampler2D BrightBuf;\n"
                        "uniform mediump vec4 GFX1v;\n"
                        "varying mediump vec2 Out_Tex0;\n"
                        "void main() {\n"
                        "  vec3 color = texture2D(Diffuse, Out_Tex0).rgb;\n"
-                       "  vec3 bloom = GFX1v.z * texture2D(DepthTex, Out_Tex0).rgb;\n"
+                       "  vec3 bloom = GFX1v.z * texture2D(BrightBuf, Out_Tex0).rgb;\n"
                        "  gl_FragColor = vec4(color + bloom, 1.0);\n"
                        "}";
     g_pBloomShader = CreateCustomShaderAlloc(0, sBloomPxl, sBloomVtx, sizeof(sBloomPxl), sizeof(sBloomVtx));
@@ -524,79 +528,133 @@ void CreateEffectsShaders()
                       "}";
     g_pFXAAShader = CreateCustomShaderAlloc(0, sFXAAPxl, sFXAAVtx, sizeof(sFXAAPxl), sizeof(sFXAAVtx));
 
-    char sSSAOPxl[] = "precision highp float;\n"
-                      "uniform sampler2D Diffuse;\n"
-                      "uniform highp sampler2D DepthTex;\n"
-                      "varying highp vec2 Out_Tex0;\n"
-                      "uniform highp vec4 GFX1v;\n"
-                      "varying highp vec3 SampleSphere[16];\n"
-                      "varying highp vec4 NormalDepthOffset;\n"
-                      "varying float RandomSeed;\n"
-                      "const float total_strength = 1.0;\n"
-                      "const float base = 0.2;\n"
-                      "const float area = 0.0075;\n"
-                      "const highp float falloff = 0.000001;\n"
-                      "const highp float radius = 0.0002;\n"
-                      "const vec2 offset1 = vec2(0.0, 0.001);\n"
-                      "const vec2 offset2 = vec2(0.001, 0.0);\n"
-                      "vec3 normalFromDepth(float depth, vec2 uvOff) {\n"
-                      "  float depth1 = texture2D(DepthTex, uvOff + offset1).r;\n"
-                      "  float depth2 = texture2D(DepthTex, uvOff + offset2).r;\n"
-                      "  vec3 p1 = vec3(offset1, depth1 - depth);\n"
-                      "  vec3 p2 = vec3(offset2, depth2 - depth);\n"
-                      "  vec3 normal = cross(p1, p2);\n"
-                      "  normal.z = -normal.z;\n"
-                      "  return normalize(normal);\n"
-                      "}"
-                      "void main() {\n"
-                      "  vec3 random = normalize(texture2D(Diffuse, 8.0 * Out_Tex0).rgb);\n"
-                      "  highp float depth = texture2D(DepthTex, Out_Tex0).r;\n"
-                      "  vec3 position = vec3(Out_Tex0, depth);\n"
-                      "  vec3 normal = normalFromDepth(depth, Out_Tex0);\n"
-                      "  float radius_depth = radius / depth;\n"
-                      "  float occlusion = 0.0;\n"
-                      "  for(int i = 0; i < 16; i++) {\n"
-                      "    vec3 ray = radius_depth * reflect(SampleSphere[i], random);\n"
-                      "    vec3 hemi_ray = position + sign(dot(ray, normal)) * ray;\n"
-                      "    float occ_depth = texture2D(DepthTex, clamp(hemi_ray.xy, 0.0, 1.0)).r;\n"
-                      "    float difference = depth - occ_depth;\n"
-                      "    occlusion += step(falloff, difference) * (1.0 - smoothstep(falloff, area, difference));\n"
-                      "  }\n"
-                      "  float ao = 1.0 - total_strength * occlusion * (1.0 / 16.0);\n"
-                      "  float oc = clamp(ao + base, 0.0, 1.0);\n"
-                      "  gl_FragColor = vec4(oc, oc, oc, 1.0);\n"
-                      "}";
-    char sSSAOVtx[] = "precision highp float;\n"
-                      "attribute vec3 Position;\n"
-                      "attribute vec2 TexCoord0;\n"
-                      "varying highp vec2 Out_Tex0;\n"
-                      "uniform highp vec4 GFX1v;\n"
-                      "varying highp vec3 SampleSphere[16];\n"
-                      "varying highp vec4 NormalDepthOffset;\n"
-                      "varying float RandomSeed;\n"
-                      "void main() {\n"
-                      "  gl_Position = vec4(Position.xy - 1.0, 0.0, 1.0);\n"
-                      "  Out_Tex0 = TexCoord0;\n"
-                      "  SampleSphere[0]  = vec3( 0.5381,  0.1856, -0.4319);\n"
-                      "  SampleSphere[1]  = vec3( 0.1379,  0.2486,  0.4430);\n"
-                      "  SampleSphere[2]  = vec3( 0.3371,  0.5679, -0.0057);\n"
-                      "  SampleSphere[3]  = vec3(-0.6999, -0.0451, -0.0019);\n"
-                      "  SampleSphere[4]  = vec3( 0.0689, -0.1598, -0.8547);\n"
-                      "  SampleSphere[5]  = vec3( 0.0560,  0.0069, -0.1843);\n"
-                      "  SampleSphere[6]  = vec3(-0.0146,  0.1402,  0.0762);\n"
-                      "  SampleSphere[7]  = vec3( 0.0100, -0.1924, -0.0344);\n"
-                      "  SampleSphere[8]  = vec3(-0.3577, -0.5301, -0.4358);\n"
-                      "  SampleSphere[9]  = vec3(-0.3169,  0.1063,  0.0158);\n"
-                      "  SampleSphere[10] = vec3( 0.0103, -0.5869,  0.0046);\n"
-                      "  SampleSphere[11] = vec3(-0.0897, -0.4940,  0.3287);\n"
-                      "  SampleSphere[12] = vec3( 0.7119, -0.0154, -0.0918);\n"
-                      "  SampleSphere[13] = vec3(-0.0533,  0.0596, -0.5411);\n"
-                      "  SampleSphere[14] = vec3( 0.0352, -0.0631,  0.5460);\n"
-                      "  SampleSphere[15] = vec3(-0.4776,  0.2847, -0.0271);\n"
-                      "  NormalDepthOffset = vec4(0.0, GFX1v.y, GFX1v.x, 0.0);\n"
-                      "  RandomSeed = 0.3333 * (GFX1v.z + Position.x + Position.y);\n"
-                      "}";
-    g_pSSAOShader = CreateCustomShaderAlloc(0, sSSAOPxl, sSSAOVtx, sizeof(sSSAOPxl), sizeof(sSSAOVtx));
+    //char sOBPxl[] = "precision highp float;\n"
+    //                "uniform highp sampler2D Diffuse;\n"
+    //                "uniform highp sampler2D NormalBuf;\n"
+    //                "uniform highp sampler2D DepthTex;\n"
+    //                "varying highp vec2 Out_Tex0;\n"
+    //                "uniform highp vec4 GFX1v;\n"
+    //                "varying highp vec3 SampleSphere[16];\n"
+    //                "uniform mat4 ProjMatrix;\n"
+    //                "varying mat4 ProjMatrixInv;\n"
+    //                "vec3 getViewPos(vec2 uv) {\n"
+    //                "  float linearDepth = 1.0 - texture2D(DepthTex, uv).r;\n"
+    //                "  vec2 ndc = uv * 2.0 - 1.0;\n"
+    //                "  vec4 clipPos = vec4(ndc, linearDepth, 1.0);\n"
+    //                "  vec4 viewPos = ProjMatrixInv * clipPos;\n"
+    //                "  viewPos /= viewPos.w;\n"
+    //                "  return viewPos.xyz;\n"
+    //                "}\n"
+    //                "void main() {\n"
+    //                "  vec3 normal = texture2D(NormalBuf, Out_Tex0).rgb;\n"
+    //                "  normal = normalize(normal * 2.0 - 1.0);\n"
+    //                "  vec3 fragPos = getViewPos(Out_Tex0);\n"
+    //                "  vec3 randomVec = texture2D(Diffuse, Out_Tex0 * GFX1v.xy).xyz;\n"
+    //                "  randomVec = normalize(randomVec * 2.0 - 1.0);\n"
+    //                "  vec3 tangent = normalize(randomVec - normal * dot(randomVec, normal));\n"
+    //                "  vec3 bitangent = cross(normal, tangent);\n"
+    //                "  mat3 TBN = mat3(tangent, bitangent, normal);\n"
+    //                "  float occlusion = 0.0;\n"
+    //                "  for (int i = 0; i < 16; ++i) {\n"
+    //                "    vec3 sampleVec = TBN * SampleSphere[i];\n"
+    //                "    sampleVec = fragPos + sampleVec * GFX1v.z;\n"
+    //                "    vec4 offset = ProjMatrix * vec4(sampleVec, 1.0);\n"
+    //                "    offset.xyz /= offset.w;\n"
+    //                "    vec2 sampleUV = offset.xy * 0.5 + 0.5;\n"
+    //                "    float sampleDepth = 1.0 - texture2D(DepthTex, sampleUV).r;\n"
+    //                "    float rangeCheck = smoothstep(0.0, 1.0, GFX1v.z / abs(fragPos.z - sampleDepth));\n"
+    //                "    if ((sampleDepth + GFX1v.w) < sampleVec.z) { occlusion += rangeCheck; }\n"
+    //                "  }\n"
+    //                "  occlusion = 1.0 - (occlusion / 16.0);\n"
+    //                "  gl_FragColor = vec4(vec3(occlusion), 1.0);\n"
+    //                "}";
+    char sOBPxl[] = "precision highp float;\n"
+                    "uniform highp sampler2D Diffuse;\n"
+                    "uniform highp sampler2D DepthTex;\n"
+                    "varying highp vec2 Out_Tex0;\n"
+                    "uniform highp vec4 GFX1v;\n"
+                    "varying highp vec3 SampleSphere[16];\n"
+                    "const float ssaoStrength = 1.2;\n"
+                    "const float ssaoBase = 0.1;\n"
+                    "const float ssaoArea = 0.03;\n"
+                    "const float ssaoFalloff = 0.000001;\n"
+                    "const float ssaoRadius = 0.004;\n"
+                    "vec3 getNormalFromDepth(float depth, vec2 uv) {\n"
+                    "  vec2 offset1 = vec2(0.0, GFX1v.w);\n"
+                    "  vec2 offset2 = vec2(GFX1v.z, 0.0);\n"
+                    "  float depth1 = texture2D(DepthTex, uv + offset1).r;\n"
+                    "  float depth2 = texture2D(DepthTex, uv + offset2).r;\n"
+                    "  vec3 p1 = vec3(offset1, depth1 - depth);\n"
+                    "  vec3 p2 = vec3(offset2, depth2 - depth);\n"
+                    "  vec3 normal = cross(p1, p2);\n"
+                    "  normal.z = -normal.z;\n"
+                    "  return normalize(normal);\n"
+                    "}\n"
+                    "void main() {\n"
+                    "  highp float depth = texture2D(DepthTex, Out_Tex0).r;\n"
+                    "  if(depth > 1.0) {\n"
+                    "    gl_FragColor = vec4(vec3(ssaoBase), 1.0);\n"
+                    "    return;\n"
+                    "  }\n"
+                    "  vec3 random = normalize(texture2D(Diffuse, Out_Tex0 * GFX1v.xy).rgb);\n"
+                    "  vec3 position = vec3(Out_Tex0, depth);\n"
+                    "  vec3 normal = getNormalFromDepth(depth, Out_Tex0);\n"
+                    "  float radiusDepth = ssaoRadius / depth;\n"
+                    "  float occlusion = 0.0;\n"
+                    "  for(int i = 0; i < 16; i++) {\n"
+                    "    vec3 ray = radiusDepth * reflect(SampleSphere[i], random);\n"
+                    "    vec3 hemiRay = position + sign(dot(ray, normal)) * ray;\n"
+                    "    float occDepth = texture2D(DepthTex, clamp(hemiRay.xy, 0.0, 1.0)).r;\n"
+                    "    float difference = depth - occDepth;\n"
+                    "    occlusion += step(ssaoFalloff, difference) * (1.0 - smoothstep(ssaoFalloff, ssaoArea, difference));\n"
+                    "  }\n"
+                    "  occlusion = 1.0 - ssaoStrength * (occlusion / 16.0);\n"
+                    "  gl_FragColor = vec4(clamp(occlusion + ssaoBase, 0.0, 1.0));\n"
+                    "}";
+    char sOBVtx[] = "precision highp float;\n"
+                    "attribute vec3 Position;\n"
+                    "attribute vec2 TexCoord0;\n"
+                    "varying highp vec2 Out_Tex0;\n"
+                    "uniform highp vec4 GFX1v;\n"
+                    "varying highp vec3 SampleSphere[16];\n"
+                    "uniform mat4 ProjMatrix;\n"
+                    "varying mat4 ProjMatrixInv;\n"
+                    "mat4 inverseMat4(mat4 m) {\n"
+                    "  float a00 = m[0][0], a01 = m[0][1], a02 = m[0][2], a03 = m[0][3], a10 = m[1][0], a11 = m[1][1], a12 = m[1][2], a13 = m[1][3],\n"
+                    "  a20 = m[2][0], a21 = m[2][1], a22 = m[2][2], a23 = m[2][3], a30 = m[3][0], a31 = m[3][1], a32 = m[3][2], a33 = m[3][3];\n"
+                    "  float b00 = a00 * a11 - a01 * a10, b01 = a00 * a12 - a02 * a10, b02 = a00 * a13 - a03 * a10, b03 = a01 * a12 - a02 * a11,\n"
+                    "  b04 = a01 * a13 - a03 * a11, b05 = a02 * a13 - a03 * a12, b06 = a20 * a31 - a21 * a30, b07 = a20 * a32 - a22 * a30,\n"
+                    "  b08 = a20 * a33 - a23 * a30, b09 = a21 * a32 - a22 * a31, b10 = a21 * a33 - a23 * a31, b11 = a22 * a33 - a23 * a32;\n"
+                    "  float det = b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06;\n"
+                    "  return mat4(a11 * b11 - a12 * b10 + a13 * b09, a02 * b10 - a01 * b11 - a03 * b09, a31 * b05 - a32 * b04 + a33 * b03,\n"
+                    "              a22 * b04 - a21 * b05 - a23 * b03, a12 * b08 - a10 * b11 - a13 * b07, a00 * b11 - a02 * b08 + a03 * b07,\n"
+                    "              a32 * b02 - a30 * b05 - a33 * b01, a20 * b05 - a22 * b02 + a23 * b01, a10 * b10 - a11 * b08 + a13 * b06,\n"
+                    "              a01 * b08 - a00 * b10 - a03 * b06, a30 * b04 - a31 * b02 + a33 * b00, a21 * b02 - a20 * b04 - a23 * b00,\n"
+                    "              a11 * b07 - a10 * b09 - a12 * b06, a00 * b09 - a01 * b07 + a02 * b06, a31 * b01 - a30 * b03 - a32 * b00,\n"
+                    "              a20 * b03 - a21 * b01 + a22 * b00) / det;\n"
+                    "}\n"
+                    "void main() {\n"
+                    "  gl_Position = vec4(Position.xy - 1.0, 0.0, 1.0);\n"
+                    "  Out_Tex0 = TexCoord0;\n"
+                    "  SampleSphere[0]  = vec3( 0.5381,  0.1856, -0.4319);\n"
+                    "  SampleSphere[1]  = vec3( 0.1379,  0.2486,  0.4430);\n"
+                    "  SampleSphere[2]  = vec3( 0.3371,  0.5679, -0.0057);\n"
+                    "  SampleSphere[3]  = vec3(-0.6999, -0.0451, -0.0019);\n"
+                    "  SampleSphere[4]  = vec3( 0.0689, -0.1598, -0.8547);\n"
+                    "  SampleSphere[5]  = vec3( 0.0560,  0.0069, -0.1843);\n"
+                    "  SampleSphere[6]  = vec3(-0.0146,  0.1402,  0.0762);\n"
+                    "  SampleSphere[7]  = vec3( 0.0100, -0.1924, -0.0344);\n"
+                    "  SampleSphere[8]  = vec3(-0.3577, -0.5301, -0.4358);\n"
+                    "  SampleSphere[9]  = vec3(-0.3169,  0.1063,  0.0158);\n"
+                    "  SampleSphere[10] = vec3( 0.0103, -0.5869,  0.0046);\n"
+                    "  SampleSphere[11] = vec3(-0.0897, -0.4940,  0.3287);\n"
+                    "  SampleSphere[12] = vec3( 0.7119, -0.0154, -0.0918);\n"
+                    "  SampleSphere[13] = vec3(-0.0533,  0.0596, -0.5411);\n"
+                    "  SampleSphere[14] = vec3( 0.0352, -0.0631,  0.5460);\n"
+                    "  SampleSphere[15] = vec3(-0.4776,  0.2847, -0.0271);\n"
+                    "  //ProjMatrixInv = inverseMat4(ProjMatrix);\n"
+                    "}";
+    g_pOcclusionBufferShader = CreateCustomShaderAlloc(0, sOBPxl, sOBVtx, sizeof(sOBPxl), sizeof(sOBVtx));
 
     char sDNMPxl[] = "precision highp float;\n"
                      "uniform sampler2D Diffuse;\n"
@@ -634,6 +692,25 @@ void CreateEffectsShaders()
                      "  Out_Tex0 = TexCoord0;\n"
                      "}";
     g_pDepthNormalMapShader = CreateCustomShaderAlloc(0, sDNMPxl, sDNMVtx, sizeof(sDNMPxl), sizeof(sDNMVtx));
+
+    char sSSAOVtx[] = "precision highp float;\n"
+                      "attribute vec3 Position;\n"
+                      "attribute vec2 TexCoord0;\n"
+                      "varying highp vec2 Out_Tex0;\n"
+                      "void main() {\n"
+                      "  gl_Position = vec4(Position.xy - 1.0, 0.0, 1.0);\n"
+                      "  Out_Tex0 = TexCoord0;\n"
+                      "}";
+    char sSSAOPxl[] = "precision mediump float;\n"
+                      "uniform sampler2D Diffuse;\n"
+                      "uniform sampler2D BrightBuf;\n"
+                      "varying mediump vec2 Out_Tex0;\n"
+                      "void main() {\n"
+                      "  vec3 color = texture2D(Diffuse, Out_Tex0).rgb;\n"
+                      "  vec3 occ = texture2D(BrightBuf, Out_Tex0).rgb;\n"
+                      "  gl_FragColor = vec4(color * occ, 1.0);\n"
+                      "}";
+    g_pSSAOShader = CreateCustomShaderAlloc(0, sSSAOPxl, sSSAOVtx, sizeof(sSSAOPxl), sizeof(sSSAOVtx));
 }
 void RenderGrainSettingChanged(int oldVal, int newVal, void* data = NULL)
 {
@@ -788,9 +865,9 @@ void CreateRandomTexture(RwRaster* target)
     int pixSize = target->width * target->height;
     for(int i = 0; i < pixSize; ++i)
     {
-        *(pixels++) = (rand() % 256);
-        *(pixels++) = (rand() % 256);
-        *(pixels++) = (rand() % 256);
+        *(pixels++) = (rand() % 64);
+        *(pixels++) = (rand() % 64);
+        *(pixels++) = (rand() % 64);
         *(pixels++) = 255;
     }
     RwRasterUnlock(target);
@@ -842,9 +919,19 @@ void GFX_ActivateFinalBloomTexture()
     ES2Texture* brTexture = GetES2Raster(pSkyGFXBloomP4Raster);
     ERQ_SetActiveTexture(2, brTexture->texID);
 }
-void GFX_DeActivateTexture()
+void GFX_ActivateFinalOcclusionTexture()
 {
-    ERQ_SetActiveTexture(2, 0);
+    ES2Texture* brTexture = GetES2Raster(pSkyGFXOcclusionP3Raster);
+    ERQ_SetActiveTexture(2, brTexture->texID);
+}
+void GFX_DeActivateTexture(int tex = 2)
+{
+    ERQ_SetActiveTexture(tex, 0);
+}
+void GFX_ActivateNormalBufferTexture()
+{
+    ES2Texture* depthTexture = GetES2Raster(pSkyGFXNormalRaster);
+    ERQ_SetActiveTexture(1, depthTexture->texID);
 }
 void GFX_CheckBuffersSize()
 {
@@ -885,6 +972,15 @@ void GFX_CheckBuffersSize()
 
         if(pSkyGFXOcclusionRaster) RwRasterDestroy(pSkyGFXOcclusionRaster);
         pSkyGFXOcclusionRaster = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
+
+        if(pSkyGFXOcclusionP1Raster) RwRasterDestroy(pSkyGFXOcclusionP1Raster);
+        pSkyGFXOcclusionP1Raster = RwRasterCreate(0.5f * fpostfxX, 0.5f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
+
+        if(pSkyGFXOcclusionP2Raster) RwRasterDestroy(pSkyGFXOcclusionP2Raster);
+        pSkyGFXOcclusionP2Raster = RwRasterCreate(0.25f * fpostfxX, 0.25f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
+
+        if(pSkyGFXOcclusionP3Raster) RwRasterDestroy(pSkyGFXOcclusionP3Raster);
+        pSkyGFXOcclusionP3Raster = RwRasterCreate(0.25f * fpostfxX, 0.25f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
 
         if(pSkyGFXNormalRaster) RwRasterDestroy(pSkyGFXNormalRaster);
         pSkyGFXNormalRaster = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
@@ -994,36 +1090,6 @@ void GFX_GrabSceneBrightness()
 {
     GFX_CheckBuffersSize();
     GFX_GrabTexIntoTex(pSkyGFXPostFXRaster1, pSkyGFXSceneBrightnessRaster);
-}
-void GFX_OcclusionBuffer()
-{
-    GFX_CheckBuffersSize();
-
-    if(pSkyGFXOcclusionRaster)
-    {
-        GFX_ActivateRawDepthTexture();
-
-        ImmediateModeRenderStatesStore();
-        ImmediateModeRenderStatesSet();
-
-        RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
-        RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
-        RwRenderStateSet(rwRENDERSTATETEXTUREADDRESS, (void*)rwTEXTUREADDRESSWRAP);
-
-        RQVector uniValues = RQVector{ 1.0f / (float)RsGlobal->maximumWidth, 1.0f / (float)RsGlobal->maximumHeight, 0.0f, 0.0f };
-        pForcedShader = g_pSSAOShader;
-        pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
-
-        float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
-        DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
-        PostEffectsDrawQuad(0.0f, 0.0f, 2.0f, 2.0f, 255, 255, 255, 255, pSkyGFXRandomRaster);
-        pForcedShader = NULL;
-
-        ERQ_GrabFramebuffer(pSkyGFXOcclusionRaster);
-        ERQ_GrabFramebufferPost();
-
-        ImmediateModeRenderStatesReStore();
-    }
 }
 void GFX_NormalBuffer()
 {
@@ -1406,6 +1472,37 @@ void GFX_DOF() // Completed
     
     ImmediateModeRenderStatesReStore();
 }
+void GFX_GrabOcclusion()
+{
+    GFX_ActivateNormalBufferTexture();
+    //GFX_ActivateProcessedDepthTexture();
+    GFX_ActivateRawDepthTexture();
+
+    ImmediateModeRenderStatesStore();
+    ImmediateModeRenderStatesSet();
+
+    RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
+    RwRenderStateSet(rwRENDERSTATETEXTUREADDRESS, (void*)rwTEXTUREADDRESSWRAP);
+
+    RQVector uniValues = RQVector{ fpostfxX / 8.0f, fpostfxY / 8.0f, fpostfxXInv, fpostfxYInv };
+    //RQVector uniValues = RQVector{ fpostfxX / 8.0f, fpostfxY / 8.0f, 0.5f, 0.025f };
+    pForcedShader = g_pOcclusionBufferShader;
+    pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
+
+    float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
+    DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
+    PostEffectsDrawQuad(0.0, 0.0, 2.0f, 2.0f, 255, 255, 255, 255, pNoiseRaster);
+    pForcedShader = NULL;
+
+    ERQ_GrabFramebuffer(pSkyGFXOcclusionRaster);
+    ERQ_GrabFramebufferPost();
+    
+    ImmediateModeRenderStatesReStore();
+
+    GFX_DeActivateTexture(1);
+    GFX_DeActivateTexture();
+}
 void GFX_FrameBuffer() // Completed
 {
     ImmediateModeRenderStatesStore();
@@ -1482,6 +1579,28 @@ void GFX_FrameBufferBloom(float intensity) // Completed
 
     GFX_GrabScreen(); // Update the framebuffer with Bloom-processed image
 }
+void GFX_FrameBufferSSAO() // Completed
+{
+    ImmediateModeRenderStatesStore();
+    ImmediateModeRenderStatesSet();
+
+    RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
+    RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERLINEAR);
+
+    //RQVector uniValues = RQVector{ 1.0f / (float)RsGlobal->maximumWidth, 1.0f / (float)RsGlobal->maximumHeight, intensity, 0.0f };
+    pForcedShader = g_pSSAOShader;
+    //pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
+    
+    float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
+    DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
+    PostEffectsDrawQuad(0.0, 0.0, 2.0f, 2.0f, 255, 255, 255, 255, pSkyGFXPostFXRaster2);
+
+    pForcedShader = NULL;
+    ImmediateModeRenderStatesReStore();
+
+    GFX_GrabScreen(); // Update the framebuffer with Bloom-processed image
+}
 void GFX_DepthBuffer() // Completed
 {
     ImmediateModeRenderStatesStore();
@@ -1521,20 +1640,38 @@ DECL_HOOKv(WaterCannons_Render)
     RenderMovingFog();
     RenderVolumetricClouds();
 }
+static bool g_bPostFXStarted = false;
 DECL_HOOKv(PostFX_Init)
 {
-    if(pGrainRaster) RwRasterDestroy(pGrainRaster);
-    pGrainRaster = RwRasterCreate(64, 64, 32, rwRASTERTYPETEXTURE | rwRASTERFORMAT8888);
-    CreateGrainTexture(pGrainRaster);
+    PostFX_Init();
 
-    if(pDarkRaster) RwRasterDestroy(pDarkRaster);
-    pDarkRaster = RwRasterCreate(64, 64, 32, rwRASTERTYPETEXTURE | rwRASTERFORMAT8888);
-    CreatePlainTexture(pDarkRaster, CRGBA(0, 0, 0));
+    if(g_bPostFXStarted) return;
 
-    if(pSkyGFXSceneBrightnessRaster) RwRasterDestroy(pSkyGFXSceneBrightnessRaster);
-    pSkyGFXSceneBrightnessRaster = RwRasterCreate(8, 8, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
+    if(!pGrainRaster)
+    {
+        pGrainRaster = RwRasterCreate(64, 64, 32, rwRASTERTYPETEXTURE | rwRASTERFORMAT8888);
+        CreateGrainTexture(pGrainRaster);
+    }
+
+    if(!pDarkRaster)
+    {
+        pDarkRaster = RwRasterCreate(64, 64, 32, rwRASTERTYPETEXTURE | rwRASTERFORMAT8888);
+        CreatePlainTexture(pDarkRaster, CRGBA(0, 0, 0));
+    }
+
+    if(!pNoiseRaster)
+    {
+        pNoiseRaster = RwRasterCreate(8, 8, 32, rwRASTERTYPETEXTURE | rwRASTERFORMAT8888);
+        CreateRandomTexture(pNoiseRaster);
+    }
+
+    if(!pSkyGFXSceneBrightnessRaster)
+    {
+        pSkyGFXSceneBrightnessRaster = RwRasterCreate(8, 8, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
+    }
 
     *pbFog = false; // uninitialised variable
+    g_bPostFXStarted = true;
 }
 float gfWaterGreen = 0.0f;
 CRGBA m_waterCol(64, 64, 64, 64);
@@ -1551,6 +1688,23 @@ DECL_HOOKv(PostFX_Render)
     else
     {
         GFX_FrameBuffer();
+    }
+
+    if(g_bSSAO)
+    {
+        GFX_GrabScreen(true);
+        GFX_GrabOcclusion();
+        // First downscale
+        GFX_GrabTexIntoTex(pSkyGFXOcclusionRaster, pSkyGFXOcclusionP1Raster);
+        // Second downscale + horizontal blur
+        RQVector uniValues = RQVector{ 1.0f / (float)pSkyGFXOcclusionP3Raster->width, 1.0f / (float)pSkyGFXOcclusionP3Raster->height, 1.0f, 0.0f };
+        GFX_GrabTexIntoTex(pSkyGFXOcclusionP1Raster, pSkyGFXOcclusionP2Raster, g_pBloomP1Shader, &uniValues);
+        // Vertical blur
+        GFX_GrabTexIntoTex(pSkyGFXOcclusionP2Raster, pSkyGFXOcclusionP3Raster, g_pBloomP2Shader, &uniValues);
+
+        GFX_ActivateFinalOcclusionTexture();
+        GFX_FrameBufferSSAO();
+        GFX_DeActivateTexture();
     }
 
     if(g_bBloom)

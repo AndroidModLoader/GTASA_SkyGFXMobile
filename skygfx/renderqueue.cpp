@@ -379,7 +379,11 @@ DECL_HOOKv(InitializeShaderAfterCompile, ES2Shader* self)
 {
     InitializeShaderAfterCompile(self);
 
-    GLint id = glGetUniformLocation(self->nShaderId, "DepthTex");
+    GLint id = glGetUniformLocation(self->nShaderId, "NormalBuf");
+    if(id != -1) glUniform1i(id, 1);
+    id = glGetUniformLocation(self->nShaderId, "DepthTex");
+    if(id != -1) glUniform1i(id, 2);
+    id = glGetUniformLocation(self->nShaderId, "BrightBuf");
     if(id != -1) glUniform1i(id, 2);
 
     if(self->vBindings[SVCID_RedGrade].uniformID == -1)
