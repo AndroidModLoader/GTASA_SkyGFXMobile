@@ -1264,7 +1264,7 @@ void GFX_SpeedFX(float speed) // Completed
     }
     ImmediateModeRenderStatesReStore();
 }
-void GFX_FrameBuffer();
+void GFX_FrameBuffer(bool second);
 void GFX_Radiosity(int intensityLimit, int filterPasses, int renderPasses, int intensity) // Does not work?
 {
     RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERLINEAR);
@@ -1301,6 +1301,8 @@ void GFX_Radiosity(int intensityLimit, int filterPasses, int renderPasses, int i
     RQVector uniValues2 = RQVector{ cu / (float)pSkyGFXRadiosityRaster->width, cv / (float)pSkyGFXRadiosityRaster->height,
                                    (maxu - minu) / (float)pSkyGFXRadiosityRaster->width, (maxv - minv) / (float)pSkyGFXRadiosityRaster->height };
 
+    GFX_FrameBuffer(true);
+    
     pForcedShader = g_pRadiosityShader;
     pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues1.x, 4);
     pForcedShader->SetVectorConstant(SVCID_GreenGrade, &uniValues2.x, 4);
@@ -1319,7 +1321,6 @@ void GFX_Radiosity(int intensityLimit, int filterPasses, int renderPasses, int i
     RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
     
     GFX_GrabScreen();
-    GFX_FrameBuffer();
 }
 void GFX_HeatHaze(float intensity, bool alphaMaskMode)
 {
@@ -1537,7 +1538,7 @@ void GFX_GrabOcclusion()
     GFX_DeActivateTexture(1);
     GFX_DeActivateTexture();
 }
-void GFX_FrameBuffer() // Completed
+void GFX_FrameBuffer(bool second = false) // Completed
 {
     ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
@@ -1547,7 +1548,7 @@ void GFX_FrameBuffer() // Completed
 
     float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
     DrawQuadSetUVs(umin, vmax, umax, vmax, umax, vmin, umin, vmin);
-    PostEffectsDrawQuad(0.0, 0.0, RsGlobal->maximumWidth, RsGlobal->maximumHeight, 255, 255, 255, 255, pSkyGFXPostFXRaster1);
+    PostEffectsDrawQuad(0.0, 0.0, RsGlobal->maximumWidth, RsGlobal->maximumHeight, 255, 255, 255, 255, second ? pSkyGFXPostFXRaster2 : pSkyGFXPostFXRaster1);
     
     ImmediateModeRenderStatesReStore();
 }
