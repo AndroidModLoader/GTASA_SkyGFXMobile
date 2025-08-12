@@ -68,14 +68,13 @@ RwRaster* pGrainRaster = NULL;
 int postfxX = 0, postfxY = 0;
 float fpostfxX = 0, fpostfxY = 0;
 float fpostfxXInv = 0, fpostfxYInv = 0;
-RwRaster *pSkyGFXPostFXRaster1 = NULL, *pSkyGFXPostFXRaster2 = NULL,
-         *pSkyGFXDepthRaster = NULL,   *pSkyGFXBrightnessRaster = NULL,
-         *pSkyGFXBloomP1Raster = NULL, *pSkyGFXBloomP2Raster = NULL,
-         *pSkyGFXBloomP3Raster = NULL,
-         *pSkyGFXSceneBrightnessRaster = NULL, *pSkyGFXOcclusionRaster = NULL,
-         *pSkyGFXOcclusionP1Raster = NULL, *pSkyGFXOcclusionP2Raster = NULL,
-         *pSkyGFXOcclusionP3Raster = NULL, *pSkyGFXRadiosityRaster = NULL,
-         *pSkyGFXNormalRaster = NULL;
+RwRaster *pSkyGFXPostFXRaster1 = NULL,     *pSkyGFXPostFXRaster2 = NULL,
+         *pSkyGFXDepthRaster = NULL,       *pSkyGFXBrightnessRaster = NULL,
+         *pSkyGFXBloomP1Raster = NULL,     *pSkyGFXBloomP2Raster = NULL,
+         *pSkyGFXBloomP3Raster = NULL,     *pSkyGFXSceneBrightnessRaster = NULL,
+         *pSkyGFXOcclusionRaster = NULL,   *pSkyGFXOcclusionP1Raster = NULL,
+         *pSkyGFXOcclusionP2Raster = NULL, *pSkyGFXOcclusionP3Raster = NULL,
+         *pSkyGFXRadiosityRaster = NULL,   *pSkyGFXNormalRaster = NULL;
 RwRaster *pDarkRaster = NULL, *pNoiseRaster = NULL;
 
 ES2Shader* g_pFramebufferRenderShader = NULL;
@@ -140,6 +139,7 @@ ConfigEntry *pCFGBloom;
 ConfigEntry *pCFGNeoWaterDrops;
 ConfigEntry *pCFGNeoBloodDrops;
 ConfigEntry *pCFGFXAA;
+ConfigEntry *pCFGHeatHaze;
 
 /* Functions */
 void CreateEffectsShaders()
@@ -894,6 +894,15 @@ void FXAASettingChanged(int oldVal, int newVal, void* data = NULL)
 
     cfg->Save();
 }
+void HeatHazeSettingChanged(int oldVal, int newVal, void* data = NULL)
+{
+    if(oldVal == newVal) return;
+
+    pCFGHeatHaze->SetBool(newVal != 0);
+    g_bHeatHaze = pCFGHeatHaze->GetBool();
+
+    cfg->Save();
+}
 void CreateGrainTexture(RwRaster* target)
 {
     if(!target) return;
@@ -1338,6 +1347,8 @@ void GFX_Radiosity(int intensityLimit, int filterPasses, int renderPasses, int i
 }
 void GFX_HeatHaze(float intensity, bool alphaMaskMode)
 {
+    GFX_GrabScreen();
+    
     pForcedShader = g_pSimpleInverseShader;
     RwRaster* bak = *pRasterFrontBuffer;
     *pRasterFrontBuffer = pSkyGFXPostFXRaster1;
@@ -2008,6 +2019,13 @@ void StartEffectsStuff()
         *m_RadiosityRenderPasses = cfg->GetInt("Radiosity_RenderPasses", *m_RadiosityRenderPasses, "Effects");
         *m_RadiosityIntensity = cfg->GetInt("Radiosity_Intensity", *m_RadiosityIntensity, "Effects");
 
+        pCFGHeatHaze = cfg->Bind("HeatHaze", g_bHeatHaze, "Effects");
+        HeatHazeSettingChanged(g_bHeatHaze, pCFGHeatHaze->GetBool());
+        AddSetting("Heat Haze", g_bHeatHaze, 0, sizeofA(aYesNo)-1, aYesNo, HeatHazeSettingChanged, NULL);
+        // Dont waste precious BLX hooks space
+        //HOOKBLX(HeatHazeFX_GrabBuffer, pGTASA + BYBIT(0x5B51E6, 0x6D94EC));
+        aml->PlaceNOP4(pGTASA + BYBIT(0x5B51E6, 0x6D94EC), 1);
+
         pCFGNeoWaterDrops = cfg->Bind("NEOWaterDrops", WaterDrops::neoWaterDrops, "Effects");
         NEOWaterDropsSettingChanged(WaterDrops::neoWaterDrops, pCFGNeoWaterDrops->GetBool());
         AddSetting("NEO Water Drops", WaterDrops::neoWaterDrops, 0, sizeofA(aYesNo)-1, aYesNo, NEOWaterDropsSettingChanged, NULL);
@@ -2047,11 +2065,6 @@ void StartEffectsStuff()
         BloomSettingChanged(g_bBloom, pCFGBloom->GetBool());
         AddSetting("Bloom", g_bBloom, 0, sizeofA(aYesNo)-1, aYesNo, BloomSettingChanged, NULL);
         g_fBloomIntensity = cfg->GetFloat("Bloom_Intensity", g_fBloomIntensity, "EnchancedEffects");
-
-        if(g_bHeatHaze)
-        {
-            HOOKBLX(HeatHazeFX_GrabBuffer, pGTASA + BYBIT(0x5B51E6, 0x6D94EC));
-        }
 
         // Normal map buffer (dumbass Qualcomm removed a required extension from a list, though its supported)
 
