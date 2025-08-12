@@ -1990,6 +1990,9 @@ void StartEffectsStuff()
         pCFGRadiosity = cfg->Bind("Radiosity", g_bRadiosity, "Effects");
         RadiositySettingChanged(g_bRadiosity, pCFGRadiosity->GetBool());
         AddSetting("Radiosity", g_bRadiosity, 0, sizeofA(aYesNo)-1, aYesNo, RadiositySettingChanged, NULL);
+        *m_RadiosityFilterPasses = cfg->GetInt("Radiosity_FilterPasses", *m_RadiosityFilterPasses, "Effects");
+        *m_RadiosityRenderPasses = cfg->GetInt("Radiosity_RenderPasses", *m_RadiosityRenderPasses, "Effects");
+        *m_RadiosityIntensity = cfg->GetInt("Radiosity_Intensity", *m_RadiosityIntensity, "Effects");
 
         pCFGNeoWaterDrops = cfg->Bind("NEOWaterDrops", WaterDrops::neoWaterDrops, "Effects");
         NEOWaterDropsSettingChanged(WaterDrops::neoWaterDrops, pCFGNeoWaterDrops->GetBool());
