@@ -1274,11 +1274,11 @@ void GFX_Radiosity(int intensityLimit, int filterPasses, int renderPasses, int i
 
     RQVector uniValues1 = RQVector{ 0.0f, 1.0f / (float)pSkyGFXRadiosityRaster->height,
                                    ((float)pSkyGFXRadiosityRaster->width / 640.0f) * (1 << filterPasses), 0.0f };
-    /*GFX_GrabTexIntoTex(pSkyGFXPostFXRaster2, pSkyGFXRadiosityRaster, g_pRadiosityBlurShader, &uniValues1);
+    GFX_GrabTexIntoTex(pSkyGFXPostFXRaster2, pSkyGFXRadiosityRaster, g_pRadiosityBlurShader, &uniValues1);
 
     uniValues1.x = 1.0f / (float)pSkyGFXRadiosityRaster->width;
     uniValues1.y = 0.0f;
-    GFX_GrabTexIntoTex(pSkyGFXRadiosityRaster, pSkyGFXRadiosityRaster, g_pRadiosityBlurShader, &uniValues1);*/
+    GFX_GrabTexIntoTex(pSkyGFXRadiosityRaster, pSkyGFXRadiosityRaster, g_pRadiosityBlurShader, &uniValues1);
 
     RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)true);
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
@@ -1311,6 +1311,14 @@ void GFX_Radiosity(int intensityLimit, int filterPasses, int renderPasses, int i
     PostEffectsDrawQuad(0.0f, 0.0f, 2.0f, 2.0f, 255, 255, 255, 255, pSkyGFXPostFXRaster2);
     pForcedShader = NULL;
 
+    RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERLINEAR);
+    RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)true);
+    RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)true);
+    RwRenderStateSet(rwRENDERSTATETEXTURERASTER, (void*)NULL);
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)true);
+    RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
+    
     GFX_GrabScreen();
 }
 void GFX_HeatHaze(float intensity, bool alphaMaskMode)
