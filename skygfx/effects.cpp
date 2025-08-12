@@ -1264,6 +1264,7 @@ void GFX_SpeedFX(float speed) // Completed
     }
     ImmediateModeRenderStatesReStore();
 }
+void GFX_FrameBuffer();
 void GFX_Radiosity(int intensityLimit, int filterPasses, int renderPasses, int intensity) // Does not work?
 {
     RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERLINEAR);
