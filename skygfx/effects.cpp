@@ -778,7 +778,7 @@ void CreateEffectsShaders()
                        "  vec4 WorldPos = ObjMatrix * vec4(Position,1.0);\n"
                        "  vec4 ViewPos = ViewMatrix * WorldPos;\n"
                        "  gl_Position = ProjMatrix * ViewPos;\n"
-                       "  gl_Position.xy *= GFX1v.xy;
+                       "  gl_Position.xy *= GFX1v.xy;\n"
                        "  Out_Tex0 = vec2(TexCoord0.x, 1.0 - TexCoord0.y);\n"
                        "}";
     g_pSimpleInverseShader = CreateCustomShaderAlloc(0, sInvrsPxl, sInvrsVtx, sizeof(sInvrsPxl), sizeof(sInvrsVtx));
@@ -1352,12 +1352,14 @@ void GFX_HeatHaze(float intensity, bool alphaMaskMode)
     // GFX_GrabScreen();
 
     RQVector uniValues = RQVector{ fpostfxXInv * RsGlobal->maximumWidth, fpostfxYInv * RsGlobal->maximumHeight, 0.0f, 0.0f };
-    
     pForcedShader = g_pSimpleInverseShader;
+    pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
+    
     RwRaster* bak = *pRasterFrontBuffer;
     *pRasterFrontBuffer = pSkyGFXPostFXRaster1;
     HeatHazeFX(intensity, alphaMaskMode);
     *pRasterFrontBuffer = bak;
+    
     pForcedShader = NULL;
 }
 // https://github.com/gta-reversed/gta-reversed/blob/7dc7e9696214e17594e8a9061be9dd808d8ae9c5/source/game_sa/PostEffects.cpp#L428
