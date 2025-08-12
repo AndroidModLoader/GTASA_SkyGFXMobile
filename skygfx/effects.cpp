@@ -779,7 +779,7 @@ void CreateEffectsShaders()
                        "  vec4 ViewPos = ViewMatrix * WorldPos;\n"
                        "  gl_Position = ProjMatrix * ViewPos;\n"
                        "  gl_Position.x = (gl_Position.x + 1.0) * GFX1v.x - 1.0;\n"
-                       "  gl_Position.y = (gl_Position.x - 1.0) * GFX1v.y + 1.0;\n"
+                       "  gl_Position.y = (gl_Position.y - 1.0) * GFX1v.y + 1.0;\n"
                        "  Out_Tex0 = vec2(TexCoord0.x, 1.0 - TexCoord0.y);\n"
                        "}";
     g_pSimpleInverseShader = CreateCustomShaderAlloc(0, sInvrsPxl, sInvrsVtx, sizeof(sInvrsPxl), sizeof(sInvrsVtx));
