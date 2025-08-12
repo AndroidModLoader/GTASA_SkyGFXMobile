@@ -1777,6 +1777,13 @@ DECL_HOOKv(PostFX_Render)
         GFX_GrabScreen(true);
         GFX_Radiosity(m_CurrentColours->intensityLimit, *m_RadiosityFilterPasses, *m_RadiosityRenderPasses, *m_RadiosityIntensity);
     }
+    
+    RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERLINEAR);
+    RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)true);
+    RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)true);
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)true);
+    RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
 
     if(!*pbInCutscene && g_nSpeedFX != SPFX_INACTIVE)
     {
