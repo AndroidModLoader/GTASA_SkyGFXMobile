@@ -772,11 +772,13 @@ void CreateEffectsShaders()
                        "uniform mat4 ObjMatrix;\n"
                        "attribute vec3 Position;\n"
                        "attribute vec2 TexCoord0;\n"
+                       "uniform highp vec4 GFX1v;\n"
                        "varying highp vec2 Out_Tex0;\n"
                        "void main() {\n"
                        "  vec4 WorldPos = ObjMatrix * vec4(Position,1.0);\n"
                        "  vec4 ViewPos = ViewMatrix * WorldPos;\n"
                        "  gl_Position = ProjMatrix * ViewPos;\n"
+                       "  gl_Position.xy *= GFX1v.xy;
                        "  Out_Tex0 = vec2(TexCoord0.x, 1.0 - TexCoord0.y);\n"
                        "}";
     g_pSimpleInverseShader = CreateCustomShaderAlloc(0, sInvrsPxl, sInvrsVtx, sizeof(sInvrsPxl), sizeof(sInvrsVtx));
@@ -1347,7 +1349,9 @@ void GFX_Radiosity(int intensityLimit, int filterPasses, int renderPasses, int i
 }
 void GFX_HeatHaze(float intensity, bool alphaMaskMode)
 {
-    GFX_GrabScreen();
+    // GFX_GrabScreen();
+
+    RQVector uniValues = RQVector{ fpostfxXInv * RsGlobal->maximumWidth, fpostfxYInv * RsGlobal->maximumHeight, 0.0f, 0.0f };
     
     pForcedShader = g_pSimpleInverseShader;
     RwRaster* bak = *pRasterFrontBuffer;
