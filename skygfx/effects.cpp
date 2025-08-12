@@ -2022,9 +2022,9 @@ void StartEffectsStuff()
         pCFGHeatHaze = cfg->Bind("HeatHaze", g_bHeatHaze, "Effects");
         HeatHazeSettingChanged(g_bHeatHaze, pCFGHeatHaze->GetBool());
         AddSetting("Heat Haze", g_bHeatHaze, 0, sizeofA(aYesNo)-1, aYesNo, HeatHazeSettingChanged, NULL);
-        // Dont waste precious BLX hooks space
-        //HOOKBLX(HeatHazeFX_GrabBuffer, pGTASA + BYBIT(0x5B51E6, 0x6D94EC));
-        aml->PlaceNOP4(pGTASA + BYBIT(0x5B51E6, 0x6D94EC), 1);
+        // Waste precious BLX hooks space 💔
+        HOOKBLX(HeatHazeFX_GrabBuffer, pGTASA + BYBIT(0x5B51E6, 0x6D94EC));
+        //aml->PlaceNOP4(pGTASA + BYBIT(0x5B51E6, 0x6D94EC), 1);
 
         pCFGNeoWaterDrops = cfg->Bind("NEOWaterDrops", WaterDrops::neoWaterDrops, "Effects");
         NEOWaterDropsSettingChanged(WaterDrops::neoWaterDrops, pCFGNeoWaterDrops->GetBool());
