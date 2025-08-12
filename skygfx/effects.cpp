@@ -1300,15 +1300,13 @@ void GFX_Radiosity(int intensityLimit, int filterPasses, int renderPasses, int i
     RQVector uniValues2 = RQVector{ cu / (float)pSkyGFXRadiosityRaster->width, cv / (float)pSkyGFXRadiosityRaster->height,
                                    (maxu - minu) / (float)pSkyGFXRadiosityRaster->width, (maxv - minv) / (float)pSkyGFXRadiosityRaster->height };
 
-    // BLURRED TEXTURE IS NOT USED..?!?!?!?!
-
     pForcedShader = g_pRadiosityShader;
     pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues1.x, 4);
     pForcedShader->SetVectorConstant(SVCID_GreenGrade, &uniValues2.x, 4);
 
     float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
     DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
-    PostEffectsDrawQuad(0.0f, 0.0f, 2.0f, 2.0f, 255, 255, 255, 255, pSkyGFXPostFXRaster2);
+    PostEffectsDrawQuad(0.0f, 0.0f, 2.0f, 2.0f, 255, 255, 255, 255, pSkyGFXRadiosityRaster);
     pForcedShader = NULL;
 
     RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERLINEAR);
@@ -1320,6 +1318,7 @@ void GFX_Radiosity(int intensityLimit, int filterPasses, int renderPasses, int i
     RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
     
     GFX_GrabScreen();
+    GFX_FrameBuffer();
 }
 void GFX_HeatHaze(float intensity, bool alphaMaskMode)
 {
