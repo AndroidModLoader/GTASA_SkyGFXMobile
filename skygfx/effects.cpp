@@ -49,7 +49,7 @@ int g_nCrAb = CRAB_INACTIVE;
 int g_nVignette = 0;
 bool g_bRadiosity = true;
 int g_nDOF = DOF_INACTIVE;
-bool g_bHeatHaze = false;
+bool g_bHeatHaze = true;
 float g_fDOFStrength = 1.0f, g_fDOFDistance = 60.0f;
 bool g_bDOFUseScale = false;
 int g_nUWR = UWR_CLASSIC;
@@ -759,6 +759,27 @@ void CreateEffectsShaders()
                        "  Out_Tex0 = TexCoord0;\n"
                        "}";
     g_pRadiosityShader = CreateCustomShaderAlloc(0, sRadioPxl, sRadioVtx, sizeof(sRadioPxl), sizeof(sRadioVtx));
+
+    char sInvrsPxl[] = "precision mediump float;\n"
+                       "uniform sampler2D Diffuse;\n"
+                       "varying mediump vec2 Out_Tex0;\n"
+                       "void main() {\n"
+                       "  gl_FragColor = texture2D(Diffuse, Out_Tex0);\n"
+                       "}";
+    char sInvrsVtx[] = "precision highp float;\n"
+                       "uniform mat4 ProjMatrix;\n"
+                       "uniform mat4 ViewMatrix;\n"
+                       "uniform mat4 ObjMatrix;\n"
+                       "attribute vec3 Position;\n"
+                       "attribute vec2 TexCoord0;\n"
+                       "varying highp vec2 Out_Tex0;\n"
+                       "void main() {\n"
+                       "  vec4 WorldPos = ObjMatrix * vec4(Position,1.0);\n"
+                       "  vec4 ViewPos = ViewMatrix * WorldPos;\n"
+                       "  gl_Position = ProjMatrix * ViewPos;\n"
+                       "  Out_Tex0 = vec2(TexCoord0.x, 1.0 - TexCoord0.y);\n"
+                       "}";
+    g_pSimpleInverseShader = CreateCustomShaderAlloc(0, sInvrsPxl, sInvrsVtx, sizeof(sInvrsPxl), sizeof(sInvrsVtx));
 }
 void RenderGrainSettingChanged(int oldVal, int newVal, void* data = NULL)
 {
