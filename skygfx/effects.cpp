@@ -1654,7 +1654,7 @@ void GFX_BloomBuffer() // Completed
 
     float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
     DrawQuadSetUVs(umin, vmax, umax, vmax, umax, vmin, umin, vmin);
-    PostEffectsDrawQuad(0.0, 0.0, RsGlobal->maximumWidth, RsGlobal->maximumHeight, 255, 255, 255, 255, pSkyGFXBloomP4Raster);
+    PostEffectsDrawQuad(0.0, 0.0, RsGlobal->maximumWidth, RsGlobal->maximumHeight, 255, 255, 255, 255, pSkyGFXBloomP3Raster);
     
     ImmediateModeRenderStatesReStore();
 }
@@ -1743,7 +1743,7 @@ DECL_HOOKv(PostFX_Render)
         GFX_GrabTexIntoTex(pSkyGFXBrightnessRaster, pSkyGFXBloomP1Raster);
         GFX_GrabTexIntoTex(pSkyGFXBloomP1Raster, pSkyGFXBloomP2Raster);
         // Bloom pass 3 (Final downscaling + horizontal blurring)
-        RQVector uniValues = RQVector{ 1.0f / (float)pSkyGFXBloomP4Raster->width, 1.0f / (float)pSkyGFXBloomP4Raster->height, 1.0f, 0.0f };
+        RQVector uniValues = RQVector{ 1.0f / (float)pSkyGFXBloomP3Raster->width, 1.0f / (float)pSkyGFXBloomP3Raster->height, 1.0f, 0.0f };
         GFX_GrabTexIntoTex(pSkyGFXBloomP2Raster, pSkyGFXBloomP3Raster, g_pBloomP1Shader, &uniValues);
         // Bloom pass 4 (Vertical blurring)
         GFX_GrabTexIntoTex(pSkyGFXBloomP3Raster, pSkyGFXBloomP3Raster, g_pBloomP2Shader, &uniValues);
