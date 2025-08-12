@@ -71,11 +71,11 @@ float fpostfxXInv = 0, fpostfxYInv = 0;
 RwRaster *pSkyGFXPostFXRaster1 = NULL, *pSkyGFXPostFXRaster2 = NULL,
          *pSkyGFXDepthRaster = NULL,   *pSkyGFXBrightnessRaster = NULL,
          *pSkyGFXBloomP1Raster = NULL, *pSkyGFXBloomP2Raster = NULL,
-         *pSkyGFXBloomP3Raster = NULL, *pSkyGFXBloomP4Raster = NULL,
+         *pSkyGFXBloomP3Raster = NULL,
          *pSkyGFXSceneBrightnessRaster = NULL, *pSkyGFXOcclusionRaster = NULL,
          *pSkyGFXOcclusionP1Raster = NULL, *pSkyGFXOcclusionP2Raster = NULL,
          *pSkyGFXOcclusionP3Raster = NULL, *pSkyGFXRadiosityRaster = NULL,
-         *pSkyGFXNormalRaster = NULL, *pSkyGFXRandomRaster = NULL;
+         *pSkyGFXNormalRaster = NULL;
 RwRaster *pDarkRaster = NULL, *pNoiseRaster = NULL;
 
 ES2Shader* g_pFramebufferRenderShader = NULL;
@@ -964,7 +964,7 @@ void GFX_ActivateFX2Texture()
 }
 void GFX_ActivateFinalBloomTexture()
 {
-    ES2Texture* brTexture = GetES2Raster(pSkyGFXBloomP4Raster);
+    ES2Texture* brTexture = GetES2Raster(pSkyGFXBloomP3Raster);
     ERQ_SetActiveTexture(2, brTexture->texID);
 }
 void GFX_ActivateFinalOcclusionTexture()
@@ -1015,10 +1015,7 @@ void GFX_CheckBuffersSize()
         if(pSkyGFXBloomP3Raster) RwRasterDestroy(pSkyGFXBloomP3Raster);
         pSkyGFXBloomP3Raster = RwRasterCreate(0.125f * fpostfxX, 0.125f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
 
-        if(pSkyGFXBloomP4Raster) RwRasterDestroy(pSkyGFXBloomP4Raster);
-        pSkyGFXBloomP4Raster = RwRasterCreate(0.125f * fpostfxX, 0.125f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
-
-        if(pSkyGFXOcclusionRaster) RwRasterDestroy(pSkyGFXOcclusionRaster);
+        /*if(pSkyGFXOcclusionRaster) RwRasterDestroy(pSkyGFXOcclusionRaster);
         pSkyGFXOcclusionRaster = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
 
         if(pSkyGFXOcclusionP1Raster) RwRasterDestroy(pSkyGFXOcclusionP1Raster);
@@ -1028,17 +1025,13 @@ void GFX_CheckBuffersSize()
         pSkyGFXOcclusionP2Raster = RwRasterCreate(0.25f * fpostfxX, 0.25f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
 
         if(pSkyGFXOcclusionP3Raster) RwRasterDestroy(pSkyGFXOcclusionP3Raster);
-        pSkyGFXOcclusionP3Raster = RwRasterCreate(0.25f * fpostfxX, 0.25f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
+        pSkyGFXOcclusionP3Raster = RwRasterCreate(0.25f * fpostfxX, 0.25f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);*/
 
         if(pSkyGFXRadiosityRaster) RwRasterDestroy(pSkyGFXRadiosityRaster);
         pSkyGFXRadiosityRaster = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
 
         if(pSkyGFXNormalRaster) RwRasterDestroy(pSkyGFXNormalRaster);
         pSkyGFXNormalRaster = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
-
-        if(pSkyGFXRandomRaster) RwRasterDestroy(pSkyGFXRandomRaster);
-        pSkyGFXRandomRaster = RwRasterCreate(0.125f * postfxX, 0.125f * postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
-        CreateRandomTexture(pSkyGFXRandomRaster);
     }
 }
 void GFX_GrabScreen(bool second = false)
@@ -1753,7 +1746,7 @@ DECL_HOOKv(PostFX_Render)
         RQVector uniValues = RQVector{ 1.0f / (float)pSkyGFXBloomP4Raster->width, 1.0f / (float)pSkyGFXBloomP4Raster->height, 1.0f, 0.0f };
         GFX_GrabTexIntoTex(pSkyGFXBloomP2Raster, pSkyGFXBloomP3Raster, g_pBloomP1Shader, &uniValues);
         // Bloom pass 4 (Vertical blurring)
-        GFX_GrabTexIntoTex(pSkyGFXBloomP3Raster, pSkyGFXBloomP4Raster, g_pBloomP2Shader, &uniValues);
+        GFX_GrabTexIntoTex(pSkyGFXBloomP3Raster, pSkyGFXBloomP3Raster, g_pBloomP2Shader, &uniValues);
         // Apply bloom to the framebuffer
         GFX_ActivateFinalBloomTexture();
         float bloomIntensity = g_fBloomIntensity;
