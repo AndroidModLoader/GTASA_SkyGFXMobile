@@ -74,7 +74,7 @@ RwRaster *pSkyGFXPostFXRaster1 = NULL, *pSkyGFXPostFXRaster2 = NULL,
          *pSkyGFXBloomP3Raster = NULL, *pSkyGFXBloomP4Raster = NULL,
          *pSkyGFXSceneBrightnessRaster = NULL, *pSkyGFXOcclusionRaster = NULL,
          *pSkyGFXOcclusionP1Raster = NULL, *pSkyGFXOcclusionP2Raster = NULL,
-         *pSkyGFXOcclusionP3Raster = NULL,
+         *pSkyGFXOcclusionP3Raster = NULL, *pSkyGFXRadiosityRaster = NULL,
          *pSkyGFXNormalRaster = NULL, *pSkyGFXRandomRaster = NULL;
 RwRaster *pDarkRaster = NULL, *pNoiseRaster = NULL;
 
@@ -97,6 +97,8 @@ ES2Shader* g_pFXAAShader = NULL; // FXAA v2.0 shader
 ES2Shader* g_pOcclusionBufferShader = NULL;
 ES2Shader* g_pSSAOShader = NULL;
 ES2Shader* g_pDepthNormalMapShader = NULL;
+ES2Shader* g_pRadiosityBlurShader = NULL;
+ES2Shader* g_pRadiosityShader = NULL;
 
 /* Other */
 static const char* aSpeedFXSettings[SPEEDFX_SETTINGS] = 
@@ -695,14 +697,6 @@ void CreateEffectsShaders()
                      "}";
     g_pDepthNormalMapShader = CreateCustomShaderAlloc(0, sDNMPxl, sDNMVtx, sizeof(sDNMPxl), sizeof(sDNMVtx));
 
-    char sSSAOVtx[] = "precision highp float;\n"
-                      "attribute vec3 Position;\n"
-                      "attribute vec2 TexCoord0;\n"
-                      "varying highp vec2 Out_Tex0;\n"
-                      "void main() {\n"
-                      "  gl_Position = vec4(Position.xy - 1.0, 0.0, 1.0);\n"
-                      "  Out_Tex0 = TexCoord0;\n"
-                      "}";
     char sSSAOPxl[] = "precision mediump float;\n"
                       "uniform sampler2D Diffuse;\n"
                       "uniform sampler2D BrightBuf;\n"
@@ -712,7 +706,59 @@ void CreateEffectsShaders()
                       "  vec3 occ = texture2D(BrightBuf, Out_Tex0).rgb;\n"
                       "  gl_FragColor = vec4(color * occ, 1.0);\n"
                       "}";
+    char sSSAOVtx[] = "precision highp float;\n"
+                      "attribute vec3 Position;\n"
+                      "attribute vec2 TexCoord0;\n"
+                      "varying highp vec2 Out_Tex0;\n"
+                      "void main() {\n"
+                      "  gl_Position = vec4(Position.xy - 1.0, 0.0, 1.0);\n"
+                      "  Out_Tex0 = TexCoord0;\n"
+                      "}";
     g_pSSAOShader = CreateCustomShaderAlloc(0, sSSAOPxl, sSSAOVtx, sizeof(sSSAOPxl), sizeof(sSSAOVtx));
+
+    char sRBlurPxl[] = "precision mediump float;\n"
+                       "uniform sampler2D Diffuse;\n"
+                       "varying mediump vec2 Out_Tex0;\n"
+                       "uniform highp vec4 GFX1v;\n"
+                       "void main() {\n"
+                       "  vec3 c = vec3(0.0);\n"
+                       "  for(float i = 0.0; i < 10.0; ++i) {\n"
+                       "    vec2 uv = Out_Tex0 + GFX1v.xy * (i / 9.0 - 0.5) * GFX1v.z;\n"
+                       "    c += texture2D(Diffuse, uv).rgb;\n"
+                       "  }\n"
+                       "  gl_FragColor = vec4(c / 10.0, 1.0);\n"
+                       "}";
+    char sRBlurVtx[] = "precision highp float;\n"
+                       "attribute vec3 Position;\n"
+                       "attribute vec2 TexCoord0;\n"
+                       "varying highp vec2 Out_Tex0;\n"
+                       "void main() {\n"
+                       "  gl_Position = vec4(Position.xy - 1.0, 0.0, 1.0);\n"
+                       "  Out_Tex0 = TexCoord0;\n"
+                       "}";
+    g_pRadiosityBlurShader = CreateCustomShaderAlloc(0, sRBlurPxl, sRBlurVtx, sizeof(sRBlurPxl), sizeof(sRBlurVtx));
+
+    char sRadioPxl[] = "precision mediump float;\n"
+                       "uniform sampler2D Diffuse;\n"
+                       "varying mediump vec2 Out_Tex0;\n"
+                       "uniform highp vec4 GFX1v;\n"
+                       "uniform highp vec4 GFX2v;\n"
+                       "void main() {\n"
+                       "  vec2 uv = Out_Tex0;\n"
+                       "  //uv = uv * GFX2v.zw + GFX2v.xy;\n"
+                       "  vec3 c = texture2D(Diffuse, uv).rgb;\n"
+                       "  c = clamp(c * 2.0 - vec3(1.0) * GFX1v.x, 0.0, 1.0) * GFX1v.y * GFX1v.z;\n"
+                       "  gl_FragColor = vec4(c, 1.0);\n"
+                       "}";
+    char sRadioVtx[] = "precision highp float;\n"
+                       "attribute vec3 Position;\n"
+                       "attribute vec2 TexCoord0;\n"
+                       "varying highp vec2 Out_Tex0;\n"
+                       "void main() {\n"
+                       "  gl_Position = vec4(Position.xy - 1.0, 0.0, 1.0);\n"
+                       "  Out_Tex0 = TexCoord0;\n"
+                       "}";
+    g_pRadiosityShader = CreateCustomShaderAlloc(0, sRadioPxl, sRadioVtx, sizeof(sRadioPxl), sizeof(sRadioVtx));
 }
 void RenderGrainSettingChanged(int oldVal, int newVal, void* data = NULL)
 {
@@ -984,6 +1030,9 @@ void GFX_CheckBuffersSize()
         if(pSkyGFXOcclusionP3Raster) RwRasterDestroy(pSkyGFXOcclusionP3Raster);
         pSkyGFXOcclusionP3Raster = RwRasterCreate(0.25f * fpostfxX, 0.25f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
 
+        if(pSkyGFXRadiosityRaster) RwRasterDestroy(pSkyGFXRadiosityRaster);
+        pSkyGFXRadiosityRaster = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
+
         if(pSkyGFXNormalRaster) RwRasterDestroy(pSkyGFXNormalRaster);
         pSkyGFXNormalRaster = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
 
@@ -1028,7 +1077,7 @@ void GFX_GrabDepth()
         ImmediateModeRenderStatesReStore();
     }
 }
-void GFX_GrabTexIntoTex(RwRaster* src, RwRaster* dst, ES2Shader* shader = NULL, RQVector* uniValues = NULL)
+void GFX_GrabTexIntoTex(RwRaster* src, RwRaster* dst, ES2Shader* shader = NULL, RQVector* uniValues1 = NULL, RQVector* uniValues2 = NULL, RQVector* uniValues3 = NULL)
 {
     ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
@@ -1043,10 +1092,9 @@ void GFX_GrabTexIntoTex(RwRaster* src, RwRaster* dst, ES2Shader* shader = NULL, 
     {
         DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
         pForcedShader = shader;
-        if(uniValues)
-        {
-            pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues->x, 4);
-        }
+        if(uniValues1) pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues1->x, 4);
+        if(uniValues2) pForcedShader->SetVectorConstant(SVCID_GreenGrade, &uniValues2->x, 4);
+        if(uniValues3) pForcedShader->SetVectorConstant(SVCID_BlueGrade, &uniValues3->x, 4);
         PostEffectsDrawQuad(0.0f, 0.0f,
                             2.0f * (float)dst->width * fpostfxXInv,
                             2.0f * (float)dst->height * fpostfxYInv,
@@ -1218,78 +1266,52 @@ void GFX_SpeedFX(float speed) // Completed
 }
 void GFX_Radiosity(int intensityLimit, int filterPasses, int renderPasses, int intensity) // Does not work?
 {
-    RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERNEAREST);
+    RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERLINEAR);
     RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)false);
-    RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)true);
+    RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)false);
     RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)false);
-    RwRenderStateSet(rwRENDERSTATETEXTURERASTER, pSkyGFXPostFXRaster1);
     RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)false);
-    RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
-    RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
 
-    TempBufferVerticesStored = 0;
+    RQVector uniValues1 = RQVector{ 0.0f, 1.0f / (float)pSkyGFXRadiosityRaster->height,
+                                   ((float)pSkyGFXRadiosityRaster->width / 640.0f) * (1 << filterPasses), 0.0f };
+    /*GFX_GrabTexIntoTex(pSkyGFXPostFXRaster2, pSkyGFXRadiosityRaster, g_pRadiosityBlurShader, &uniValues1);
 
-    const float m_RadiosityFilterUCorrection = 2.0f, m_RadiosityFilterVCorrection = 2.0f;
-    float m_RadiosityPixelsX = RsGlobal->maximumWidth, m_RadiosityPixelsY = RsGlobal->maximumHeight;
-    const float rhw = 1.0f / TheCamera->m_pRwCamera->nearClip;
-    const float fRasterWidth = pSkyGFXPostFXRaster1->width;
-    const float fRasterHeight = pSkyGFXPostFXRaster1->height;
+    uniValues1.x = 1.0f / (float)pSkyGFXRadiosityRaster->width;
+    uniValues1.y = 0.0f;
+    GFX_GrabTexIntoTex(pSkyGFXRadiosityRaster, pSkyGFXRadiosityRaster, g_pRadiosityBlurShader, &uniValues1);*/
 
-    Set2DQuadRHW(rhw, 0.0f, 0.0f, RsGlobal->maximumWidth, RsGlobal->maximumHeight, 0.0f, 0.0f, 1.0f, 1.0f, RwRGBA(255,255,255));
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)true);
+    RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDONE);
 
-    TempBufferVerticesStored = 0;
-    RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)true);
-    if(filterPasses > 0)
-    {
-        RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERLINEAR);
-        for(int i = 0; i < filterPasses; ++i)
-        {
-            float secU = m_RadiosityPixelsX / fRasterWidth;
-            float secV = m_RadiosityPixelsY / fRasterHeight;
-            m_RadiosityPixelsX = ( (m_RadiosityPixelsX > 0) ? (m_RadiosityPixelsX * 0.5f) : 1.0f );
-            m_RadiosityPixelsY = ( (m_RadiosityPixelsY > 0) ? (m_RadiosityPixelsY * 0.5f) : 1.0f );
+    float off = ((1 << filterPasses) - 1);
+    float offu = off * 2; // m_RadiosityFilterUCorrection;
+    float offv = off * 2; // m_RadiosityFilterVCorrection;
+    float minu = offu;
+    float minv = offv;
+    float maxu = pSkyGFXRadiosityRaster->width - offu; //off*2;
+    float maxv = pSkyGFXRadiosityRaster->height - offv; //off*2;
+    float cu = (offu*(pSkyGFXRadiosityRaster->width+0.5f) + offu/*off*2*/*0.5f) / pSkyGFXRadiosityRaster->width;
+    float cv = (offv*(pSkyGFXRadiosityRaster->height+0.5f) + offv/*off*2*/*0.5f) / pSkyGFXRadiosityRaster->height;
 
-            Set2DQuadRHW(rhw, 0.0f, 0.0f, RsGlobal->maximumWidth, RsGlobal->maximumHeight,
-                         m_RadiosityFilterUCorrection / fRasterWidth, m_RadiosityFilterVCorrection / fRasterHeight,
-                         secU, secV, RwRGBA(255,255,255));
-        }
-    }
+    uniValues1.x = (float)intensityLimit / 255.0f;
+    uniValues1.y = (float)intensity / 255.0f;
+    uniValues1.z = (float)renderPasses;
+    RQVector uniValues2 = RQVector{ cu / (float)pSkyGFXRadiosityRaster->width, cv / (float)pSkyGFXRadiosityRaster->height,
+                                   (maxu - minu) / (float)pSkyGFXRadiosityRaster->width, (maxv - minv) / (float)pSkyGFXRadiosityRaster->height };
 
-    Set2DQuadRHW(rhw, 0.0f, 0.0f, m_RadiosityPixelsX + 1.0f, m_RadiosityPixelsY + 1.0f,
-                         0.5f / fRasterWidth, 0.5f / fRasterHeight,
-                         (m_RadiosityPixelsX + 0.5f) / fRasterWidth, (m_RadiosityPixelsY + 0.5f) / fRasterHeight,
-                         RwRGBA(intensityLimit, intensityLimit, intensityLimit, 128));
-    
-    if(renderPasses > 0)
-    {
-        if(TempBufferVerticesStored > 2)
-        {
-            RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, TempVertexBuffer.m_2d, TempBufferVerticesStored);
-        }
-        TempBufferVerticesStored = 0;
+    // BLURRED TEXTURE IS NOT USED..?!?!?!?!
 
-        RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERLINEAR);
+    pForcedShader = g_pRadiosityShader;
+    pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues1.x, 4);
+    pForcedShader->SetVectorConstant(SVCID_GreenGrade, &uniValues2.x, 4);
 
-        for(int i = 0; i < renderPasses; ++i)
-        {
-            Set2DQuadRHW(rhw, 0.0f, 0.0f, RsGlobal->maximumWidth, RsGlobal->maximumHeight, 0.0f, 0.0f,
-                         m_RadiosityPixelsX / fRasterWidth, m_RadiosityPixelsY / fRasterHeight, RwRGBA(0,0,0,intensity));
-        }
-    }
+    float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
+    DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
+    PostEffectsDrawQuad(0.0f, 0.0f, 2.0f, 2.0f, 255, 255, 255, 255, pSkyGFXPostFXRaster2);
+    pForcedShader = NULL;
 
-    if(TempBufferVerticesStored > 2)
-    {
-        RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, TempVertexBuffer.m_2d, TempBufferVerticesStored);
-    }
-
-    TempBufferVerticesStored = 0;
-    RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)false);
-    RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)true);
-    RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)true);
-    RwRenderStateSet(rwRENDERSTATETEXTURERASTER, NULL);
-    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)false);
-    RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
-    RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
+    GFX_GrabScreen();
 }
 void GFX_HeatHaze(float intensity, bool alphaMaskMode)
 {
@@ -1683,7 +1705,7 @@ DECL_HOOKv(PostFX_Render)
 {
     GFX_GrabScreen();
     GFX_GrabDepth();
-    GFX_NormalBuffer();
+    //GFX_NormalBuffer();
     if(g_bCSB)
     {
         // I got a request for this.
@@ -1742,6 +1764,12 @@ DECL_HOOKv(PostFX_Render)
 
     PostFX_Render();
 
+    if(g_bRadiosity && !*m_bDarknessFilter)
+    {
+        GFX_GrabScreen(true);
+        GFX_Radiosity(m_CurrentColours->intensityLimit, *m_RadiosityFilterPasses, *m_RadiosityRenderPasses, *m_RadiosityIntensity);
+    }
+
     if(!*pbInCutscene && g_nSpeedFX != SPFX_INACTIVE)
     {
         CAutomobile* veh = (CAutomobile*)FindPlayerVehicle(-1, false);
@@ -1761,11 +1789,6 @@ DECL_HOOKv(PostFX_Render)
                 GFX_SpeedFX(FindPlayerSpeed(-1)->Magnitude());
             }
         }
-    }
-
-    if(g_bRadiosity && !*m_bDarknessFilter)
-    {
-        GFX_Radiosity(m_CurrentColours->intensityLimit, 2, 1, 35);
     }
 
     if(g_bRenderGrain && pGrainRaster)
@@ -1948,6 +1971,10 @@ void StartEffectsStuff()
         UWRSettingChanged(g_nUWR, pCFGUWR->GetInt());
         AddSetting("Underwater Ripple", g_nUWR, 0, sizeofA(aUWRSettings)-1, aUWRSettings, UWRSettingChanged, NULL);
 
+        pCFGRadiosity = cfg->Bind("Radiosity", g_bRadiosity, "Effects");
+        RadiositySettingChanged(g_bRadiosity, pCFGRadiosity->GetBool());
+        AddSetting("Radiosity", g_bRadiosity, 0, sizeofA(aYesNo)-1, aYesNo, RadiositySettingChanged, NULL);
+
         pCFGNeoWaterDrops = cfg->Bind("NEOWaterDrops", WaterDrops::neoWaterDrops, "Effects");
         NEOWaterDropsSettingChanged(WaterDrops::neoWaterDrops, pCFGNeoWaterDrops->GetBool());
         AddSetting("NEO Water Drops", WaterDrops::neoWaterDrops, 0, sizeofA(aYesNo)-1, aYesNo, NEOWaterDropsSettingChanged, NULL);
@@ -1967,10 +1994,6 @@ void StartEffectsStuff()
         pCFGVignette = cfg->Bind("VignetteIntensity", g_nVignette, "EnchancedEffects");
         VignetteSettingChanged(g_nVignette, pCFGVignette->GetInt());
         AddSlider("Vignette Intensity", g_nVignette, 0, 100, VignetteSettingChanged, NULL, NULL);
-
-        //pCFGRadiosity = cfg->Bind("Radiosity", g_bRadiosity, "Effects");
-        //RadiositySettingChanged(g_bRadiosity, pCFGRadiosity->GetBool());
-        //AddSetting("Radiosity", g_bRadiosity, 0, sizeofA(aYesNo)-1, aYesNo, RadiositySettingChanged, NULL);
 
         pCFGDOF = cfg->Bind("DOFType", g_nDOF, "EnchancedEffects");
         DOFSettingChanged(g_nDOF, pCFGDOF->GetInt());

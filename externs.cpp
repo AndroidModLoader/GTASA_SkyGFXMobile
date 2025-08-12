@@ -95,6 +95,7 @@ bool *ms_running;
 RwTexture** gpMoonMask;
 FakeFx_c* g_fx;
 float *WetRoads;
+int *m_RadiosityFilterPasses, *m_RadiosityRenderPasses, *m_RadiosityIntensity;
 
 // Functions
 RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);
@@ -494,4 +495,7 @@ void ResolveExternals()
     SET_TO(gpMoonMask,                      aml->GetSym(hGTASA, "gpMoonMask"));
     SET_TO(g_fx,                            aml->GetSym(hGTASA, "g_fx"));
     SET_TO(WetRoads,                        aml->GetSym(hGTASA, "_ZN8CWeather8WetRoadsE"));
+    SET_TO(m_RadiosityFilterPasses,         aml->GetSym(hGTASA, "_ZN12CPostEffects23m_RadiosityFilterPassesE"));
+    SET_TO(m_RadiosityRenderPasses,         aml->GetSym(hGTASA, "_ZN12CPostEffects23m_RadiosityRenderPassesE"));
+    SET_TO(m_RadiosityIntensity,            aml->GetSym(hGTASA, "_ZN12CPostEffects20m_RadiosityIntensityE"));
 }
