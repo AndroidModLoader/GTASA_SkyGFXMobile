@@ -765,8 +765,9 @@ void CreateEffectsShaders()
     char sInvrsPxl[] = "precision mediump float;\n"
                        "uniform mediump sampler2D Diffuse;\n"
                        "varying mediump vec2 Out_Tex0;\n"
+                       "varying lowp vec4 Out_Color;\n"
                        "void main() {\n"
-                       "  gl_FragColor = texture2D(Diffuse, Out_Tex0);\n"
+                       "  gl_FragColor = texture2D(Diffuse, Out_Tex0) * Out_Color;\n"
                        "}";
     char sInvrsVtx[] = "precision highp float;\n"
                        "uniform mat4 ProjMatrix;\n"
@@ -774,15 +775,15 @@ void CreateEffectsShaders()
                        "uniform mat4 ObjMatrix;\n"
                        "attribute vec3 Position;\n"
                        "attribute vec2 TexCoord0;\n"
-                       "//uniform mediump vec4 GFX1v;\n"
+                       "attribute vec4 GlobalColor;\n"
+                       "varying lowp vec4 Out_Color;\n"
                        "varying mediump vec2 Out_Tex0;\n"
                        "void main() {\n"
                        "  vec4 WorldPos = ObjMatrix * vec4(Position,1.0);\n"
                        "  vec4 ViewPos = ViewMatrix * WorldPos;\n"
                        "  gl_Position = ProjMatrix * ViewPos;\n"
-                       "  //gl_Position.x = (gl_Position.x + 1.0) * GFX1v.x - 1.0;\n"
-                       "  //gl_Position.y = (gl_Position.y - 1.0) * GFX1v.y + 1.0;\n"
                        "  Out_Tex0 = vec2(TexCoord0.x, 1.0 - TexCoord0.y);\n"
+                       "  Out_Color = GlobalColor;\n"
                        "}";
     g_pSimpleInverseShader = CreateCustomShaderAlloc(0, sInvrsPxl, sInvrsVtx, sizeof(sInvrsPxl), sizeof(sInvrsVtx));
 }
@@ -1352,12 +1353,9 @@ void GFX_Radiosity(int intensityLimit, int filterPasses, int renderPasses, int i
 }
 void GFX_HeatHaze(float intensity, bool alphaMaskMode)
 {
-    // GFX_GrabScreen();
+    GFX_GrabScreen();
 
-    //RQVector uniValues = RQVector{ fpostfxXInv * RsGlobal->maximumWidth, fpostfxYInv * RsGlobal->maximumHeight, 0.0f, 0.0f };
     pForcedShader = g_pSimpleInverseShader;
-    //pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
-    
     RwRaster* bak = *pRasterFrontBuffer;
     *pRasterFrontBuffer = pSkyGFXPostFXRaster1;
     pSkyGFXPostFXRaster1->width = RsGlobal->maximumWidth;
@@ -2041,9 +2039,9 @@ void StartEffectsStuff()
         pCFGHeatHaze = cfg->Bind("HeatHaze", g_bHeatHaze, "Effects");
         HeatHazeSettingChanged(g_bHeatHaze, pCFGHeatHaze->GetBool());
         AddSetting("Heat Haze", g_bHeatHaze, 0, sizeofA(aYesNo)-1, aYesNo, HeatHazeSettingChanged, NULL);
-        // Waste precious BLX hooks space 💔
-        HOOKBLX(HeatHazeFX_GrabBuffer, pGTASA + BYBIT(0x5B51E6, 0x6D94EC));
-        //aml->PlaceNOP4(pGTASA + BYBIT(0x5B51E6, 0x6D94EC), 1);
+        // Dont waste precious BLX hooks space
+        //HOOKBLX(HeatHazeFX_GrabBuffer, pGTASA + BYBIT(0x5B51E6, 0x6D94EC));
+        aml->PlaceNOP4(pGTASA + BYBIT(0x5B51E6, 0x6D94EC), 1);
 
         pCFGNeoWaterDrops = cfg->Bind("NEOWaterDrops", WaterDrops::neoWaterDrops, "Effects");
         NEOWaterDropsSettingChanged(WaterDrops::neoWaterDrops, pCFGNeoWaterDrops->GetBool());
