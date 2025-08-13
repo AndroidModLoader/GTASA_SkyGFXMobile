@@ -407,11 +407,12 @@ void CreateEffectsShaders()
                      "const vec3 LumCoeff = vec3(0.2126, 0.7152, 0.0722);\n"
                      "const vec3 AvgLumin = vec3(0.5, 0.5, 0.5);\n"
                      "void main() {\n"
-                     "  vec3 brtColor  = texture2D(Diffuse, Out_Tex0).rgb * vec3(GFX1v.z);\n"
-                     "  vec3 intensity = vec3(dot(brtColor, LumCoeff));\n"
-                     "  vec3 satColor  = mix(intensity, brtColor, GFX1v.y);\n"
+                     "  vec3 brtColor = texture2D(Diffuse, Out_Tex0).rgb * vec3(GFX1v.z);\n"
+                     "  float intensity = dot(brtColor, LumCoeff);\n"
+                     "  vec3 satColor = mix(vec3(intensity), brtColor, GFX1v.y);\n"
                      "  vec3 gammaColor = pow(mix(AvgLumin, satColor, GFX1v.x), vec3(GFX1v.w));\n"
-                     "  gl_FragColor = vec4(gammaColor, 1.0);\n"
+                     "  vec4 finalColor = vec4(gammaColor, 1.0);\n"
+                     "  gl_FragColor = finalColor;\n"
                      "}";
     char sCSBVtx[] = "precision highp float;\n"
                      "attribute vec3 Position;\n"
@@ -1595,10 +1596,15 @@ void GFX_FrameBufferCSB(float contrast, float saturation, float brightness, floa
     ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
 
+    if(contrast < 0.0f) contrast = 0.0f;
+    if(saturation < 0.0f) saturation = 0.0f;
+    if(brightness < 0.0f) brightness = 0.0f;
+    if(gamma <= 0.1f) gamma = 0.1f;
+
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
     RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
 
-    RQVector uniValues = RQVector{ contrast, saturation, brightness, 1.0f / g_fGamma };
+    RQVector uniValues = RQVector{ contrast, saturation, brightness, 1.0f / gamma };
     pForcedShader = g_pCSBShader;
     pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
     
