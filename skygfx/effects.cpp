@@ -145,7 +145,7 @@ ConfigEntry *pCFGHeatHaze;
 void CreateEffectsShaders()
 {
     char sFRPxl[] = "precision mediump float;\n"
-                    "uniform sampler2D Diffuse;\n"
+                    "uniform mediump sampler2D Diffuse;\n"
                     "varying mediump vec2 Out_Tex0;\n"
                     "void main() {\n"
                     "  gl_FragColor = texture2D(Diffuse, Out_Tex0);\n"
@@ -184,7 +184,7 @@ void CreateEffectsShaders()
     g_pSimpleDepthShader = CreateCustomShaderAlloc(0, sSimpleDepthPxl, sSimpleDepthVtx, sizeof(sSimpleDepthPxl), sizeof(sSimpleDepthVtx));
 
     char sSimpleBrightPxl[] = "precision mediump float;\n"
-                              "uniform sampler2D Diffuse;\n"
+                              "uniform mediump sampler2D Diffuse;\n"
                               "varying mediump vec2 Out_Tex0;\n"
                               "uniform mediump vec4 GFX1v;\n"
                               "varying mediump float CalculatedScaler;\n"
@@ -210,7 +210,7 @@ void CreateEffectsShaders()
 
     // https://lettier.github.io/3d-game-shaders-for-beginners/chromatic-aberration.html
     char sChromaPxl[] = "precision mediump float;\n"
-                        "uniform sampler2D Diffuse;\n"
+                        "uniform mediump sampler2D Diffuse;\n"
                         "varying mediump vec2 Out_Tex0;\n"
                         "varying mediump vec2 vPos;\n"
                         "void main() {\n"
@@ -248,7 +248,7 @@ void CreateEffectsShaders()
     // https://github.com/TyLindberg/glsl-vignette
     // mediump -> highp for smoother vignette
     char sVignettePxl[] = "precision highp float;\n"
-                          "uniform sampler2D Diffuse;\n"
+                          "uniform mediump sampler2D Diffuse;\n"
                           "varying mediump vec2 Out_Tex0;\n"
                           "uniform mediump vec4 GFX1v;\n"
                           "const vec2 centerVec = vec2(0.5, 0.5);\n"
@@ -272,7 +272,7 @@ void CreateEffectsShaders()
     g_pVignetteShader = CreateCustomShaderAlloc(0, sVignettePxl, sVignetteVtx, sizeof(sVignettePxl), sizeof(sVignetteVtx));
 
     char sFakeRayPxl[] = "precision mediump float;\n"
-                         "uniform sampler2D Diffuse;\n"
+                         "uniform mediump sampler2D Diffuse;\n"
                          "uniform highp sampler2D DepthTex;\n"
                          "varying mediump vec2 Out_Tex0;\n"
                          "varying mediump vec2 vPos;\n"
@@ -302,8 +302,8 @@ void CreateEffectsShaders()
                          "}";
     g_pFakeRayShader = CreateCustomShaderAlloc(0, sFakeRayPxl, sFakeRayVtx, sizeof(sFakeRayPxl), sizeof(sFakeRayVtx));
 
-    char sDOFPxl[] = "precision mediump float;\n"
-                     "uniform sampler2D Diffuse;\n"
+    char sDOFPxl[] = "precision highp float;\n"
+                     "uniform mediump sampler2D Diffuse;\n"
                      "uniform highp sampler2D DepthTex;\n"
                      "varying mediump vec2 Out_Tex0;\n"
                      "uniform mediump vec4 GFX1v;\n"
@@ -335,8 +335,8 @@ void CreateEffectsShaders()
                      "}";
     g_pDOFShader = CreateCustomShaderAlloc(0, sDOFPxl, sDOFVtx, sizeof(sDOFPxl), sizeof(sDOFVtx));
 
-    char sDOFDAPxl[] = "precision mediump float;\n"
-                       "uniform sampler2D Diffuse;\n"
+    char sDOFDAPxl[] = "precision highp float;\n"
+                       "uniform mediump sampler2D Diffuse;\n"
                        "uniform highp sampler2D DepthTex;\n"
                        "varying mediump vec2 Out_Tex0;\n"
                        "uniform mediump vec4 GFX1v;\n"
@@ -372,7 +372,7 @@ void CreateEffectsShaders()
     g_pDADOFShader = CreateCustomShaderAlloc(0, sDOFDAPxl, sDOFDAVtx, sizeof(sDOFDAPxl), sizeof(sDOFDAVtx));
 
     char sUWRPxl[] = "precision highp float;\n"
-                     "uniform sampler2D Diffuse;\n"
+                     "uniform mediump sampler2D Diffuse;\n"
                      "uniform mediump vec4 GFX1v;\n"
                      "varying mediump vec2 Out_Tex0;\n"
                      "varying mediump vec2 vPos;\n"
@@ -400,8 +400,8 @@ void CreateEffectsShaders()
     g_pUnderwaterRippleShader = CreateCustomShaderAlloc(0, sUWRPxl, sUWRVtx, sizeof(sUWRPxl), sizeof(sUWRVtx));
 
     // https://github.com/SableRaf/Filters4Processing/blob/master/sketches/ContrastSaturationBrightness/data/ContrastSaturationBrightness.glsl
-    char sCSBPxl[] = "precision mediump float;\n"
-                     "uniform sampler2D Diffuse;\n"
+    char sCSBPxl[] = "precision highp float;\n"
+                     "uniform mediump sampler2D Diffuse;\n"
                      "uniform mediump vec4 GFX1v;\n"
                      "varying mediump vec2 Out_Tex0;\n"
                      "const vec3 LumCoeff = vec3(0.2126, 0.7152, 0.0722);\n"
@@ -410,7 +410,8 @@ void CreateEffectsShaders()
                      "  vec3 brtColor  = texture2D(Diffuse, Out_Tex0).rgb * vec3(GFX1v.z);\n"
                      "  vec3 intensity = vec3(dot(brtColor, LumCoeff));\n"
                      "  vec3 satColor  = mix(intensity, brtColor, GFX1v.y);\n"
-                     "  gl_FragColor = vec4(pow(mix(AvgLumin, satColor, GFX1v.x), vec3(GFX1v.w)), 1.0);\n"
+                     "  vec3 gammaColor = pow(mix(AvgLumin, satColor, GFX1v.x), vec3(GFX1v.w));\n"
+                     "  gl_FragColor = vec4(gammaColor, 1.0);\n"
                      "}";
     char sCSBVtx[] = "precision highp float;\n"
                      "attribute vec3 Position;\n"
@@ -436,8 +437,8 @@ void CreateEffectsShaders()
                        "  WeightGauss[3] = 0.0540540541;\n"
                        "  WeightGauss[4] = 0.0162162162;\n"
                        "}";
-    char sBloom1Pxl[] = "precision mediump float;\n"
-                        "uniform sampler2D Diffuse;\n"
+    char sBloom1Pxl[] = "precision highp float;\n"
+                        "uniform mediump sampler2D Diffuse;\n"
                         "uniform mediump vec4 GFX1v;\n"
                         "varying mediump vec2 Out_Tex0;\n"
                         "varying highp float WeightGauss[5];\n"
@@ -452,8 +453,8 @@ void CreateEffectsShaders()
                         "}";
     g_pBloomP1Shader = CreateCustomShaderAlloc(0, sBloom1Pxl, sBloomVtx, sizeof(sBloom1Pxl), sizeof(sBloomVtx)); // Horizontal blur
 
-    char sBloom2Pxl[] = "precision mediump float;\n"
-                        "uniform sampler2D Diffuse;\n"
+    char sBloom2Pxl[] = "precision highp float;\n"
+                        "uniform mediump sampler2D Diffuse;\n"
                         "uniform mediump vec4 GFX1v;\n"
                         "varying mediump vec2 Out_Tex0;\n"
                         "varying highp float WeightGauss[5];\n"
@@ -468,9 +469,9 @@ void CreateEffectsShaders()
                         "}";
     g_pBloomP2Shader = CreateCustomShaderAlloc(0, sBloom2Pxl, sBloomVtx, sizeof(sBloom2Pxl), sizeof(sBloomVtx)); // Vertical blur
 
-    char sBloomPxl[] = "precision mediump float;\n"
-                       "uniform sampler2D Diffuse;\n"
-                       "uniform sampler2D BrightBuf;\n"
+    char sBloomPxl[] = "precision highp float;\n"
+                       "uniform mediump sampler2D Diffuse;\n"
+                       "uniform highp sampler2D BrightBuf;\n"
                        "uniform mediump vec4 GFX1v;\n"
                        "varying mediump vec2 Out_Tex0;\n"
                        "void main() {\n"
@@ -481,7 +482,7 @@ void CreateEffectsShaders()
     g_pBloomShader = CreateCustomShaderAlloc(0, sBloomPxl, sBloomVtx, sizeof(sBloomPxl), sizeof(sBloomVtx));
 
     char sFXAAPxl[] = "precision mediump float;\n"
-                      "uniform sampler2D Diffuse;\n"
+                      "uniform mediump sampler2D Diffuse;\n"
                       "varying mediump vec2 Out_Tex0;\n"
                       "uniform mediump vec4 GFX1v;\n"
                       "varying mediump vec2 TexelNegatedAxis;\n"
@@ -717,7 +718,7 @@ void CreateEffectsShaders()
     g_pSSAOShader = CreateCustomShaderAlloc(0, sSSAOPxl, sSSAOVtx, sizeof(sSSAOPxl), sizeof(sSSAOVtx));
 
     char sRBlurPxl[] = "precision mediump float;\n"
-                       "uniform sampler2D Diffuse;\n"
+                       "uniform mediump sampler2D Diffuse;\n"
                        "varying mediump vec2 Out_Tex0;\n"
                        "uniform highp vec4 GFX1v;\n"
                        "void main() {\n"
@@ -739,7 +740,7 @@ void CreateEffectsShaders()
     g_pRadiosityBlurShader = CreateCustomShaderAlloc(0, sRBlurPxl, sRBlurVtx, sizeof(sRBlurPxl), sizeof(sRBlurVtx));
 
     char sRadioPxl[] = "precision mediump float;\n"
-                       "uniform sampler2D Diffuse;\n"
+                       "uniform mediump sampler2D Diffuse;\n"
                        "varying mediump vec2 Out_Tex0;\n"
                        "uniform highp vec4 GFX1v;\n"
                        "uniform highp vec4 GFX2v;\n"
@@ -761,7 +762,7 @@ void CreateEffectsShaders()
     g_pRadiosityShader = CreateCustomShaderAlloc(0, sRadioPxl, sRadioVtx, sizeof(sRadioPxl), sizeof(sRadioVtx));
 
     char sInvrsPxl[] = "precision mediump float;\n"
-                       "uniform sampler2D Diffuse;\n"
+                       "uniform mediump sampler2D Diffuse;\n"
                        "varying mediump vec2 Out_Tex0;\n"
                        "void main() {\n"
                        "  gl_FragColor = texture2D(Diffuse, Out_Tex0);\n"
@@ -772,7 +773,7 @@ void CreateEffectsShaders()
                        "uniform mat4 ObjMatrix;\n"
                        "attribute vec3 Position;\n"
                        "attribute vec2 TexCoord0;\n"
-                       "uniform mediump vec4 GFX1v;\n"
+                       "//uniform mediump vec4 GFX1v;\n"
                        "varying mediump vec2 Out_Tex0;\n"
                        "void main() {\n"
                        "  vec4 WorldPos = ObjMatrix * vec4(Position,1.0);\n"
