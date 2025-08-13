@@ -17,6 +17,7 @@ bool g_bFixTimecycIllumination = true;
 bool g_bAdditionalWaterLayer = true;
 bool g_bPS2WaterWaves = true;
 bool g_bFixPointLightsFog = true;
+bool g_bLightningIlluminatesWorld = true;
 
 /* Configs */
 ConfigEntry* pCFGPS2SunZTest;
@@ -202,6 +203,7 @@ void StartMiscStuff()
     g_bAdditionalWaterLayer = cfg->GetBool("AdditionalWaterLayer", g_bAdditionalWaterLayer, "Visual");
     g_bPS2WaterWaves = cfg->GetBool("PS2WaterWaves", g_bPS2WaterWaves, "Visual");
     g_bFixPointLightsFog = cfg->GetBool("FixPointLightsFog", g_bFixPointLightsFog, "Visual");
+    g_bLightningIlluminatesWorld = cfg->GetBool("LightningIlluminatesWorld", g_bLightningIlluminatesWorld, "Visual");
     
     if(g_bRemoveDumbWaterColorCalculations)
     {
@@ -365,5 +367,17 @@ void StartMiscStuff()
         HOOKPLT(RenderBufferedOneXLUSprite_Rotate_Aspect, pGTASA + BYBIT(0x6742C0, 0x847098));
         //aml->Write32(pGTASA + BYBIT(0x5B203C, 0x6D6704), BYBIT(0x04FFF04F, 0x52801FE3)); // Intensity 255
         aml->Write32(pGTASA + BYBIT(0x5B203C, 0x6D6704), BYBIT(0x405CF8DD, 0xD10092C3)); // PointLight* in Intensity
+    }
+
+    // World doesnt get nearly white on lightning
+    if(!g_bLightningIlluminatesWorld)
+    {
+      #ifdef AML32
+        aml->PlaceNOP4(pGTASA + 0x5D178E, 1);
+        aml->PlaceNOP(pGTASA + 0x5D1792, 1);
+      #else
+        aml->PlaceNOP4(pGTASA + 0x6F5EBC, 1);
+        aml->PlaceNOP4(pGTASA + 0x6F5EC0, 1);
+      #endif
     }
 }
