@@ -2,10 +2,7 @@
 #include "include/renderqueue.h"
 
 /* Structs */
-struct CRenPar_fake
-{
-  char pad[0x10];
-};
+struct CRenPar_fake { char pad[0x10]; };
 
 /* Variables */
 bool g_bRemoveDumbWaterColorCalculations = true;
@@ -16,6 +13,10 @@ bool g_bPS2Flare = true;
 bool g_bTransparentLockOn = true;
 bool g_bDarkerModelsAtSun = true;
 bool g_bFixCarLightsIntensity = true;
+bool g_bFixTimecycIllumination = true;
+bool g_bAdditionalWaterLayer = true;
+bool g_bPS2WaterWaves = true;
+bool g_bFixPointLightsFog = true;
 
 /* Configs */
 ConfigEntry* pCFGPS2SunZTest;
@@ -92,6 +93,20 @@ DECL_HOOKv(CalcWavesForCoord, int x, int y, float bigWaves, float smallWaves, fl
 
     float hDiff = (*height - hInit) / hClamp;
     if(hDiff > 0) *shading *= (hDiff + 1.0f);
+}
+DECL_HOOKv(RenderBufferedOneXLUSprite_Rotate_Aspect, float ScreenX, float ScreenY, float ScreenZ, float SizeX, float SizeY, UInt8 R, UInt8 G, UInt8 B, uintptr_t Intensity16, float RecipZ, float Rotation, char Alpha)
+{
+    if(Intensity16 < 256)
+    {
+        return RenderBufferedOneXLUSprite_Rotate_Aspect(ScreenX, ScreenY, ScreenZ, SizeX, SizeY, R, G, B, Intensity16, RecipZ, Rotation, Alpha);
+    }
+
+    uint8_t fogType = *(uint8_t*) (*(uintptr_t*)Intensity16 + BYBIT(0x2D - 0x24, 0x31));
+    if(fogType == 1)
+    {
+        return RenderBufferedOneXLUSprite_Rotate_Aspect(ScreenX, ScreenY, ScreenZ, SizeX, SizeY, R + 16, G + 16, B + 16, 255, RecipZ, Rotation, Alpha);
+    }
+    RenderBufferedOneXLUSprite_Rotate_Aspect(ScreenX, ScreenY, ScreenZ, SizeX, SizeY, R, G, B, 255, RecipZ, Rotation, Alpha);
 }
 
 /* Functions */
@@ -183,6 +198,10 @@ void StartMiscStuff()
     g_bTransparentLockOn = cfg->GetBool("TransparentLockOn", g_bTransparentLockOn, "Visual");
     g_bDarkerModelsAtSun = cfg->GetBool("DarkerModelsAtSun", g_bDarkerModelsAtSun, "Visual");
     g_bFixCarLightsIntensity = cfg->GetBool("FixCarLightsIntensity", g_bFixCarLightsIntensity, "Visual");
+    g_bFixTimecycIllumination = cfg->GetBool("FixTimecycDefaultIllumination", g_bFixTimecycIllumination, "Visual");
+    g_bAdditionalWaterLayer = cfg->GetBool("AdditionalWaterLayer", g_bAdditionalWaterLayer, "Visual");
+    g_bPS2WaterWaves = cfg->GetBool("PS2WaterWaves", g_bPS2WaterWaves, "Visual");
+    g_bFixPointLightsFog = cfg->GetBool("FixPointLightsFog", g_bFixPointLightsFog, "Visual");
     
     if(g_bRemoveDumbWaterColorCalculations)
     {
@@ -321,12 +340,30 @@ void StartMiscStuff()
     }
 
     // Fix illumination value (1.28 on mobile, 1.00 on PS2)
-    aml->Write32(pGTASA + BYBIT(0x470E46, 0x55D4CC), BYBIT(0x0100F240, 0x52800008));
-    aml->Write32(pGTASA + BYBIT(0x470E4A, 0x55D4D4), BYBIT(0x7180F6C3, 0x72A7F008));
+    if(g_bFixTimecycIllumination)
+    {
+        aml->Write32(pGTASA + BYBIT(0x470E46, 0x55D4CC), BYBIT(0x0100F240, 0x52800008));
+        aml->Write32(pGTASA + BYBIT(0x470E4A, 0x55D4D4), BYBIT(0x7180F6C3, 0x72A7F008));
+    }
 
     // An additional water layer (exists on PC only, maybe also on PS2)
-    HOOK(RenderSingleHiPolyWaterTriangle, aml->GetSym(hGTASA, "_ZN11CWaterLevel38RenderHighDetailWaterTriangle_OneLayerEii7CRenPariiS0_iiS0_iiii"));
+    if(g_bAdditionalWaterLayer)
+    {
+        HOOK(RenderSingleHiPolyWaterTriangle, aml->GetSym(hGTASA, "_ZN11CWaterLevel38RenderHighDetailWaterTriangle_OneLayerEii7CRenPariiS0_iiS0_iiii"));
+    }
 
     // An imitation of water effect from PS2 (on PS2 it's Vector Units 0 & 1, can't replicate the code)
-    HOOK(CalcWavesForCoord, aml->GetSym(hGTASA, "_ZN11CWaterLevel27CalculateWavesForCoordinateEiiffPfS0_S0_P7CVector"));
+    if(g_bPS2WaterWaves)
+    {
+        HOOK(CalcWavesForCoord, aml->GetSym(hGTASA, "_ZN11CWaterLevel27CalculateWavesForCoordinateEiiffPfS0_S0_P7CVector"));
+    }
+    
+    // A fix for pointlight effect
+    if(g_bFixPointLightsFog)
+    {
+        // It's used by FogEffect only plus its PLT. It wont affect custom plugins.
+        HOOKPLT(RenderBufferedOneXLUSprite_Rotate_Aspect, pGTASA + BYBIT(0x6742C0, 0x847098));
+        //aml->Write32(pGTASA + BYBIT(0x5B203C, 0x6D6704), BYBIT(0x04FFF04F, 0x52801FE3)); // Intensity 255
+        aml->Write32(pGTASA + BYBIT(0x5B203C, 0x6D6704), BYBIT(0x405CF8DD, 0xD10092C3)); // PointLight* in Intensity
+    }
 }
