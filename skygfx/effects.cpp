@@ -50,6 +50,7 @@ int g_nVignette = 0;
 bool g_bRadiosity = true;
 int g_nDOF = DOF_INACTIVE;
 bool g_bHeatHaze = true;
+bool g_bHeatHaze_FixUnderWater = true;
 float g_fDOFStrength = 1.0f, g_fDOFDistance = 60.0f;
 bool g_bDOFUseScale = false;
 int g_nUWR = UWR_CLASSIC;
@@ -1883,7 +1884,7 @@ DECL_HOOKv(PostFX_Render)
         {
             if(*m_bHeatHazeFX || *pfWeatherUnderwaterness >= 0.535f)
             {
-                GFX_HeatHaze(1.0f, false);
+                if(g_nUWR == UWR_CLASSIC) GFX_HeatHaze(1.0f, false);
             }
             else if(*pfWeatherHeatHaze <= 0.0f)
             {
@@ -1900,6 +1901,9 @@ DECL_HOOKv(PostFX_Render)
     {
         if(*pfWeatherUnderwaterness >= 0.535f)
         {
+            /* FIX_BUGS */
+            if(g_bHeatHaze_FixUnderWater) GFX_GrabScreen();
+
             CRGBA underwaterCol;
             float waterColScale = 1.0f - fminf(*WaterDepth, 90.0f) / 90.0f;
 
@@ -2045,6 +2049,7 @@ void StartEffectsStuff()
         pCFGHeatHaze = cfg->Bind("HeatHaze", g_bHeatHaze, "Effects");
         HeatHazeSettingChanged(g_bHeatHaze, pCFGHeatHaze->GetBool());
         AddSetting("Heat Haze", g_bHeatHaze, 0, sizeofA(aYesNo)-1, aYesNo, HeatHazeSettingChanged, NULL);
+        g_bHeatHaze_FixUnderWater = cfg->GetBool("HeatHaze_FixUnderwaterFeature", g_bHeatHaze_FixUnderWater, "Effects");
         // Dont waste precious BLX hooks space
         //HOOKBLX(HeatHazeFX_GrabBuffer, pGTASA + BYBIT(0x5B51E6, 0x6D94EC));
         aml->PlaceNOP4(pGTASA + BYBIT(0x5B51E6, 0x6D94EC), 1);
