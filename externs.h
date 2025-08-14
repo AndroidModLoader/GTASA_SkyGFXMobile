@@ -107,6 +107,7 @@ inline void ForceCustomShader(ES2Shader* shader)
     #include <isautils.h>
     extern ISAUtils* sautils;
     extern eTypeOfSettings skygfxSettingsTab;
+    extern eTypeOfSettings skygfxEnchancedSettingsTab;
     inline void AddSetting(const char* name, int initVal, int minVal, int maxVal, const char** switchesArray = NULL, OnSettingChangedFn fnOnValueChange = NULL, void* data = NULL)
     {
         if(!sautils) return;
@@ -116,6 +117,16 @@ inline void ForceCustomShader(ES2Shader* shader)
     {
         if(!sautils) return;
         sautils->AddSliderItem(skygfxSettingsTab, name, initVal, minVal, maxVal, fnOnValueChange, fnOnValueDraw, data);
+    }
+    inline void AddEnSetting(const char* name, int initVal, int minVal, int maxVal, const char** switchesArray = NULL, OnSettingChangedFn fnOnValueChange = NULL, void* data = NULL)
+    {
+        if(!sautils) return;
+        sautils->AddClickableItem(skygfxEnchancedSettingsTab, name, initVal, minVal, maxVal, switchesArray, fnOnValueChange, data);
+    }
+    inline void AddEnSlider(const char* name, int initVal, int minVal, int maxVal, OnSettingChangedFn fnOnValueChange = NULL, OnSettingDrawedFn fnOnValueDraw = NULL, void* data = NULL)
+    {
+        if(!sautils) return;
+        sautils->AddSliderItem(skygfxEnchancedSettingsTab, name, initVal, minVal, maxVal, fnOnValueChange, fnOnValueDraw, data);
     }
 #else
     inline void AddSetting(...)

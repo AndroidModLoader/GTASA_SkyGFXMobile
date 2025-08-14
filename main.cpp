@@ -42,6 +42,7 @@ extern "C" void OnAllModsLoaded()
     if(sautils)
     {
         skygfxSettingsTab = sautils->AddSettingsTab("SkyGFX", "menu_maindisplay");
+        skygfxEnchancedSettingsTab = sautils->AddSettingsTab("SkyGFX Enchanced", "menu_maindisplay");
     }
   #endif
     

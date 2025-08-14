@@ -3,6 +3,7 @@
 #ifdef _SAUTILS_INTERFACE
     ISAUtils* sautils = NULL;
     eTypeOfSettings skygfxSettingsTab;
+    eTypeOfSettings skygfxEnchancedSettingsTab;
 #endif
 
 extern void* hGTASA;

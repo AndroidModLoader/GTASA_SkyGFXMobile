@@ -59,7 +59,7 @@ bool g_bBloom = false;
 float g_fBloomIntensity = 0.55f;
 bool g_bAutoExposure = false;
 bool g_bFXAA = false;
-bool g_bSSAO = false;
+bool g_bSSAO = false; // Looks bad, need a normal buffer
 
 int g_nGrainRainStrength = 0;
 int g_nInitialGrain = 0;
@@ -73,8 +73,8 @@ RwRaster *pSkyGFXPostFXRaster1 = NULL,     *pSkyGFXPostFXRaster2 = NULL,
          *pSkyGFXBloomP1Raster = NULL,     *pSkyGFXBloomP2Raster = NULL,
          *pSkyGFXBloomP3Raster = NULL,     *pSkyGFXSceneBrightnessRaster = NULL,
          *pSkyGFXOcclusionRaster = NULL,   *pSkyGFXOcclusionP1Raster = NULL,
-         *pSkyGFXOcclusionP2Raster = NULL, *pSkyGFXOcclusionP3Raster = NULL,
-         *pSkyGFXRadiosityRaster = NULL,   *pSkyGFXNormalRaster = NULL;
+         *pSkyGFXOcclusionP2Raster = NULL, *pSkyGFXRadiosityRaster = NULL,
+         *pSkyGFXNormalRaster = NULL;
 RwRaster *pDarkRaster = NULL, *pNoiseRaster = NULL;
 
 ES2Shader* g_pFramebufferRenderShader = NULL;
@@ -1005,7 +1005,7 @@ void GFX_ActivateFinalBloomTexture()
 }
 void GFX_ActivateFinalOcclusionTexture()
 {
-    ES2Texture* brTexture = GetES2Raster(pSkyGFXOcclusionP3Raster);
+    ES2Texture* brTexture = GetES2Raster(pSkyGFXOcclusionP2Raster);
     ERQ_SetActiveTexture(2, brTexture->texID);
 }
 void GFX_DeActivateTexture(int tex = 2)
@@ -1051,6 +1051,9 @@ void GFX_CheckBuffersSize()
         if(pSkyGFXBloomP3Raster) RwRasterDestroy(pSkyGFXBloomP3Raster);
         pSkyGFXBloomP3Raster = RwRasterCreate(0.125f * fpostfxX, 0.125f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
 
+        if(pSkyGFXRadiosityRaster) RwRasterDestroy(pSkyGFXRadiosityRaster);
+        pSkyGFXRadiosityRaster = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
+
         /*if(pSkyGFXOcclusionRaster) RwRasterDestroy(pSkyGFXOcclusionRaster);
         pSkyGFXOcclusionRaster = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
 
@@ -1060,14 +1063,8 @@ void GFX_CheckBuffersSize()
         if(pSkyGFXOcclusionP2Raster) RwRasterDestroy(pSkyGFXOcclusionP2Raster);
         pSkyGFXOcclusionP2Raster = RwRasterCreate(0.25f * fpostfxX, 0.25f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
 
-        if(pSkyGFXOcclusionP3Raster) RwRasterDestroy(pSkyGFXOcclusionP3Raster);
-        pSkyGFXOcclusionP3Raster = RwRasterCreate(0.25f * fpostfxX, 0.25f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);*/
-
-        if(pSkyGFXRadiosityRaster) RwRasterDestroy(pSkyGFXRadiosityRaster);
-        pSkyGFXRadiosityRaster = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
-
         if(pSkyGFXNormalRaster) RwRasterDestroy(pSkyGFXNormalRaster);
-        pSkyGFXNormalRaster = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
+        pSkyGFXNormalRaster = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);*/
     }
 }
 void GFX_GrabScreen(bool second = false)
@@ -1774,10 +1771,10 @@ DECL_HOOKv(PostFX_Render)
         // First downscale
         GFX_GrabTexIntoTex(pSkyGFXOcclusionRaster, pSkyGFXOcclusionP1Raster);
         // Second downscale + horizontal blur
-        RQVector uniValues = RQVector{ 1.0f / (float)pSkyGFXOcclusionP3Raster->width, 1.0f / (float)pSkyGFXOcclusionP3Raster->height, 1.0f, 0.0f };
+        RQVector uniValues = RQVector{ 1.0f / (float)pSkyGFXOcclusionP2Raster->width, 1.0f / (float)pSkyGFXOcclusionP2Raster->height, 1.0f, 0.0f };
         GFX_GrabTexIntoTex(pSkyGFXOcclusionP1Raster, pSkyGFXOcclusionP2Raster, g_pBloomP1Shader, &uniValues);
         // Vertical blur
-        GFX_GrabTexIntoTex(pSkyGFXOcclusionP2Raster, pSkyGFXOcclusionP3Raster, g_pBloomP2Shader, &uniValues);
+        GFX_GrabTexIntoTex(pSkyGFXOcclusionP2Raster, pSkyGFXOcclusionP2Raster, g_pBloomP2Shader, &uniValues);
 
         GFX_ActivateFinalOcclusionTexture();
         GFX_FrameBufferSSAO();
@@ -2053,26 +2050,26 @@ void StartEffectsStuff()
 
         pCFGFXAA = cfg->Bind("AntiAliasing", g_bFXAA, "EnchancedEffects");
         FXAASettingChanged(g_bFXAA, pCFGFXAA->GetBool());
-        AddSetting("FXAA", g_bFXAA, 0, sizeofA(aYesNo)-1, aYesNo, FXAASettingChanged, NULL);
+        AddEnSetting("FXAA", g_bFXAA, 0, sizeofA(aYesNo)-1, aYesNo, FXAASettingChanged, NULL);
         
         pCFGCrAbFX = cfg->Bind("ChromaticAberration", g_nCrAb, "EnchancedEffects");
         CrAbFXSettingChanged(g_nCrAb, pCFGCrAbFX->GetInt());
-        AddSetting("Chromatic Aberration", g_nCrAb, 0, sizeofA(aCrAbFXSettings)-1, aCrAbFXSettings, CrAbFXSettingChanged, NULL);
+        AddEnSetting("Chromatic Aberration", g_nCrAb, 0, sizeofA(aCrAbFXSettings)-1, aCrAbFXSettings, CrAbFXSettingChanged, NULL);
 
         pCFGVignette = cfg->Bind("VignetteIntensity", g_nVignette, "EnchancedEffects");
         VignetteSettingChanged(g_nVignette, pCFGVignette->GetInt());
-        AddSlider("Vignette Intensity", g_nVignette, 0, 100, VignetteSettingChanged, NULL, NULL);
+        AddEnSlider("Vignette Intensity", g_nVignette, 0, 100, VignetteSettingChanged, NULL, NULL);
 
         pCFGDOF = cfg->Bind("DOFType", g_nDOF, "EnchancedEffects");
         DOFSettingChanged(g_nDOF, pCFGDOF->GetInt());
-        AddSetting("Depth'o'Field", g_nDOF, 0, sizeofA(aDOFSettings)-1, aDOFSettings, DOFSettingChanged, NULL);
+        AddEnSetting("Depth'o'Field", g_nDOF, 0, sizeofA(aDOFSettings)-1, aDOFSettings, DOFSettingChanged, NULL);
         g_fDOFStrength = cfg->GetFloat("DOFStrength", g_fDOFStrength, "EnchancedEffects");
         g_bDOFUseScale = cfg->GetFloat("DOFUseScaleInsteadDist", g_bDOFUseScale, "EnchancedEffects");
         g_fDOFDistance = cfg->GetFloat("DOFDistance", g_fDOFDistance, "EnchancedEffects");
 
         pCFGCSB = cfg->Bind("CSBFilter", g_bCSB, "EnchancedEffects");
         CSBSettingChanged(g_bCSB, pCFGCSB->GetBool());
-        AddSetting("CSB Image Filter", g_bCSB, 0, sizeofA(aYesNo)-1, aYesNo, CSBSettingChanged, NULL);
+        AddEnSetting("CSB Image Filter", g_bCSB, 0, sizeofA(aYesNo)-1, aYesNo, CSBSettingChanged, NULL);
         g_fContrast = cfg->GetFloat("CSBFilter_Contrast", g_fContrast, "EnchancedEffects");
         g_fSaturation = cfg->GetFloat("CSBFilter_Saturation", g_fSaturation, "EnchancedEffects");
         g_fBrightness = cfg->GetFloat("CSBFilter_Brightness", g_fBrightness, "EnchancedEffects");
@@ -2080,7 +2077,7 @@ void StartEffectsStuff()
 
         pCFGBloom = cfg->Bind("Bloom", g_bBloom, "EnchancedEffects");
         BloomSettingChanged(g_bBloom, pCFGBloom->GetBool());
-        AddSetting("Bloom", g_bBloom, 0, sizeofA(aYesNo)-1, aYesNo, BloomSettingChanged, NULL);
+        AddEnSetting("Bloom", g_bBloom, 0, sizeofA(aYesNo)-1, aYesNo, BloomSettingChanged, NULL);
         g_fBloomIntensity = cfg->GetFloat("Bloom_Intensity", g_fBloomIntensity, "EnchancedEffects");
 
         // Normal map buffer (dumbass Qualcomm removed a required extension from a list, though its supported)
