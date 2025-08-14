@@ -1880,7 +1880,7 @@ DECL_HOOKv(PostFX_Render)
 
     if(g_bHeatHaze)
     {
-        if(*pfWeatherHeatHaze > 0.0f || (*m_bHeatHazeFX && *m_foundHeatHazeInfo) || *pfWeatherUnderwaterness >= 0.535f)
+        if(*pfWeatherHeatHaze > 0.0f || *m_bHeatHazeFX || *m_foundHeatHazeInfo || *pfWeatherUnderwaterness >= 0.535f)
         {
             if(*m_bHeatHazeFX || *pfWeatherUnderwaterness >= 0.535f)
             {
