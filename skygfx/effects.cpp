@@ -721,13 +721,18 @@ void CreateEffectsShaders()
     char sRBlurPxl[] = "precision mediump float;\n"
                        "uniform mediump sampler2D Diffuse;\n"
                        "varying mediump vec2 Out_Tex0;\n"
-                       "uniform highp vec4 GFX1v;\n"
+                       "uniform mediump vec4 GFX1v;\n"
                        "void main() {\n"
-                       "  vec3 c = vec3(0.0);\n"
-                       "  for(float i = 0.0; i < 10.0; ++i) {\n"
-                       "    vec2 uv = Out_Tex0 + GFX1v.xy * (i / 9.0 - 0.5) * GFX1v.z;\n"
-                       "    c += texture2D(Diffuse, uv).rgb;\n"
-                       "  }\n"
+                       "  vec3 c = texture2D(Diffuse, Out_Tex0 + GFX1v.xy * (-0.5000)).rgb;\n"
+                       "  c += texture2D(Diffuse, Out_Tex0 + GFX1v.xy * (-0.3889)).rgb;\n"
+                       "  c += texture2D(Diffuse, Out_Tex0 + GFX1v.xy * (-0.2778)).rgb;\n"
+                       "  c += texture2D(Diffuse, Out_Tex0 + GFX1v.xy * (-0.1667)).rgb;\n"
+                       "  c += texture2D(Diffuse, Out_Tex0 + GFX1v.xy * (-0.0556)).rgb;\n"
+                       "  c += texture2D(Diffuse, Out_Tex0 + GFX1v.xy * ( 0.0556)).rgb;\n"
+                       "  c += texture2D(Diffuse, Out_Tex0 + GFX1v.xy * ( 0.1667)).rgb;\n"
+                       "  c += texture2D(Diffuse, Out_Tex0 + GFX1v.xy * ( 0.2778)).rgb;\n"
+                       "  c += texture2D(Diffuse, Out_Tex0 + GFX1v.xy * ( 0.3889)).rgb;\n"
+                       "  c += texture2D(Diffuse, Out_Tex0 + GFX1v.xy * ( 0.5000)).rgb;\n"
                        "  gl_FragColor = vec4(c / 10.0, 1.0);\n"
                        "}";
     char sRBlurVtx[] = "precision highp float;\n"
@@ -744,12 +749,13 @@ void CreateEffectsShaders()
                        "uniform mediump sampler2D Diffuse;\n"
                        "varying mediump vec2 Out_Tex0;\n"
                        "uniform highp vec4 GFX1v;\n"
-                       "uniform highp vec4 GFX2v;\n"
+                       "//uniform highp vec4 GFX2v;\n"
                        "void main() {\n"
-                       "  vec2 uv = Out_Tex0;\n"
+                       "  //vec2 uv = Out_Tex0;\n"
                        "  //uv = uv * GFX2v.zw + GFX2v.xy;\n"
-                       "  vec3 c = texture2D(Diffuse, uv).rgb;\n"
-                       "  c = clamp(c * 2.0 - vec3(1.0) * GFX1v.x, 0.0, 1.0) * GFX1v.y * GFX1v.z;\n"
+                       "  vec3 c = texture2D(Diffuse, Out_Tex0).rgb;\n"
+                       "  //c = clamp(c * 2.0 - vec3(1.0) * GFX1v.x, 0.0, 1.0) * GFX1v.y * GFX1v.z;\n"
+                       "  c = clamp(c * 2.0 - GFX1v.x, 0.0, 1.0) * GFX1v.y;\n"
                        "  gl_FragColor = vec4(c, 1.0);\n"
                        "}";
     char sRadioVtx[] = "precision highp float;\n"
@@ -1299,11 +1305,11 @@ void GFX_Radiosity(int intensityLimit, int filterPasses, int renderPasses, int i
     RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)false);
     RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)false);
 
-    RQVector uniValues1 = RQVector{ 0.0f, 1.0f / (float)pSkyGFXRadiosityRaster->height,
-                                   ((float)pSkyGFXRadiosityRaster->width / 640.0f) * (1 << filterPasses), 0.0f };
+    float fFilterPixelMul = ((float)pSkyGFXRadiosityRaster->width / 640.0f) * (1 << filterPasses);
+    RQVector uniValues1 = RQVector{ 0.0f, fFilterPixelMul / (float)pSkyGFXRadiosityRaster->height, 0.0f, 0.0f };
     GFX_GrabTexIntoTex(pSkyGFXPostFXRaster2, pSkyGFXRadiosityRaster, g_pRadiosityBlurShader, &uniValues1);
 
-    uniValues1.x = 1.0f / (float)pSkyGFXRadiosityRaster->width;
+    uniValues1.x = fFilterPixelMul / (float)pSkyGFXRadiosityRaster->width;
     uniValues1.y = 0.0f;
     GFX_GrabTexIntoTex(pSkyGFXRadiosityRaster, pSkyGFXRadiosityRaster, g_pRadiosityBlurShader, &uniValues1);
 
@@ -1323,15 +1329,16 @@ void GFX_Radiosity(int intensityLimit, int filterPasses, int renderPasses, int i
 
     uniValues1.x = (float)intensityLimit / 255.0f;
     uniValues1.y = (float)intensity / 255.0f;
-    uniValues1.z = (float)renderPasses;
-    RQVector uniValues2 = RQVector{ cu / (float)pSkyGFXRadiosityRaster->width, cv / (float)pSkyGFXRadiosityRaster->height,
-                                   (maxu - minu) / (float)pSkyGFXRadiosityRaster->width, (maxv - minv) / (float)pSkyGFXRadiosityRaster->height };
+    //uniValues1.z = (float)renderPasses;
+    uniValues1.y *= (float)renderPasses;
+    //RQVector uniValues2 = RQVector{ cu / (float)pSkyGFXRadiosityRaster->width, cv / (float)pSkyGFXRadiosityRaster->height,
+    //                               (maxu - minu) / (float)pSkyGFXRadiosityRaster->width, (maxv - minv) / (float)pSkyGFXRadiosityRaster->height };
 
     GFX_FrameBuffer(true);
     
     pForcedShader = g_pRadiosityShader;
     pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues1.x, 4);
-    pForcedShader->SetVectorConstant(SVCID_GreenGrade, &uniValues2.x, 4);
+    //pForcedShader->SetVectorConstant(SVCID_GreenGrade, &uniValues2.x, 4);
 
     float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
     DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
