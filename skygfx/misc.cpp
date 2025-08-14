@@ -102,7 +102,7 @@ DECL_HOOKv(RenderBufferedOneXLUSprite_Rotate_Aspect, float ScreenX, float Screen
         return RenderBufferedOneXLUSprite_Rotate_Aspect(ScreenX, ScreenY, ScreenZ, SizeX, SizeY, R, G, B, Intensity16, RecipZ, Rotation, Alpha);
     }
 
-    uint8_t fogType = *(uint8_t*) (*(uintptr_t*)Intensity16 + BYBIT(0x2D - 0x24, 0x31));
+    uint8_t fogType = *(uint8_t*) (Intensity16 + BYBIT(0x2D - 0x24, 0x31));
     if(fogType == 1)
     {
         return RenderBufferedOneXLUSprite_Rotate_Aspect(ScreenX, ScreenY, ScreenZ, SizeX, SizeY, R + 16, G + 16, B + 16, 255, RecipZ, Rotation, Alpha);

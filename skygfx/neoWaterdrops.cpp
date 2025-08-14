@@ -130,10 +130,9 @@ DECL_HOOKv(AddFxParticle, void* self, RwV3d *pos, RwV3d *vel, float timeSince, v
     bool isDirt = false, isFrameSensitive = false;
     
     if(self == g_fx->prt_boatsplash) { pd = 40.0f; isFrameSensitive = true; }
-    //else if(self == g_fx->prt_splash) { pd = 15.0; }
     else if(self == g_fx->prt_wake) { pd = 10.0f; isFrameSensitive = true; }
-    else if(self == g_fx->prt_watersplash) { pd = 30.0f; isFrameSensitive = true; }
-    else if(self == g_fx->prt_wheeldirt && *WetRoads > 0.0f) { pd = 15.0f; isDirt = true; }
+    else if(self == g_fx->prt_watersplash) { pd = 15.0f; isFrameSensitive = true; }
+    else if(self == g_fx->prt_wheeldirt && *WetRoads > 0.2f) { pd = 15.0f; isDirt = true; }
     else return;
 
     float len = RwV3dLength(&dist);
