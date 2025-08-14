@@ -1884,7 +1884,10 @@ DECL_HOOKv(PostFX_Render)
         {
             if(*m_bHeatHazeFX || *pfWeatherUnderwaterness >= 0.535f)
             {
-                if(g_nUWR == UWR_CLASSIC) GFX_HeatHaze(1.0f, false);
+                if(*pfWeatherUnderwaterness < 0.535f || g_nUWR == UWR_CLASSIC)
+                {
+                    GFX_HeatHaze(1.0f, false);
+                }
             }
             else if(*pfWeatherHeatHaze <= 0.0f)
             {
