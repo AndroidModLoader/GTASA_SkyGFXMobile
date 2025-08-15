@@ -19,6 +19,7 @@ const char* aShadingSwitch[SHADING_MAX] =
     "Simplified Algorithm",
 };
 bool g_bAmbLightNoMultiplier = true;
+extern bool g_bLightningIlluminatesWorld;
 
 /* Configs */
 ConfigEntry* pCFGShading;
@@ -125,9 +126,12 @@ void SetLightsWithTimeOfDayColour_PC_PS2(RpWorld* world)
 
         if(*p_CWeather__LightningFlash)
         {
-            p_AmbientLightColourForFrame->red   = 1.0f;
-            p_AmbientLightColourForFrame->green = 1.0f;
-            p_AmbientLightColourForFrame->blue  = 1.0f;
+            if(g_bLightningIlluminatesWorld)
+            {
+                p_AmbientLightColourForFrame->red   = 1.0f;
+                p_AmbientLightColourForFrame->green = 1.0f;
+                p_AmbientLightColourForFrame->blue  = 1.0f;
+            }
 
             p_AmbientLightColourForFrame_PedsCarsAndObjects->red   = 1.0f;
             p_AmbientLightColourForFrame_PedsCarsAndObjects->green = 1.0f;
@@ -198,9 +202,12 @@ void SetLightsWithTimeOfDayColour_Simple(RpWorld* world)
 
         if(*p_CWeather__LightningFlash)
         {
-            p_AmbientLightColourForFrame->red   = 1.0f;
-            p_AmbientLightColourForFrame->green = 1.0f;
-            p_AmbientLightColourForFrame->blue  = 1.0f;
+            if(g_bLightningIlluminatesWorld)
+            {
+                p_AmbientLightColourForFrame->red   = 1.0f;
+                p_AmbientLightColourForFrame->green = 1.0f;
+                p_AmbientLightColourForFrame->blue  = 1.0f;
+            }
 
             p_AmbientLightColourForFrame_PedsCarsAndObjects->red   = 1.0f;
             p_AmbientLightColourForFrame_PedsCarsAndObjects->green = 1.0f;
