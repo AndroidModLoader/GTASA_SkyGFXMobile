@@ -176,9 +176,6 @@ void CreateEffectsShaders()
                              "void main() {\n"
                              "  gl_Position = vec4(Position.xy - 1.0, 0.0, 1.0);\n"
                              "  Out_Tex0 = TexCoord0;\n"
-                             "  float zNear = GFX1v.x;\n"
-                             "  float zFar = GFX1v.y;\n"
-                             "  FarNearLogic = vec3(2.0 * zNear, zFar + zNear, zFar - zNear);\n"
                              "}";
     g_pSimpleDepthShader = CreateCustomShaderAlloc(0, sSimpleDepthPxl, sSimpleDepthVtx, sizeof(sSimpleDepthPxl), sizeof(sSimpleDepthVtx));
 
