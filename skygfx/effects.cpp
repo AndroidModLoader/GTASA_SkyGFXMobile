@@ -1061,7 +1061,7 @@ void GFX_CheckBuffersSize()
         pSkyGFXBloomP3Raster = RwRasterCreate(0.125f * fpostfxX, 0.125f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
 
         if(pSkyGFXRadiosityRaster) RwRasterDestroy(pSkyGFXRadiosityRaster);
-        pSkyGFXRadiosityRaster = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
+        pSkyGFXRadiosityRaster = RwRasterCreate(0.5f * fpostfxX, 0.5f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
 
         /*if(pSkyGFXOcclusionRaster) RwRasterDestroy(pSkyGFXOcclusionRaster);
         pSkyGFXOcclusionRaster = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
@@ -1309,12 +1309,12 @@ void GFX_Radiosity(int intensityLimit, int filterPasses, int renderPasses, int i
     RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)false);
 
     float fFilterPixelMul = ((float)pSkyGFXRadiosityRaster->width / 640.0f) * (1 << filterPasses);
-    RQVector uniValues1 = RQVector{ 0.0f, fFilterPixelMul / (float)pSkyGFXRadiosityRaster->height, 0.0f, 0.0f };
-    GFX_GrabTexIntoTex(pSkyGFXPostFXRaster2, pSkyGFXRadiosityRaster, g_pRadiosityBlurShader, &uniValues1);
+    RQVector uniValues = RQVector{ 0.0f, fFilterPixelMul / (float)pSkyGFXRadiosityRaster->height, 0.0f, 0.0f };
+    GFX_GrabTexIntoTex(pSkyGFXPostFXRaster2, pSkyGFXRadiosityRaster, g_pRadiosityBlurShader, &uniValues);
 
-    uniValues1.x = fFilterPixelMul / (float)pSkyGFXRadiosityRaster->width;
-    uniValues1.y = 0.0f;
-    GFX_GrabTexIntoTex(pSkyGFXRadiosityRaster, pSkyGFXRadiosityRaster, g_pRadiosityBlurShader, &uniValues1);
+    uniValues.x = fFilterPixelMul / (float)pSkyGFXRadiosityRaster->width;
+    uniValues.y = 0.0f;
+    GFX_GrabTexIntoTex(pSkyGFXRadiosityRaster, pSkyGFXRadiosityRaster, g_pRadiosityBlurShader, &uniValues);
 
     RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)true);
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
@@ -1330,18 +1330,12 @@ void GFX_Radiosity(int intensityLimit, int filterPasses, int renderPasses, int i
     float cu = (offu*(pSkyGFXRadiosityRaster->width+0.5f) + offu/*off*2*/*0.5f) / pSkyGFXRadiosityRaster->width;
     float cv = (offv*(pSkyGFXRadiosityRaster->height+0.5f) + offv/*off*2*/*0.5f) / pSkyGFXRadiosityRaster->height;
 
-    uniValues1.x = (float)intensityLimit / 255.0f;
-    uniValues1.y = (float)intensity / 255.0f;
-    //uniValues1.z = (float)renderPasses;
-    uniValues1.y *= (float)renderPasses;
-    //RQVector uniValues2 = RQVector{ cu / (float)pSkyGFXRadiosityRaster->width, cv / (float)pSkyGFXRadiosityRaster->height,
-    //                               (maxu - minu) / (float)pSkyGFXRadiosityRaster->width, (maxv - minv) / (float)pSkyGFXRadiosityRaster->height };
-
+    uniValues.x = (float)intensityLimit / 255.0f;
+    uniValues.y = (float)(intensity * renderPasses) / 255.0f;
     GFX_FrameBuffer(true);
     
     pForcedShader = g_pRadiosityShader;
-    pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues1.x, 4);
-    //pForcedShader->SetVectorConstant(SVCID_GreenGrade, &uniValues2.x, 4);
+    pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
 
     float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
     DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
