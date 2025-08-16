@@ -58,6 +58,7 @@ void RQ_Command_erqAlphaBlendStatus(uint8_t** data)
 {
     extRQ.m_bAlphaBlending = (glIsEnabled(GL_BLEND) == GL_TRUE);
 }
+void RQ_Command_erqGrabFramebufferPost(uint8_t** data);
 void RQ_Command_erqGrabFramebuffer(uint8_t** data)
 {
     ES2Texture* dst = (ES2Texture*)RQUEUE_READPTR(data);
@@ -73,6 +74,8 @@ void RQ_Command_erqGrabFramebuffer(uint8_t** data)
     glBindFramebuffer(GL_FRAMEBUFFER, (*backTarget)->frameBuffer);
     glBindTexture(GL_TEXTURE_2D, dst->texID);
     glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, dst->width, dst->height);
+
+    RQ_Command_erqGrabFramebufferPost(NULL);
 }
 void RQ_Command_erqGrabFramebufferPost(uint8_t** data)
 {
