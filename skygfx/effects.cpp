@@ -1096,6 +1096,7 @@ void GFX_GrabDepth()
 
         RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
         RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
+        RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)false);
 
         RQVector uniValues = RQVector{ TheCamera->m_pRwCamera->nearClip, TheCamera->m_pRwCamera->farClip, 0.0f, 0.0f };
         pForcedShader = g_pSimpleDepthShader;
@@ -1120,6 +1121,7 @@ void GFX_GrabTexIntoTex(RwRaster* src, RwRaster* dst, ES2Shader* shader = NULL, 
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
     RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
     RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERLINEAR);
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)false);
 
     float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
     if(!shader) shader = g_pFramebufferRenderShader;
@@ -1155,6 +1157,7 @@ void GFX_GrabBrightness(float luminance)
 
         RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
         RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
+        RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)false);
 
         RQVector uniValues = RQVector{ luminance, 0.0f, 0.0f, 0.0f };
         pForcedShader = g_pSimpleBrightShader;
@@ -1189,6 +1192,7 @@ void GFX_NormalBuffer()
 
         RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
         RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
+        RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)false);
 
         RQVector uniValues = RQVector{ fpostfxXInv, fpostfxYInv, 0.0f, 0.0f };
         pForcedShader = g_pDepthNormalMapShader;
@@ -1425,6 +1429,7 @@ void GFX_UnderWaterRipple(CRGBA col, float xo, float yo, int strength, float spe
         RwRenderStateSet(rwRENDERSTATETEXTURERASTER, pSkyGFXPostFXRaster1);
         RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
         RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
+        RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)false);
         RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, TempVertexBuffer.m_2d, TempBufferVerticesStored);
     }
     
@@ -1437,6 +1442,7 @@ void GFX_UnderWaterRipple_Shader(CRGBA col, float xoIntensity, float speed, floa
 
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
     RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)false);
 
     RQVector uniValues = RQVector{ xoIntensity, speed * *m_snTimeInMilliseconds, freq, 0.0f };
     g_pUnderwaterRippleShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
@@ -1469,6 +1475,7 @@ void GFX_ChromaticAberration() // Completed
 
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
     RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)false);
 
     pForcedShader = ( g_nCrAb == CRAB_INTENSE ? g_pChromaticAberrationShader_Intensive : g_pChromaticAberrationShader );
     float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
@@ -1533,6 +1540,7 @@ void GFX_DOF() // Completed
 
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
     RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)false);
 
     RQVector uniValues = RQVector{ fpostfxXInv, fpostfxYInv, 2.0f * g_fDOFStrength, calc01Dist };
     pForcedShader = g_pDOFShader; // g_pDADOFShader (not yet little guys)
@@ -1556,6 +1564,7 @@ void GFX_GrabOcclusion()
 
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
     RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)false);
     RwRenderStateSet(rwRENDERSTATETEXTUREADDRESS, (void*)rwTEXTUREADDRESSWRAP);
 
     RQVector uniValues = RQVector{ fpostfxX / 8.0f, fpostfxY / 8.0f, fpostfxXInv, fpostfxYInv };
@@ -1583,6 +1592,7 @@ void GFX_FrameBuffer(bool second = false) // Completed
 
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
     RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)false);
 
     float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
     DrawQuadSetUVs(umin, vmax, umax, vmax, umax, vmin, umin, vmin);
@@ -1602,6 +1612,7 @@ void GFX_FrameBufferCSB(float contrast, float saturation, float brightness, floa
 
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
     RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)false);
 
     RQVector uniValues = RQVector{ contrast, saturation, brightness, 1.0f / gamma };
     pForcedShader = g_pCSBShader;
@@ -1623,6 +1634,7 @@ void GFX_FrameBufferFXAA() // Completed
 
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
     RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)false);
 
     RQVector uniValues = RQVector{ fpostfxXInv, fpostfxYInv, 0.0f, 0.0f };
     pForcedShader = g_pFXAAShader;
@@ -1643,6 +1655,7 @@ void GFX_FrameBufferBloom(float intensity) // Completed
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
     RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
     RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERLINEAR);
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)false);
 
     RQVector uniValues = RQVector{ 1.0f / (float)RsGlobal->maximumWidth, 1.0f / (float)RsGlobal->maximumHeight, intensity, 0.0f };
     pForcedShader = g_pBloomShader;
@@ -1665,6 +1678,7 @@ void GFX_FrameBufferSSAO() // Completed
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
     RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
     RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERLINEAR);
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)false);
 
     //RQVector uniValues = RQVector{ 1.0f / (float)RsGlobal->maximumWidth, 1.0f / (float)RsGlobal->maximumHeight, intensity, 0.0f };
     pForcedShader = g_pSSAOShader;
@@ -1686,6 +1700,7 @@ void GFX_DepthBuffer() // Completed
 
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
     RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)false);
 
     float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
     DrawQuadSetUVs(umin, vmax, umax, vmax, umax, vmin, umin, vmin);
@@ -1701,6 +1716,7 @@ void GFX_BloomBuffer() // Completed
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
     RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
     RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERLINEAR);
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)false);
 
     float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
     DrawQuadSetUVs(umin, vmax, umax, vmax, umax, vmin, umin, vmin);
