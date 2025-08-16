@@ -1137,7 +1137,7 @@ void GFX_GrabTexIntoTex(RwRaster* src, RwRaster* dst, ES2Shader* shader = NULL, 
     }
 
     ERQ_GrabFramebuffer(dst);
-    ERQ_GrabFramebufferPost();
+    //ERQ_GrabFramebufferPost();
 
     ImmediateModeRenderStatesReStore();
 }
@@ -1164,7 +1164,7 @@ void GFX_GrabBrightness(float luminance)
         pForcedShader = NULL;
 
         ERQ_GrabFramebuffer(pSkyGFXBrightnessRaster);
-        ERQ_GrabFramebufferPost();
+        //ERQ_GrabFramebufferPost();
 
         ImmediateModeRenderStatesReStore();
     }
@@ -1196,7 +1196,7 @@ void GFX_NormalBuffer()
         pForcedShader = NULL;
 
         ERQ_GrabFramebuffer(pSkyGFXNormalRaster);
-        ERQ_GrabFramebufferPost();
+        //ERQ_GrabFramebufferPost();
 
         ImmediateModeRenderStatesReStore();
     }
@@ -1570,7 +1570,7 @@ void GFX_GrabOcclusion()
     pForcedShader = NULL;
 
     ERQ_GrabFramebuffer(pSkyGFXOcclusionRaster);
-    ERQ_GrabFramebufferPost();
+    //ERQ_GrabFramebufferPost();
     
     ImmediateModeRenderStatesReStore();
 
