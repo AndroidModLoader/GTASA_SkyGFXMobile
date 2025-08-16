@@ -160,21 +160,19 @@ void CreateEffectsShaders()
                     "}";
     g_pFramebufferRenderShader = CreateCustomShaderAlloc(0, sFRPxl, sFRVtx, sizeof(sFRPxl), sizeof(sFRVtx));
     
-    char sSimpleDepthPxl[] = "precision highp float;\n"
-                             "uniform highp sampler2D DepthTex;\n"
-                             "varying highp vec2 Out_Tex0;\n"
-                             "varying highp vec3 FarNearLogic;\n"
+    char sSimpleDepthPxl[] = "precision mediump float;\n"
+                             "uniform mediump sampler2D DepthTex;\n"
+                             "varying mediump vec2 Out_Tex0;\n"
+                             "uniform mediump vec4 GFX1v;\n"
                              "void main() {\n"
-                             "  float depth = 2.0 * texture2D(DepthTex, Out_Tex0).r - 1.0;\n"
-                             "  depth = FarNearLogic.x / (FarNearLogic.y - depth * FarNearLogic.z);\n"
+                             "  highp float depth = 2.0 * texture2D(DepthTex, Out_Tex0).r - 1.0;\n"
+                             "  depth = GFX1v.x / (GFX1v.y - depth * GFX1v.z);\n"
                              "  gl_FragColor = vec4(vec3(1.0 - depth), 1.0);\n"
                              "}";
     char sSimpleDepthVtx[] = "precision highp float;\n"
                              "attribute vec3 Position;\n"
                              "attribute vec2 TexCoord0;\n"
-                             "varying highp vec2 Out_Tex0;\n"
-                             "uniform highp vec4 GFX1v;\n"
-                             "varying highp vec3 FarNearLogic;\n"
+                             "varying mediump vec2 Out_Tex0;\n"
                              "void main() {\n"
                              "  gl_Position = vec4(Position.xy - 1.0, 0.0, 1.0);\n"
                              "  Out_Tex0 = TexCoord0;\n"
@@ -1078,15 +1076,11 @@ void GFX_CheckBuffersSize()
 }
 void GFX_GrabScreen(bool second = false)
 {
-    GFX_CheckBuffersSize();
-
     ERQ_GrabFramebuffer(second ? pSkyGFXPostFXRaster2 : pSkyGFXPostFXRaster1);
-    ERQ_GrabFramebufferPost();
+    //ERQ_GrabFramebufferPost();
 }
 void GFX_GrabDepth()
 {
-    GFX_CheckBuffersSize();
-
     if(TheCamera->m_pRwCamera)
     {
         ImmediateModeRenderStatesStore();
@@ -1098,7 +1092,10 @@ void GFX_GrabDepth()
         RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
         RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)false);
 
-        RQVector uniValues = RQVector{ TheCamera->m_pRwCamera->nearClip, TheCamera->m_pRwCamera->farClip, 0.0f, 0.0f };
+        float nc = TheCamera->m_pRwCamera->nearClip;
+        float fc = TheCamera->m_pRwCamera->farClip;
+
+        RQVector uniValues = RQVector{ 2.0f * nc, fc + nc, fc - nc, 0.0f };
         pForcedShader = g_pSimpleDepthShader;
         pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
 
@@ -1108,7 +1105,7 @@ void GFX_GrabDepth()
         pForcedShader = NULL;
 
         ERQ_GrabFramebuffer(pSkyGFXDepthRaster);
-        ERQ_GrabFramebufferPost();
+        //ERQ_GrabFramebufferPost();
 
         ImmediateModeRenderStatesReStore();
     }
@@ -1146,8 +1143,6 @@ void GFX_GrabTexIntoTex(RwRaster* src, RwRaster* dst, ES2Shader* shader = NULL, 
 }
 void GFX_GrabBrightness(float luminance)
 {
-    GFX_CheckBuffersSize();
-
     if(pSkyGFXBrightnessRaster)
     {
         GFX_ActivateProcessedDepthTexture();
@@ -1176,13 +1171,10 @@ void GFX_GrabBrightness(float luminance)
 }
 void GFX_GrabSceneBrightness()
 {
-    GFX_CheckBuffersSize();
     GFX_GrabTexIntoTex(pSkyGFXPostFXRaster1, pSkyGFXSceneBrightnessRaster);
 }
 void GFX_NormalBuffer()
 {
-    GFX_CheckBuffersSize();
-
     if(pSkyGFXNormalRaster)
     {
         GFX_ActivateRawDepthTexture();
@@ -1771,9 +1763,13 @@ float gfWaterGreen = 0.0f;
 CRGBA m_waterCol(64, 64, 64, 64);
 DECL_HOOKv(PostFX_Render)
 {
+    // Most important
+    GFX_CheckBuffersSize();
+    // Grab original fb & depth
     GFX_GrabScreen();
     GFX_GrabDepth();
     //GFX_NormalBuffer();
+    // Return fb back to the screen after depth
     if(g_bCSB)
     {
         // I got a request for this.
