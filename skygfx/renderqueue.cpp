@@ -11,7 +11,6 @@
 
 /* Variables */
 ExtendedRQ extRQ;
-PFNGLDRAWBUFFERSEXTPROC glDrawBuffers = NULL;
 
 /* Functions */
 void RQ_Command_erqColorMask(uint8_t** data)
@@ -367,17 +366,6 @@ DECL_HOOKv(RQ_Command_rqTargetDelete, uint8_t** data)
 
     delete target;
 }
-DECL_HOOKv(RQ_Command_rqTargetSelect, uint8_t** data)
-{
-    ES2RenderTarget* target = (ES2RenderTarget*)RQUEUE_PEAKPTR(data);
-    RQ_Command_rqTargetSelect(data);
-
-    if(target == *backTarget)
-    {
-        GLenum bufs[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1_EXT };
-        glDrawBuffers(2, bufs);
-    }
-}
 DECL_HOOKv(InitializeShaderAfterCompile, ES2Shader* self)
 {
     InitializeShaderAfterCompile(self);
@@ -409,9 +397,5 @@ void StartRenderQueue()
     HOOKPLT(RQ_Command_rqDebugMarker, pGTASA + BYBIT(0x677850, 0x84D0C8));
     HOOKPLT(RQ_Command_rqTargetCreate, pGTASA + BYBIT(0x677024, 0x84C080));
     HOOKPLT(RQ_Command_rqTargetDelete, pGTASA + BYBIT(0x6797B0, 0x850F68));
-    //HOOKPLT(RQ_Command_rqTargetSelect, pGTASA + BYBIT(0x679B6C, 0x8516F8));
     HOOK(InitializeShaderAfterCompile, aml->GetSym(hGTASA, "_ZN9ES2Shader22InitializeAfterCompileEv"));
-
-    glDrawBuffers = (PFNGLDRAWBUFFERSEXTPROC)eglGetProcAddress("glDrawBuffers");
-    if(!glDrawBuffers) glDrawBuffers = (PFNGLDRAWBUFFERSEXTPROC)eglGetProcAddress("glDrawBuffersEXT");
 }

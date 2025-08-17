@@ -129,10 +129,10 @@ inline void ForceCustomShader(ES2Shader* shader)
         sautils->AddSliderItem(skygfxEnchancedSettingsTab, name, initVal, minVal, maxVal, fnOnValueChange, fnOnValueDraw, data);
     }
 #else
-    inline void AddSetting(...)
-    {
-        /* No SAUtils */
-    }
+    inline void AddSetting(...) { /* No SAUtils */ }
+    inline void AddSlider(...) { /* No SAUtils */ }
+    inline void AddEnSetting(...) { /* No SAUtils */ }
+    inline void AddEnSlider(...) { /* No SAUtils */ }
 #endif
 
 #define NAKEDAT __attribute__((optnone)) __attribute__((naked))

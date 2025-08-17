@@ -38,6 +38,9 @@ enum eDOF : uint8_t
 };
 
 /* Variables */
+static RwOpenGLVertex g_ScreenQuad[4] { 0 };
+static bool g_bPostFXStarted = false;
+
 bool g_bFixSandstorm = true;
 bool g_bFixFog = true;
 bool g_bExtendRainSplashes = true;
@@ -978,6 +981,11 @@ void RenderGrainEffect(uint8_t strength)
     DrawQuadSetDefaultUVs();
     ImmediateModeRenderStatesReStore();
 }
+inline void GFX_FullScreenQuad(RwRaster* raster)
+{
+    RwRenderStateSet(rwRENDERSTATETEXTURERASTER, (void*)raster);
+    RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, g_ScreenQuad, 4);
+}
 void GFX_ActivateRawDepthTexture()
 {
     ERQ_SetActiveTexture(2, (*backTarget)->depthBuffer);
@@ -1325,9 +1333,10 @@ void GFX_Radiosity(int intensityLimit, int filterPasses, int renderPasses, int i
     pForcedShader = g_pRadiosityShader;
     pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
 
-    float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
-    DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
-    PostEffectsDrawQuad(0.0f, 0.0f, 2.0f, 2.0f, 255, 255, 255, 255, pSkyGFXRadiosityRaster);
+    //float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
+    //DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
+    //PostEffectsDrawQuad(0.0f, 0.0f, 2.0f, 2.0f, 255, 255, 255, 255, pSkyGFXRadiosityRaster);
+    GFX_FullScreenQuad(pSkyGFXRadiosityRaster);
     pForcedShader = NULL;
 
     RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERLINEAR);
@@ -1432,9 +1441,10 @@ void GFX_UnderWaterRipple_Shader(CRGBA col, float xoIntensity, float speed, floa
     g_pUnderwaterRippleShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
 
     pForcedShader = g_pUnderwaterRippleShader;
-    float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
-    DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
-    PostEffectsDrawQuad(0.0f, 0.0f, 2.0f, 2.0f, col.r, col.g, col.b, 255, pSkyGFXPostFXRaster1);
+    //float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
+    //DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
+    //PostEffectsDrawQuad(0.0f, 0.0f, 2.0f, 2.0f, col.r, col.g, col.b, 255, pSkyGFXPostFXRaster1);
+    GFX_FullScreenQuad(pSkyGFXPostFXRaster1);
     pForcedShader = NULL;
 
     ImmediateModeRenderStatesReStore();
@@ -1480,9 +1490,10 @@ void GFX_Vignette(int alpha) // Completed
     RQVector uniValues = RQVector{ (float)alpha / 256.0f, 0.0f, 0.0f, 0.0f };
     pForcedShader = g_pVignetteShader;
     pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
-    float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
-    DrawQuadSetUVs(umin, vmax, umax, vmax, umax, vmin, umin, vmin);
-    PostEffectsDrawQuad(0.0f, 0.0f, 2.0f, 2.0f, 0, 0, 0, 255, pDarkRaster);
+    //float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
+    //DrawQuadSetUVs(umin, vmax, umax, vmax, umax, vmin, umin, vmin);
+    //PostEffectsDrawQuad(0.0f, 0.0f, 2.0f, 2.0f, 0, 0, 0, 255, pDarkRaster);
+    GFX_FullScreenQuad(pDarkRaster);
     pForcedShader = NULL;
     
     ImmediateModeRenderStatesReStore();
@@ -1530,9 +1541,10 @@ void GFX_DOF() // Completed
     pForcedShader = g_pDOFShader; // g_pDADOFShader (not yet little guys)
     pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
 
-    float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
-    DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
-    PostEffectsDrawQuad(0.0, 0.0, 2.0f, 2.0f, 255, 255, 255, 255, pSkyGFXPostFXRaster2);
+    //float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
+    //DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
+    //PostEffectsDrawQuad(0.0, 0.0, 2.0f, 2.0f, 255, 255, 255, 255, pSkyGFXPostFXRaster2);
+    GFX_FullScreenQuad(pSkyGFXPostFXRaster2);
     pForcedShader = NULL;
     
     ImmediateModeRenderStatesReStore();
@@ -1602,9 +1614,10 @@ void GFX_FrameBufferCSB(float contrast, float saturation, float brightness, floa
     pForcedShader = g_pCSBShader;
     pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
     
-    float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
-    DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
-    PostEffectsDrawQuad(0.0, 0.0, 2.0f, 2.0f, 255, 255, 255, 255, pSkyGFXPostFXRaster1);
+    //float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
+    //DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
+    //PostEffectsDrawQuad(0.0, 0.0, 2.0f, 2.0f, 255, 255, 255, 255, pSkyGFXPostFXRaster1);
+    GFX_FullScreenQuad(pSkyGFXPostFXRaster1);
 
     pForcedShader = NULL;
     ImmediateModeRenderStatesReStore();
@@ -1624,9 +1637,10 @@ void GFX_FrameBufferFXAA() // Completed
     pForcedShader = g_pFXAAShader;
     pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
     
-    float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
-    DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
-    PostEffectsDrawQuad(0.0, 0.0, 2.0f, 2.0f, 255, 255, 255, 255, pSkyGFXPostFXRaster2);
+    //float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
+    //DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
+    //PostEffectsDrawQuad(0.0, 0.0, 2.0f, 2.0f, 255, 255, 255, 255, pSkyGFXPostFXRaster2);
+    GFX_FullScreenQuad(pSkyGFXPostFXRaster2);
 
     pForcedShader = NULL;
     ImmediateModeRenderStatesReStore();
@@ -1645,9 +1659,10 @@ void GFX_FrameBufferBloom(float intensity) // Completed
     pForcedShader = g_pBloomShader;
     pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
     
-    float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
-    DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
-    PostEffectsDrawQuad(0.0, 0.0, 2.0f, 2.0f, 255, 255, 255, 255, pSkyGFXPostFXRaster1);
+    //float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
+    //DrawQuadSetUVs(umin, vmin, umax, vmin, umax, vmax, umin, vmax);
+    //PostEffectsDrawQuad(0.0, 0.0, 2.0f, 2.0f, 255, 255, 255, 255, pSkyGFXPostFXRaster1);
+    GFX_FullScreenQuad(pSkyGFXPostFXRaster1);
 
     pForcedShader = NULL;
     ImmediateModeRenderStatesReStore();
@@ -1718,12 +1733,29 @@ DECL_HOOKv(WaterCannons_Render)
     RenderMovingFog();
     RenderVolumetricClouds();
 }
-static bool g_bPostFXStarted = false;
+RwRGBA whiteClr(255, 255, 255);
 DECL_HOOKv(PostFX_Init)
 {
     PostFX_Init();
 
     if(g_bPostFXStarted) return;
+
+    g_ScreenQuad[0].texCoord.u = 0.0f;
+    g_ScreenQuad[0].texCoord.v = 0.0f;
+    g_ScreenQuad[0].pos = RwV3d{0.0f, 0.0f, 0.0f};
+    g_ScreenQuad[0].rgba = whiteClr;
+    g_ScreenQuad[1].texCoord.u = 1.0f;
+    g_ScreenQuad[1].texCoord.v = 0.0f;
+    g_ScreenQuad[1].rgba = whiteClr;
+    g_ScreenQuad[1].pos = RwV3d{2.0f, 0.0f, 0.0f};
+    g_ScreenQuad[2].texCoord.u = 0.0f;
+    g_ScreenQuad[2].texCoord.v = 1.0f;
+    g_ScreenQuad[2].rgba = whiteClr;
+    g_ScreenQuad[2].pos = RwV3d{0.0f, 2.0f, 0.0f};
+    g_ScreenQuad[3].texCoord.u = 1.0f;
+    g_ScreenQuad[3].texCoord.v = 1.0f;
+    g_ScreenQuad[3].rgba = whiteClr;
+    g_ScreenQuad[3].pos = RwV3d {2.0f, 2.0f, 0.0f};
 
     if(!pGrainRaster)
     {
@@ -1755,12 +1787,27 @@ float gfWaterGreen = 0.0f;
 CRGBA m_waterCol(64, 64, 64, 64);
 DECL_HOOKv(PostFX_Render)
 {
+    // Pre-stuff
+    float nearZ = RwIm2DGetNearScreenZ();
+    float rhw = 1.0f / Scene->camera->nearClip;
+    for(int i = 0; i < 4; ++i)
+    {
+        g_ScreenQuad[i].rhw = rhw;
+        g_ScreenQuad[i].pos.z = nearZ;
+    }
+
     // Most important
     GFX_CheckBuffersSize();
+
     // Grab original fb & depth
     GFX_GrabScreen();
-    GFX_GrabDepth();
+    if(g_nDOF != DOF_INACTIVE && *currArea == 0)
+    {
+        // We need it for DOF only?
+        GFX_GrabDepth();
+    }
     //GFX_NormalBuffer();
+
     // Return fb back to the screen after depth
     if(g_bCSB)
     {
@@ -1936,12 +1983,13 @@ DECL_HOOKv(PostFX_Render)
     }
 
     // Enchanced PostFXs
-    GFX_ActivateProcessedDepthTexture();
     if(g_nDOF != DOF_INACTIVE && *currArea == 0)
     {
         if(g_nDOF == DOF_ALWAYS || (g_nDOF == DOF_CUTSCENES && *pbInCutscene))
         {
+            GFX_ActivateProcessedDepthTexture();
             GFX_DOF();
+            GFX_DeActivateTexture();
         }
     }
     
@@ -1962,8 +2010,6 @@ DECL_HOOKv(PostFX_Render)
     }
     
     GFX_Vignette(g_nVignette * 2.55f);
-
-    GFX_DeActivateTexture();
 }
 DECL_HOOKv(PostFX_CCTV)
 {
@@ -1972,10 +2018,6 @@ DECL_HOOKv(PostFX_CCTV)
 DECL_HOOKv(ShowGameBuffer)
 {
     ShowGameBuffer();
-    GFX_GrabScreen();
-}
-DECL_HOOKv(HeatHazeFX_GrabBuffer, void* a, int b, int c)
-{
     GFX_GrabScreen();
 }
 
@@ -2051,8 +2093,6 @@ void StartEffectsStuff()
         HeatHazeSettingChanged(g_bHeatHaze, pCFGHeatHaze->GetBool());
         AddSetting("Heat Haze", g_bHeatHaze, 0, sizeofA(aYesNo)-1, aYesNo, HeatHazeSettingChanged, NULL);
         g_bHeatHaze_FixUnderWater = cfg->GetBool("HeatHaze_FixUnderwaterFeature", g_bHeatHaze_FixUnderWater, "Effects");
-        // Dont waste precious BLX hooks space
-        //HOOKBLX(HeatHazeFX_GrabBuffer, pGTASA + BYBIT(0x5B51E6, 0x6D94EC));
         aml->PlaceNOP4(pGTASA + BYBIT(0x5B51E6, 0x6D94EC), 1);
 
         pCFGNeoWaterDrops = cfg->Bind("NEOWaterDrops", WaterDrops::neoWaterDrops, "Effects");

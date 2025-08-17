@@ -492,7 +492,10 @@ bool WaterDrops::NoRain(void)
 void WaterDrops::InitialiseRender(RwCamera *cam)
 {
     // Get water drop mask
-    m_pMask = (RwTexture*)sautils->LoadRwTextureFromPNG("texdb/dropmask.png");
+    if(sautils)
+    {
+        m_pMask = (RwTexture*)sautils->LoadRwTextureFromPNG("texdb/dropmask.png");
+    }
     if(!m_pMask)
     {
         // Use sphere_CJ if no dropmask found!
