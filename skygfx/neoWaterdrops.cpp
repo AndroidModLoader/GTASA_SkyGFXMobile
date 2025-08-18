@@ -1,7 +1,7 @@
 #include "include/neoWaterdrops.h"
 #include "include/renderqueue.h"
 
-extern RwRaster *pSkyGFXPostFXRaster1, *pSkyGFXPostFXRaster2, *pDarkRaster;
+extern RwRaster *pSkyGFXPostFXRaster;
 float scaling, frameTimeDelta, frameTimeDeltaInv, deltaMs;
 float fRX, fRY, fRXInv, fRYInv;
 int nRX, nRY;
@@ -620,7 +620,7 @@ void WaterDrops::Render(void)
         RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, &DropletsMaskBuffer[0], 4 * ms_numBatchedDrops, DropletsIndices, 6 * ms_numBatchedDrops);
 
         // Drops
-        RwRenderStateSet(rwRENDERSTATETEXTURERASTER, (void*)pSkyGFXPostFXRaster1);
+        RwRenderStateSet(rwRENDERSTATETEXTURERASTER, (void*)pSkyGFXPostFXRaster);
         RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDDESTALPHA);
         RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVDESTALPHA);
         RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, &DropletsBuffer[0], 4 * ms_numBatchedDrops, DropletsIndices, 6 * ms_numBatchedDrops);
