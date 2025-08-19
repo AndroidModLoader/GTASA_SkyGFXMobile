@@ -65,6 +65,7 @@ float g_fBloomIntensity = 0.55f;
 bool g_bAutoExposure = false;
 bool g_bFXAA = false;
 bool g_bSSAO = false; // Looks bad, need a normal buffer
+float g_fGodRaysIntensity = 0.6f, g_fGodRaysSkyBgIntensity = 0.2f;
 
 int g_nGrainRainStrength = 0;
 int g_nInitialGrain = 0;
@@ -278,16 +279,12 @@ void CreateEffectsShaders()
                          "varying mediump vec2 Out_Tex0;\n"
                          "uniform mediump vec4 GFX1v;\n"
                          "uniform mediump vec4 GFX2v;\n"
-                         "vec3 fragColor = vec3(0.0);\n"
                          "const float density = 0.4;\n"
                          "const float weight = 0.01;\n"
                          "const float decay = 1.0;\n"
                          "const float samples = 30.0;\n"
+                         "vec3 fragColor = vec3(0.0);\n"
                          "void main() {\n"
-                         "  if(texture2D(DepthTex, Out_Tex0).r == 1.0) {\n"
-                         "    gl_FragColor = vec4(texture2D(Diffuse, Out_Tex0).rgb, 1.0);\n"
-                         "    return;\n"
-                         "  }\n"
                          "  vec2 deltaTextCoord = Out_Tex0 - GFX1v.xy;\n"
                          "  vec2 textCoo = Out_Tex0;\n"
                          "  deltaTextCoord *= (1.0 / samples) * density;\n"
@@ -299,7 +296,11 @@ void CreateEffectsShaders()
                          "    }\n"
                          "    illuminationDecay *= decay;\n"
                          "  }\n"
-                         "  gl_FragColor = vec4(texture2D(Diffuse, Out_Tex0).rgb + 0.6 * fragColor, 1.0);\n"
+                         "  if(texture2D(DepthTex, Out_Tex0).r == 1.0) {\n"
+                         "    gl_FragColor = vec4(texture2D(Diffuse, Out_Tex0).rgb + GFX1v.w * fragColor, 1.0);\n"
+                         "  } else {\n"
+                         "    gl_FragColor = vec4(texture2D(Diffuse, Out_Tex0).rgb + GFX1v.z * fragColor, 1.0);\n"
+                         "  }\n"
                          "}";
     char sGodRaysVtx[] = "precision highp float;\n"
                          "attribute vec3 Position;\n"
@@ -1458,7 +1459,7 @@ void GFX_GodRays()
     RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)false);
 
     pForcedShader = g_pGodRaysShader;
-    RQVector uniValues = RQVector{ xs, ys, 0.0f, 0.0f };
+    RQVector uniValues = RQVector{ xs, ys, g_fGodRaysIntensity, g_fGodRaysIntensity * g_fGodRaysSkyBgIntensity };
     RQVector uniValues1 = RQVector
     {
         intensity * (float)p_CTimeCycle__m_CurrentColours->suncorer / 256.0f,
@@ -1905,7 +1906,7 @@ DECL_HOOKv(PostFX_Render)
     
     if(g_nCrAb != CRAB_INACTIVE) GFX_ChromaticAberration();
     
-    //GFX_GodRays();
+    GFX_GodRays();
 
     if(WaterDrops::neoWaterDrops)
     {
