@@ -89,7 +89,7 @@ ES2Shader* g_pSimpleBrightShader = NULL;
 ES2Shader* g_pChromaticAberrationShader = NULL;
 ES2Shader* g_pChromaticAberrationShader_Intensive = NULL;
 ES2Shader* g_pVignetteShader = NULL;
-ES2Shader* g_pFakeRayShader = NULL;
+ES2Shader* g_pGodRaysShader = NULL;
 ES2Shader* g_pDOFShader = NULL;
 ES2Shader* g_pDADOFShader = NULL;
 ES2Shader* g_pUnderwaterRippleShader = NULL;
@@ -271,26 +271,37 @@ void CreateEffectsShaders()
                           "}";
     g_pVignetteShader = CreateCustomShaderAlloc(0, sVignettePxl, sVignetteVtx, sizeof(sVignettePxl), sizeof(sVignetteVtx));
 
-    char sFakeRayPxl[] = "precision mediump float;\n"
+    // https://github.com/Erkaman/glsl-godrays
+    char sGodRaysPxl[] = "precision highp float;\n"
                          "uniform mediump sampler2D Diffuse;\n"
-                         "uniform highp sampler2D DepthTex;\n"
+                         "uniform lowp sampler2D DepthTex;\n"
                          "varying mediump vec2 Out_Tex0;\n"
-                         "varying mediump vec2 vPos;\n"
-                         "const vec3 LumCoeff = vec3(0.2126, 0.7152, 0.0722);\n"
+                         "uniform mediump vec4 GFX1v;\n"
+                         "uniform mediump vec4 GFX2v;\n"
+                         "vec3 fragColor = vec3(0.0);\n"
+                         "const float density = 0.4;\n"
+                         "const float weight = 0.01;\n"
+                         "const float decay = 1.0;\n"
+                         "const float samples = 30.0;\n"
                          "void main() {\n"
-                         "  vec2 tex = Out_Tex0 - 0.5;\n"
-                         "  float pz = 0.0;\n"
-                         "  for(float i = 0.0; i < 50.0; i++) {\n"
-                         "    vec3 shiftColor = texture2D(Diffuse, (tex *= 0.99) + 0.5).rgb;\n"
-                         "    float depth = texture2D(DepthTex, tex + 0.5).r;\n"
-                         "    if(depth < 0.01) {\n"
-                         "      float pixelBrightness = dot(shiftColor, LumCoeff);\n"
-                         "      pz += pow(max(0.0, 0.5 - length(1.0 - shiftColor.rg)), 2.0) * exp(-i * 0.1);\n"
-                         "    }\n"
+                         "  if(texture2D(DepthTex, Out_Tex0).r == 1.0) {\n"
+                         "    gl_FragColor = vec4(texture2D(Diffuse, Out_Tex0).rgb, 1.0);\n"
+                         "    return;\n"
                          "  }\n"
-                         "  gl_FragColor = vec4(texture2D(Diffuse, Out_Tex0).rgb + pz, 1.0);\n"
+                         "  vec2 deltaTextCoord = Out_Tex0 - GFX1v.xy;\n"
+                         "  vec2 textCoo = Out_Tex0;\n"
+                         "  deltaTextCoord *= (1.0 / samples) * density;\n"
+                         "  float illuminationDecay = 1.0;\n"
+                         "  for(int i = 0; i < 30; i++) {\n"
+                         "    textCoo -= deltaTextCoord;\n"
+                         "    if(texture2D(DepthTex, textCoo).r == 1.0) {\n"
+                         "      fragColor += GFX2v.rgb * illuminationDecay * weight;\n"
+                         "    }\n"
+                         "    illuminationDecay *= decay;\n"
+                         "  }\n"
+                         "  gl_FragColor = vec4(texture2D(Diffuse, Out_Tex0).rgb + 0.6 * fragColor, 1.0);\n"
                          "}";
-    char sFakeRayVtx[] = "precision highp float;\n"
+    char sGodRaysVtx[] = "precision highp float;\n"
                          "attribute vec3 Position;\n"
                          "attribute vec2 TexCoord0;\n"
                          "varying mediump vec2 Out_Tex0;\n"
@@ -300,7 +311,7 @@ void CreateEffectsShaders()
                          "  vPos = gl_Position.xy;\n"
                          "  Out_Tex0 = TexCoord0;\n"
                          "}";
-    g_pFakeRayShader = CreateCustomShaderAlloc(0, sFakeRayPxl, sFakeRayVtx, sizeof(sFakeRayPxl), sizeof(sFakeRayVtx));
+    g_pGodRaysShader = CreateCustomShaderAlloc(0, sGodRaysPxl, sGodRaysVtx, sizeof(sGodRaysPxl), sizeof(sGodRaysVtx));
 
     char sDOFPxl[] = "precision highp float;\n"
                      "uniform mediump sampler2D Diffuse;\n"
@@ -960,7 +971,6 @@ void CreateRandomTexture(RwRaster* target)
 }
 void RenderGrainEffect(uint8_t strength)
 {
-    ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
     RwRenderStateSet(rwRENDERSTATETEXTUREADDRESS, (void*)rwTEXTUREADDRESSWRAP);
     RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERLINEAR);
@@ -979,7 +989,6 @@ void RenderGrainEffect(uint8_t strength)
     PostEffectsDrawQuad(0.0, 0.0, RsGlobal->maximumWidth, RsGlobal->maximumHeight, 255, 255, 255, strength, pGrainRaster);
     
     DrawQuadSetDefaultUVs();
-    ImmediateModeRenderStatesReStore();
 }
 inline void GFX_FullScreenQuad(RwRaster* raster)
 {
@@ -1074,7 +1083,6 @@ void GFX_GrabDepth()
 {
     if(TheCamera->m_pRwCamera)
     {
-        ImmediateModeRenderStatesStore();
         ImmediateModeRenderStatesSet();
 
         GFX_ActivateRawDepthTexture();
@@ -1096,13 +1104,10 @@ void GFX_GrabDepth()
         pForcedShader = NULL;
 
         ERQ_GrabFramebuffer(pSkyGFXDepthRaster);
-
-        ImmediateModeRenderStatesReStore();
     }
 }
 void GFX_GrabTexIntoTex(RwRaster* src, RwRaster* dst, ES2Shader* shader = NULL, RQVector* uniValues1 = NULL, RQVector* uniValues2 = NULL, RQVector* uniValues3 = NULL)
 {
-    ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
 
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
@@ -1128,19 +1133,14 @@ void GFX_GrabTexIntoTex(RwRaster* src, RwRaster* dst, ES2Shader* shader = NULL, 
         RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, g_ScaledScreenQuad, 4);
         pForcedShader = NULL;
     }
-
     ERQ_GrabFramebuffer(dst);
-
-    ImmediateModeRenderStatesReStore();
 }
 void GFX_GrabBrightness(float luminance)
 {
     if(pSkyGFXBrightnessRaster)
     {
-        GFX_ActivateProcessedDepthTexture();
-
-        ImmediateModeRenderStatesStore();
         ImmediateModeRenderStatesSet();
+        GFX_ActivateProcessedDepthTexture();
 
         RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
         RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
@@ -1153,8 +1153,6 @@ void GFX_GrabBrightness(float luminance)
         pForcedShader = NULL;
 
         ERQ_GrabFramebuffer(pSkyGFXBrightnessRaster);
-
-        ImmediateModeRenderStatesReStore();
     }
 }
 void GFX_GrabSceneBrightness()
@@ -1165,10 +1163,8 @@ void GFX_NormalBuffer()
 {
     if(pSkyGFXNormalRaster)
     {
-        GFX_ActivateRawDepthTexture();
-
-        ImmediateModeRenderStatesStore();
         ImmediateModeRenderStatesSet();
+        GFX_ActivateRawDepthTexture();
 
         RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
         RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
@@ -1179,13 +1175,10 @@ void GFX_NormalBuffer()
         pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
         GFX_FullScreenQuad(NULL);
         ERQ_GrabFramebuffer(pSkyGFXNormalRaster);
-
-        ImmediateModeRenderStatesReStore();
     }
 }
 void GFX_CCTV() // Completed
 {
-    ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
 
     uint32 lineHeight  = (uint32)(2.0f * ((float)RsGlobal->maximumHeight) / 448.0f);
@@ -1202,8 +1195,6 @@ void GFX_CCTV() // Completed
         DrawQuadSetUVs(umin, -vmin, umax, -vmin, umax, -vmax, umin, -vmax);*/
         PostEffectsDrawQuad(0.0f, y, RsGlobal->maximumWidth, lineHeight, 0, 0, 0, 255, pSkyGFXPostFXRaster);
     }
-
-    ImmediateModeRenderStatesReStore();
 }
 void GFX_SpeedFX(float speed) // Completed
 {
@@ -1224,7 +1215,6 @@ void GFX_SpeedFX(float speed) // Completed
     int DirectionWasLooking = TheCamera->Cams[TheCamera->ActiveCam].DirectionWasLooking;
 #endif
 
-    ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
 
     const float ar43 = 4.0f / 3.0f;
@@ -1275,17 +1265,10 @@ void GFX_SpeedFX(float speed) // Completed
             fLoopShiftY2 = fShiftOffset + ( (DirectionWasLooking > 2) ? 0.0f : fLoopShiftY2 );
         }
     }
-    ImmediateModeRenderStatesReStore();
 }
 void GFX_FrameBuffer();
 void GFX_Radiosity(int intensityLimit, int filterPasses, int renderPasses, int intensity) // Completed
 {
-    RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERLINEAR);
-    RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)false);
-    RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)false);
-    RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)false);
-    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)false);
-
     float fFilterPixelMul = ((float)pSkyGFXRadiosityRaster->width / 640.0f) * (1 << filterPasses);
     RQVector uniValues = RQVector{ 0.0f, fFilterPixelMul / (float)pSkyGFXRadiosityRaster->height, 0.0f, 0.0f };
     GFX_GrabTexIntoTex(pSkyGFXPostFXRaster, pSkyGFXRadiosityRaster, g_pRadiosityBlurShader, &uniValues);
@@ -1294,37 +1277,30 @@ void GFX_Radiosity(int intensityLimit, int filterPasses, int renderPasses, int i
     uniValues.y = 0.0f;
     GFX_GrabTexIntoTex(pSkyGFXRadiosityRaster, pSkyGFXRadiosityRaster, g_pRadiosityBlurShader, &uniValues);
 
-    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)true);
-    RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
-    RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDONE);
-
     float off = ((1 << filterPasses) - 1);
     float offu = off * 2; // m_RadiosityFilterUCorrection;
     float offv = off * 2; // m_RadiosityFilterVCorrection;
     float minu = offu;
     float minv = offv;
-    float maxu = pSkyGFXRadiosityRaster->width - offu; //off*2;
-    float maxv = pSkyGFXRadiosityRaster->height - offv; //off*2;
-    float cu = (offu*(pSkyGFXRadiosityRaster->width+0.5f) + offu/*off*2*/*0.5f) / pSkyGFXRadiosityRaster->width;
-    float cv = (offv*(pSkyGFXRadiosityRaster->height+0.5f) + offv/*off*2*/*0.5f) / pSkyGFXRadiosityRaster->height;
+    float maxu = pSkyGFXRadiosityRaster->width - offu;
+    float maxv = pSkyGFXRadiosityRaster->height - offv;
+    float cu = (offu * (pSkyGFXRadiosityRaster->width + 0.5f) + offu * 0.5f) / pSkyGFXRadiosityRaster->width;
+    float cv = (offv * (pSkyGFXRadiosityRaster->height + 0.5f) + offv * 0.5f) / pSkyGFXRadiosityRaster->height;
 
     uniValues.x = (float)intensityLimit / 255.0f;
     uniValues.y = (float)(intensity * renderPasses) / 255.0f;
     GFX_FrameBuffer();
+
+    RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERLINEAR);
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)true);
+    RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDONE);
     
     pForcedShader = g_pRadiosityShader;
     pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
     GFX_FullScreenQuad(pSkyGFXRadiosityRaster);
     pForcedShader = NULL;
 
-    RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERLINEAR);
-    RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)true);
-    RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)true);
-    RwRenderStateSet(rwRENDERSTATETEXTURERASTER, (void*)NULL);
-    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)true);
-    RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
-    RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
-    
     GFX_GrabScreen();
 }
 void GFX_HeatHaze(float intensity, bool alphaMaskMode)
@@ -1347,7 +1323,6 @@ void GFX_HeatHaze(float intensity, bool alphaMaskMode)
 // https://github.com/gta-reversed/gta-reversed/blob/7dc7e9696214e17594e8a9061be9dd808d8ae9c5/source/game_sa/PostEffects.cpp#L428
 void GFX_UnderWaterRipple(CRGBA col, float xo, float yo, int strength, float speed, float freq) // Completed
 {
-    ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
 
     col.a = 255;
@@ -1403,12 +1378,9 @@ void GFX_UnderWaterRipple(CRGBA col, float xo, float yo, int strength, float spe
         RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)false);
         RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, TempVertexBuffer.m_2d, TempBufferVerticesStored);
     }
-    
-    ImmediateModeRenderStatesReStore();
 }
 void GFX_UnderWaterRipple_Shader(CRGBA col, float xoIntensity, float speed, float freq)
 {
-    ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
 
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
@@ -1421,25 +1393,18 @@ void GFX_UnderWaterRipple_Shader(CRGBA col, float xoIntensity, float speed, floa
     pForcedShader = g_pUnderwaterRippleShader;
     GFX_FullScreenQuad(pSkyGFXPostFXRaster);
     pForcedShader = NULL;
-
-    ImmediateModeRenderStatesReStore();
 }
 void GFX_DarknessFilter(int alpha) // Completed
 {
-    ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
 
     float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
     DrawQuadSetUVs(umin, vmax, umax, vmax, umax, vmin, umin, vmin);
     PostEffectsDrawQuad(0.0, 0.0, RsGlobal->maximumWidth, RsGlobal->maximumHeight, 0, 0, 0, alpha, NULL);
-    
-    ImmediateModeRenderStatesReStore();
 }
 void GFX_ChromaticAberration() // Completed
 {
     GFX_GrabScreen();
-
-    ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
 
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
@@ -1449,41 +1414,68 @@ void GFX_ChromaticAberration() // Completed
     pForcedShader = ( g_nCrAb == CRAB_INTENSE ? g_pChromaticAberrationShader_Intensive : g_pChromaticAberrationShader );
     GFX_FullScreenQuad(pSkyGFXPostFXRaster);
     pForcedShader = NULL;
-    
-    ImmediateModeRenderStatesReStore();
 }
 void GFX_Vignette(int alpha) // Completed
 {
     if(alpha <= 0) return;
     if(alpha > 255) alpha = 255;
 
-    ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
 
-    RQVector uniValues = RQVector{ (float)alpha / 256.0f, 0.0f, 0.0f, 0.0f };
+    RQVector uniValues = RQVector{ (float)alpha / 255.0f, 0.0f, 0.0f, 0.0f };
     pForcedShader = g_pVignetteShader;
     pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
-    //float umin = 0.0f, vmin = 0.0f, umax = 1.0f, vmax = 1.0f;
-    //DrawQuadSetUVs(umin, vmax, umax, vmax, umax, vmin, umin, vmin);
-    //PostEffectsDrawQuad(0.0f, 0.0f, 2.0f, 2.0f, 0, 0, 0, 255, pDarkRaster);
     GFX_FullScreenQuad(pDarkRaster);
     pForcedShader = NULL;
-    
-    ImmediateModeRenderStatesReStore();
 }
-void GFX_FakeRay()
+void GFX_GodRays()
 {
-    ImmediateModeRenderStatesStore();
+    if(*SunScreenX >= RsGlobal->maximumWidth || *SunScreenY >= RsGlobal->maximumHeight) return;
+    if(*SunScreenX <= 0 || *SunScreenY <= 0) return;
+
+    float xs = *SunScreenX / (float)RsGlobal->maximumWidth;
+    float ys = 1.0f - *SunScreenY / (float)RsGlobal->maximumHeight;
+
+    float xi = fabsf(xs - 0.5f);
+    float yi = fabsf(ys - 0.5f);
+    if(xi >= 0.495f || yi >= 0.495f) return;
+
+    float intensity = 1.0f;
+    xi = (xi - 0.4f) * 10.0f;
+    yi = (yi - 0.4f) * 10.0f;
+    if(xi < 1.0f || yi < 1.0f)
+    {
+        xi = 1.0f - xi;
+        yi = 1.0f - yi;
+        intensity = ((xi < yi) ? xi : yi);
+    }
+
     ImmediateModeRenderStatesSet();
+    GFX_GrabScreen();
 
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
     RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)false);
 
-    pForcedShader = g_pFakeRayShader;
+    pForcedShader = g_pGodRaysShader;
+    RQVector uniValues = RQVector{ xs, ys, 0.0f, 0.0f };
+    RQVector uniValues1 = RQVector
+    {
+        intensity * (float)p_CTimeCycle__m_CurrentColours->suncorer / 256.0f,
+        intensity * (float)p_CTimeCycle__m_CurrentColours->suncoreg / 256.0f,
+        intensity * (float)p_CTimeCycle__m_CurrentColours->suncoreb / 256.0f,
+        0.0f
+    };
+    for(int i = 0; i < 3; ++i)
+    {
+        uniValues1.v[i] = 0.6f * uniValues1.v[i] + 0.4f;
+    }
+    pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
+    pForcedShader->SetVectorConstant(SVCID_GreenGrade, &uniValues1.x, 4);
+    GFX_ActivateRawDepthTexture();
     GFX_FullScreenQuad(pSkyGFXPostFXRaster);
+    GFX_DeActivateTexture();
     pForcedShader = NULL;
-    
-    ImmediateModeRenderStatesReStore();
 }
 void GFX_DOF() // Completed
 {
@@ -1499,10 +1491,8 @@ void GFX_DOF() // Completed
         calc01Dist = 1.0f - g_fDOFDistance / (TheCamera->m_pRwCamera->farClip - TheCamera->m_pRwCamera->nearClip);
     }
 
-    GFX_GrabScreen();
-    
-    ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
+    GFX_GrabScreen();
 
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
     RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
@@ -1513,16 +1503,12 @@ void GFX_DOF() // Completed
     pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
     GFX_FullScreenQuad(pSkyGFXPostFXRaster);
     pForcedShader = NULL;
-    
-    ImmediateModeRenderStatesReStore();
 }
 void GFX_GrabOcclusion()
 {
     GFX_ActivateNormalBufferTexture();
     //GFX_ActivateProcessedDepthTexture();
     GFX_ActivateRawDepthTexture();
-
-    ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
 
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
@@ -1541,15 +1527,11 @@ void GFX_GrabOcclusion()
     pForcedShader = NULL;
 
     ERQ_GrabFramebuffer(pSkyGFXOcclusionRaster);
-    
-    ImmediateModeRenderStatesReStore();
-
     GFX_DeActivateTexture(1);
     GFX_DeActivateTexture();
 }
 void GFX_FrameBuffer() // Completed
 {
-    ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
 
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
@@ -1559,12 +1541,9 @@ void GFX_FrameBuffer() // Completed
     pForcedShader = g_pFramebufferRenderShader;
     GFX_FullScreenQuad(pSkyGFXPostFXRaster);
     pForcedShader = NULL;
-    
-    ImmediateModeRenderStatesReStore();
 }
 void GFX_FrameBufferCSB(float contrast, float saturation, float brightness, float gamma = 1.0f) // Completed
 {
-    ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
 
     if(contrast < 0.0f) contrast = 0.0f;
@@ -1581,13 +1560,11 @@ void GFX_FrameBufferCSB(float contrast, float saturation, float brightness, floa
     pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
     GFX_FullScreenQuad(pSkyGFXPostFXRaster);
     pForcedShader = NULL;
-    ImmediateModeRenderStatesReStore();
 
     GFX_GrabScreen(); // Update the framebuffer with CSB-processed image
 }
 void GFX_FrameBufferFXAA() // Completed
 {
-    ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
 
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
@@ -1598,13 +1575,10 @@ void GFX_FrameBufferFXAA() // Completed
     pForcedShader = g_pFXAAShader;
     pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
     GFX_FullScreenQuad(pSkyGFXPostFXRaster);
-
     pForcedShader = NULL;
-    ImmediateModeRenderStatesReStore();
 }
 void GFX_FrameBufferBloom(float intensity) // Completed
 {
-    ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
 
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
@@ -1616,15 +1590,12 @@ void GFX_FrameBufferBloom(float intensity) // Completed
     pForcedShader = g_pBloomShader;
     pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
     GFX_FullScreenQuad(pSkyGFXPostFXRaster);
-
     pForcedShader = NULL;
-    ImmediateModeRenderStatesReStore();
 
     GFX_GrabScreen(); // Update the framebuffer with Bloom-processed image
 }
 void GFX_FrameBufferSSAO() // Completed
 {
-    ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
 
     RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
@@ -1636,9 +1607,7 @@ void GFX_FrameBufferSSAO() // Completed
     pForcedShader = g_pSSAOShader;
     //pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
     GFX_FullScreenQuad(pSkyGFXPostFXRaster);
-
     pForcedShader = NULL;
-    ImmediateModeRenderStatesReStore();
 
     GFX_GrabScreen(); // Update the framebuffer with Bloom-processed image
 }
@@ -1724,6 +1693,7 @@ CRGBA m_waterCol(64, 64, 64, 64);
 DECL_HOOKv(PostFX_Render)
 {
     // Pre-stuff
+    ImmediateModeRenderStatesStore();
     float nearZ = RwIm2DGetNearScreenZ();
     float rhw = 1.0f / Scene->camera->nearClip;
     for(int i = 0; i < 4; ++i)
@@ -1803,7 +1773,9 @@ DECL_HOOKv(PostFX_Render)
 
     if(*pbFog) RenderScreenFogPostEffect();
 
+    ImmediateModeRenderStatesReStore();
     PostFX_Render();
+    ImmediateModeRenderStatesStore();
 
     if(g_bRadiosity && !*m_bDarknessFilter)
     {
@@ -1933,7 +1905,7 @@ DECL_HOOKv(PostFX_Render)
     
     if(g_nCrAb != CRAB_INACTIVE) GFX_ChromaticAberration();
     
-    //GFX_FakeRay(); // doesnt look cool enough
+    //GFX_GodRays();
 
     if(WaterDrops::neoWaterDrops)
     {
@@ -1948,6 +1920,8 @@ DECL_HOOKv(PostFX_Render)
     }
     
     GFX_Vignette(g_nVignette * 2.55f);
+
+    ImmediateModeRenderStatesReStore();
 }
 DECL_HOOKv(PostFX_CCTV)
 {

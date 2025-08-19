@@ -314,6 +314,7 @@ extern RwTexture** gpMoonMask;
 extern FakeFx_c* g_fx;
 extern float *WetRoads;
 extern int *m_RadiosityFilterPasses, *m_RadiosityRenderPasses, *m_RadiosityIntensity;
+extern float *SunScreenX, *SunScreenY;
 
 // Functions
 extern RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);

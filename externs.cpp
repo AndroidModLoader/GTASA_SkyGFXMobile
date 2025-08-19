@@ -97,6 +97,7 @@ RwTexture** gpMoonMask;
 FakeFx_c* g_fx;
 float *WetRoads;
 int *m_RadiosityFilterPasses, *m_RadiosityRenderPasses, *m_RadiosityIntensity;
+float *SunScreenX, *SunScreenY;
 
 // Functions
 RwFrame*            (*RwFrameTransform)(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine);
@@ -499,4 +500,6 @@ void ResolveExternals()
     SET_TO(m_RadiosityFilterPasses,         aml->GetSym(hGTASA, "_ZN12CPostEffects23m_RadiosityFilterPassesE"));
     SET_TO(m_RadiosityRenderPasses,         aml->GetSym(hGTASA, "_ZN12CPostEffects23m_RadiosityRenderPassesE"));
     SET_TO(m_RadiosityIntensity,            aml->GetSym(hGTASA, "_ZN12CPostEffects20m_RadiosityIntensityE"));
+    SET_TO(SunScreenX,                      aml->GetSym(hGTASA, "_ZN8CCoronas10SunScreenXE"));
+    SET_TO(SunScreenY,                      aml->GetSym(hGTASA, "_ZN8CCoronas10SunScreenYE"));
 }
