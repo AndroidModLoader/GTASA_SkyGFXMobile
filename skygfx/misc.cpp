@@ -233,7 +233,7 @@ void StartMiscStuff()
 
     // Sun Z-Test disabled (to match PS2 logic, same in reverse of PS2 game)
     pCFGPS2SunZTest = cfg->Bind("PS2SunZTest", g_bPS2Sun, "Visual");
-    PS2SunZTestSettingChanged(false, pCFGPS2SunZTest->GetBool(), NULL);
+    PS2SunZTestSettingChanged(g_bPS2Sun, pCFGPS2SunZTest->GetBool(), NULL);
     AddSetting("PS2 Sun Z-Test", g_bPS2Sun, 0, sizeofA(aYesNo)-1, aYesNo, PS2SunZTestSettingChanged, NULL);
 
     // Better RGBA quality rasters
@@ -248,7 +248,7 @@ void StartMiscStuff()
     // Flare rendering like it was on PS2
     HOOKPLT(RenderBufferedOneXLUSprite2D, pGTASA + BYBIT(0x674E98, 0x8483A0));
     pCFGPS2Flare = cfg->Bind("PS2Flare", g_bPS2Flare, "Visual");
-    PS2FlareSettingChanged(false, pCFGPS2Flare->GetBool(), NULL);
+    PS2FlareSettingChanged(g_bPS2Flare, pCFGPS2Flare->GetBool(), NULL);
     AddSetting("PS2 Flare", g_bPS2Flare, 0, sizeofA(aYesNo)-1, aYesNo, PS2FlareSettingChanged, NULL);
 
     // Fixing uninitialized variable (Jesus Christ, wtf Rockstar)

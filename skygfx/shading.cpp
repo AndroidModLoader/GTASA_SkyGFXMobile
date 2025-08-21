@@ -284,7 +284,7 @@ void StartShading()
     AddSetting("Shading Style", g_nShading, 0, sizeofA(aShadingSwitch)-1, aShadingSwitch, ShadingSettingChanged, NULL);
 
     pCFGAmbLightNoMultiplier = cfg->Bind("AmbLightNoMultiplier", g_bAmbLightNoMultiplier, "Shading");
-    AmbLightNoMultiplierSettingChanged(true, pCFGAmbLightNoMultiplier->GetBool(), NULL);
+    AmbLightNoMultiplierSettingChanged(g_bAmbLightNoMultiplier, pCFGAmbLightNoMultiplier->GetBool(), NULL);
     AddSetting("No Brighter Ambient", g_bAmbLightNoMultiplier, 0, sizeofA(aYesNo)-1, aYesNo, AmbLightNoMultiplierSettingChanged, NULL);
     
     //HOOKPLT(_rwOpenGLLightsSetMaterialProperties, pGTASA + BYBIT(0x67381C, 0x845F18)); // useless?

@@ -89,7 +89,7 @@ void EnvMapSettingChanged(int oldVal, int newVal, void* data)
 void StartEnvMapStuff()
 {
     pCFGEnvMapType = cfg->Bind("EnvReflectionType", g_nEnvMapType, "Visual");
-    EnvMapSettingChanged(ENVMAP_MOBILE, pCFGEnvMapType->GetInt(), NULL);
+    EnvMapSettingChanged(g_nEnvMapType, pCFGEnvMapType->GetInt(), NULL);
     AddSetting("Env Reflection Type", g_nEnvMapType, 0, sizeofA(aEnvMapNames)-1, aEnvMapNames, EnvMapSettingChanged, NULL);
 
   #ifdef AML32

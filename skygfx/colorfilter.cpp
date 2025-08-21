@@ -189,6 +189,6 @@ void StartColorfilter()
     AddSetting("Colorfilter", g_nColorFilter, 0, sizeofA(aColorFilterNames)-1, aColorFilterNames, ColorfilterSettingChanged, NULL);
 
     pCFGUsePCTimecyc = cfg->Bind("UsePCTimecyc", g_bUsePCTimecyc, "Visual");
-    PCTimecycSettingChanged(1, pCFGUsePCTimecyc->GetBool(), NULL);
+    PCTimecycSettingChanged(g_bUsePCTimecyc, pCFGUsePCTimecyc->GetBool(), NULL);
     AddSetting("Using PC Timecyc", g_bUsePCTimecyc, 0, sizeofA(aYesNo)-1, aYesNo, PCTimecycSettingChanged, NULL);
 }

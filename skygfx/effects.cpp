@@ -36,6 +36,15 @@ enum eDOF : uint8_t
 
     DOF_SETTINGS
 };
+enum eGodRays : uint8_t
+{
+    GRAY_INACTIVE = 0,
+    GRAY_LOW,
+    GRAY_MEDIUM,
+    GRAY_BEST,
+
+    GRAY_SETTINGS
+};
 
 /* Variables */
 static RwOpenGLVertex g_ScreenQuad[4] { 0 };
@@ -66,6 +75,7 @@ bool g_bAutoExposure = false;
 bool g_bFXAA = false;
 bool g_bSSAO = false; // Looks bad, need a normal buffer
 float g_fGodRaysIntensity = 0.6f, g_fGodRaysSkyBgIntensity = 0.2f;
+int g_nGodRays = GRAY_INACTIVE;
 
 int g_nGrainRainStrength = 0;
 int g_nInitialGrain = 0;
@@ -74,7 +84,7 @@ RwRaster* pGrainRaster = NULL;
 int postfxX = 0, postfxY = 0;
 float fpostfxX = 0, fpostfxY = 0;
 float fpostfxXInv = 0, fpostfxYInv = 0;
-RwRaster *pSkyGFXPostFXRaster = NULL,
+RwRaster *pSkyGFXPostFXRaster = NULL,      *pSkyGFXGodraysRaster[GRAY_SETTINGS-1] = { NULL },
          *pSkyGFXDepthRaster = NULL,       *pSkyGFXBrightnessRaster = NULL,
          *pSkyGFXBloomP1Raster = NULL,     *pSkyGFXBloomP2Raster = NULL,
          *pSkyGFXBloomP3Raster = NULL,     *pSkyGFXSceneBrightnessRaster = NULL,
@@ -131,21 +141,29 @@ static const char* aDOFSettings[DOF_SETTINGS] =
     "Only cutscenes",
     "Always"
 };
+static const char* aGodRaysSettings[GRAY_SETTINGS] = 
+{
+    "Disabled",
+    "FED_FXL",
+    "FED_FXM",
+    "FED_FXH"
+};
 
 /* Configs */
 ConfigEntry *pCFGRenderGrain;
 ConfigEntry *pCFGSpeedFX;
-ConfigEntry *pCFGCrAbFX;
-ConfigEntry *pCFGVignette;
 ConfigEntry *pCFGRadiosity;
-ConfigEntry *pCFGDOF;
 ConfigEntry *pCFGUWR;
-ConfigEntry *pCFGCSB;
-ConfigEntry *pCFGBloom;
 ConfigEntry *pCFGNeoWaterDrops;
 ConfigEntry *pCFGNeoBloodDrops;
-ConfigEntry *pCFGFXAA;
 ConfigEntry *pCFGHeatHaze;
+ConfigEntry *pCFGCSB;
+ConfigEntry *pCFGBloom;
+ConfigEntry *pCFGFXAA;
+ConfigEntry *pCFGGodRays;
+ConfigEntry *pCFGCrAbFX;
+ConfigEntry *pCFGVignette;
+ConfigEntry *pCFGDOF;
 
 /* Functions */
 void CreateEffectsShaders()
@@ -297,9 +315,9 @@ void CreateEffectsShaders()
                          "    illuminationDecay *= decay;\n"
                          "  }\n"
                          "  if(texture2D(DepthTex, Out_Tex0).r == 1.0) {\n"
-                         "    gl_FragColor = vec4(texture2D(Diffuse, Out_Tex0).rgb + GFX1v.w * fragColor, 1.0);\n"
+                         "    gl_FragColor = vec4(GFX1v.w * fragColor, 1.0);\n"
                          "  } else {\n"
-                         "    gl_FragColor = vec4(texture2D(Diffuse, Out_Tex0).rgb + GFX1v.z * fragColor, 1.0);\n"
+                         "    gl_FragColor = vec4(GFX1v.z * fragColor, 1.0);\n"
                          "  }\n"
                          "}";
     char sGodRaysVtx[] = "precision highp float;\n"
@@ -923,6 +941,16 @@ void HeatHazeSettingChanged(int oldVal, int newVal, void* data = NULL)
 
     cfg->Save();
 }
+void GodRaysSettingChanged(int oldVal, int newVal, void* data = NULL)
+{
+    if(oldVal == newVal) return;
+
+    pCFGGodRays->SetInt(newVal);
+    pCFGGodRays->Clamp(0, GRAY_SETTINGS);
+    g_nGodRays = pCFGGodRays->GetInt();
+
+    cfg->Save();
+}
 void CreateGrainTexture(RwRaster* target)
 {
     if(!target) return;
@@ -994,7 +1022,7 @@ void RenderGrainEffect(uint8_t strength)
 inline void GFX_FullScreenQuad(RwRaster* raster)
 {
     RwRenderStateSet(rwRENDERSTATETEXTURERASTER, (void*)raster);
-    RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, g_ScreenQuad, 4);
+    RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, &g_ScreenQuad[0], 4);
 }
 inline void GFX_ActivateRawDepthTexture()
 {
@@ -1074,6 +1102,15 @@ void GFX_CheckBuffersSize()
 
         if(pSkyGFXNormalRaster) RwRasterDestroy(pSkyGFXNormalRaster);
         pSkyGFXNormalRaster = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);*/
+
+        if(pSkyGFXGodraysRaster[0]) RwRasterDestroy(pSkyGFXGodraysRaster[0]);
+        pSkyGFXGodraysRaster[0] = RwRasterCreate(0.25f * fpostfxX, 0.25f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
+
+        if(pSkyGFXGodraysRaster[1]) RwRasterDestroy(pSkyGFXGodraysRaster[1]);
+        pSkyGFXGodraysRaster[1] = RwRasterCreate(0.4333f * fpostfxX, 0.4333f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
+
+        if(pSkyGFXGodraysRaster[2]) RwRasterDestroy(pSkyGFXGodraysRaster[2]);
+        pSkyGFXGodraysRaster[2] = RwRasterCreate(0.6667f * fpostfxX, 0.6667f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
     }
 }
 inline void GFX_GrabScreen()
@@ -1131,7 +1168,7 @@ void GFX_GrabTexIntoTex(RwRaster* src, RwRaster* dst, ES2Shader* shader = NULL, 
         g_ScaledScreenQuad[2].pos.y = ym;
         g_ScaledScreenQuad[3].pos.x = xm;
         g_ScaledScreenQuad[3].pos.y = ym;
-        RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, g_ScaledScreenQuad, 4);
+        RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, &g_ScaledScreenQuad[0], 4);
         pForcedShader = NULL;
     }
     ERQ_GrabFramebuffer(dst);
@@ -1181,6 +1218,7 @@ void GFX_NormalBuffer()
 void GFX_CCTV() // Completed
 {
     ImmediateModeRenderStatesSet();
+    //GFX_GrabScreen();
 
     uint32 lineHeight  = (uint32)(2.0f * ((float)RsGlobal->maximumHeight) / 448.0f);
     uint32 linePadding = 2 * lineHeight;
@@ -1217,6 +1255,7 @@ void GFX_SpeedFX(float speed) // Completed
 #endif
 
     ImmediateModeRenderStatesSet();
+    GFX_GrabScreen();
 
     const float ar43 = 4.0f / 3.0f;
     const float ar169 = 16.0f / 9.0f;
@@ -1270,6 +1309,8 @@ void GFX_SpeedFX(float speed) // Completed
 void GFX_FrameBuffer();
 void GFX_Radiosity(int intensityLimit, int filterPasses, int renderPasses, int intensity) // Completed
 {
+    GFX_GrabScreen();
+
     float fFilterPixelMul = ((float)pSkyGFXRadiosityRaster->width / 640.0f) * (1 << filterPasses);
     RQVector uniValues = RQVector{ 0.0f, fFilterPixelMul / (float)pSkyGFXRadiosityRaster->height, 0.0f, 0.0f };
     GFX_GrabTexIntoTex(pSkyGFXPostFXRaster, pSkyGFXRadiosityRaster, g_pRadiosityBlurShader, &uniValues);
@@ -1301,8 +1342,6 @@ void GFX_Radiosity(int intensityLimit, int filterPasses, int renderPasses, int i
     pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
     GFX_FullScreenQuad(pSkyGFXRadiosityRaster);
     pForcedShader = NULL;
-
-    GFX_GrabScreen();
 }
 void GFX_HeatHaze(float intensity, bool alphaMaskMode)
 {
@@ -1453,29 +1492,38 @@ void GFX_GodRays()
 
     ImmediateModeRenderStatesSet();
     GFX_GrabScreen();
-
-    RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
-    RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
-    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)false);
-
-    pForcedShader = g_pGodRaysShader;
-    RQVector uniValues = RQVector{ xs, ys, g_fGodRaysIntensity, g_fGodRaysIntensity * g_fGodRaysSkyBgIntensity };
-    RQVector uniValues1 = RQVector
+    
+    RQVector uniValues1 = RQVector{ xs, ys, g_fGodRaysIntensity, g_fGodRaysIntensity * g_fGodRaysSkyBgIntensity };
+    RQVector uniValues2 = RQVector
     {
-        intensity * (float)p_CTimeCycle__m_CurrentColours->suncorer / 256.0f,
-        intensity * (float)p_CTimeCycle__m_CurrentColours->suncoreg / 256.0f,
-        intensity * (float)p_CTimeCycle__m_CurrentColours->suncoreb / 256.0f,
+        (float)p_CTimeCycle__m_CurrentColours->suncorer / 256.0f,
+        (float)p_CTimeCycle__m_CurrentColours->suncoreg / 256.0f,
+        (float)p_CTimeCycle__m_CurrentColours->suncoreb / 256.0f,
         0.0f
     };
     for(int i = 0; i < 3; ++i)
     {
-        uniValues1.v[i] = 0.6f * uniValues1.v[i] + 0.4f;
+        uniValues2.v[i] = intensity * (0.6f * uniValues2.v[i] + 0.4f);
     }
-    pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
-    pForcedShader->SetVectorConstant(SVCID_GreenGrade, &uniValues1.x, 4);
+
+    RwRaster* target = pSkyGFXGodraysRaster[g_nGodRays - 1];
+
     GFX_ActivateRawDepthTexture();
-    GFX_FullScreenQuad(pSkyGFXPostFXRaster);
+    GFX_GrabTexIntoTex(pSkyGFXPostFXRaster, target, g_pGodRaysShader, &uniValues1, &uniValues2);
     GFX_DeActivateTexture();
+
+    pForcedShader = g_pFramebufferRenderShader;
+    RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDZERO);
+    GFX_FullScreenQuad(pSkyGFXPostFXRaster);
+    
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDONE);
+    RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERLINEAR);
+
+    //RQVector uniValues = RQVector{ 0.0f, 1.0f / (float)target->height, 0.0f, 0.0f };
+    //pForcedShader = g_pRadiosityBlurShader;
+    //pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
+    GFX_FullScreenQuad(target);
     pForcedShader = NULL;
 }
 void GFX_DOF() // Completed
@@ -1483,7 +1531,7 @@ void GFX_DOF() // Completed
     float calc01Dist;
     if(g_bDOFUseScale)
     {
-        if(g_fDOFDistance < 0.0f || g_fDOFDistance >= 0.99f) return;
+        if(g_fDOFDistance < 0.0f || g_fDOFDistance >= 0.95f) return;
         calc01Dist = 1.0f - g_fDOFDistance;
     }
     else
@@ -1561,8 +1609,6 @@ void GFX_FrameBufferCSB(float contrast, float saturation, float brightness, floa
     pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
     GFX_FullScreenQuad(pSkyGFXPostFXRaster);
     pForcedShader = NULL;
-
-    GFX_GrabScreen(); // Update the framebuffer with CSB-processed image
 }
 void GFX_FrameBufferFXAA() // Completed
 {
@@ -1592,8 +1638,6 @@ void GFX_FrameBufferBloom(float intensity) // Completed
     pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
     GFX_FullScreenQuad(pSkyGFXPostFXRaster);
     pForcedShader = NULL;
-
-    GFX_GrabScreen(); // Update the framebuffer with Bloom-processed image
 }
 void GFX_FrameBufferSSAO() // Completed
 {
@@ -1609,8 +1653,6 @@ void GFX_FrameBufferSSAO() // Completed
     //pForcedShader->SetVectorConstant(SVCID_RedGrade, &uniValues.x, 4);
     GFX_FullScreenQuad(pSkyGFXPostFXRaster);
     pForcedShader = NULL;
-
-    GFX_GrabScreen(); // Update the framebuffer with Bloom-processed image
 }
 
 /* Hooks */
@@ -1747,6 +1789,7 @@ DECL_HOOKv(PostFX_Render)
 
     if(g_bBloom)
     {
+        GFX_GrabScreen();
         // Grabbing brightness values
         GFX_GrabBrightness( *currArea == 0 ? 0.1f : 0.3f );
         // Downscale 2 times
@@ -1768,6 +1811,7 @@ DECL_HOOKv(PostFX_Render)
 
     if(g_bAutoExposure)
     {
+        GFX_GrabScreen();
         GFX_GrabSceneBrightness();
         GFX_FrameBuffer();
     }
@@ -1906,10 +1950,14 @@ DECL_HOOKv(PostFX_Render)
     
     if(g_nCrAb != CRAB_INACTIVE) GFX_ChromaticAberration();
     
-    GFX_GodRays();
+    if(g_nGodRays != GRAY_INACTIVE)
+    {
+        GFX_GodRays();
+    }
 
     if(WaterDrops::neoWaterDrops)
     {
+        GFX_GrabScreen();
         WaterDrops::Process();
         WaterDrops::Render();
     }
@@ -2047,6 +2095,10 @@ void StartEffectsStuff()
         BloomSettingChanged(g_bBloom, pCFGBloom->GetBool());
         AddEnSetting("Bloom", g_bBloom, 0, sizeofA(aYesNo)-1, aYesNo, BloomSettingChanged, NULL);
         g_fBloomIntensity = cfg->GetFloat("Bloom_Intensity", g_fBloomIntensity, "EnchancedEffects");
+        
+        pCFGGodRays = cfg->Bind("GodRays", g_nCrAb, "EnchancedEffects");
+        GodRaysSettingChanged(g_nGodRays, pCFGGodRays->GetInt());
+        AddEnSetting("GodRays Quality", g_nGodRays, 0, sizeofA(aGodRaysSettings)-1, aGodRaysSettings, GodRaysSettingChanged, NULL);
 
         // Normal map buffer (dumbass Qualcomm removed a required extension from a list, though its supported)
 
