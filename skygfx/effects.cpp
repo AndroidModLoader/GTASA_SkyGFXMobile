@@ -1107,10 +1107,10 @@ void GFX_CheckBuffersSize()
         pSkyGFXGodraysRaster[0] = RwRasterCreate(0.25f * fpostfxX, 0.25f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
 
         if(pSkyGFXGodraysRaster[1]) RwRasterDestroy(pSkyGFXGodraysRaster[1]);
-        pSkyGFXGodraysRaster[1] = RwRasterCreate(0.4333f * fpostfxX, 0.4333f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
+        pSkyGFXGodraysRaster[1] = RwRasterCreate(0.5f * fpostfxX, 0.5f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
 
         if(pSkyGFXGodraysRaster[2]) RwRasterDestroy(pSkyGFXGodraysRaster[2]);
-        pSkyGFXGodraysRaster[2] = RwRasterCreate(0.6667f * fpostfxX, 0.6667f * fpostfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
+        pSkyGFXGodraysRaster[2] = RwRasterCreate(postfxX, postfxY, 32, rwRASTERTYPECAMERATEXTURE | rwRASTERFORMAT8888);
     }
 }
 inline void GFX_GrabScreen()
